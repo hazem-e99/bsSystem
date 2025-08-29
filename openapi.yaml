@@ -1,0 +1,2377 @@
+openapi: 3.1.0
+info:
+  title: Student Transport System API
+  description: Comprehensive API for managing student transportation including buses, routes, trips, bookings, payments, and user management
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@studenttransport.com
+
+servers:
+  - url: http://busmanagementsystem.runasp.net/api
+    description: Development server
+  - url: https://api.studenttransport.com
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/bookings:
+    get:
+      summary: Get bookings
+      description: Retrieve bookings with optional filtering by tripId, studentId, or date
+      parameters:
+        - name: tripId
+          in: query
+          schema:
+            type: string
+          description: Filter by trip ID
+        - name: studentId
+          in: query
+          schema:
+            type: string
+          description: Filter by student ID
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by date
+      responses:
+        '200':
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a booking
+      description: Creates a new booking for a student. Requires active subscription.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tripId:
+                  type: string
+                  description: ID of the trip to book
+                studentId:
+                  type: string
+                  description: ID of the student making the booking
+                stopId:
+                  type: string
+                  description: ID of the pickup/dropoff stop
+              required: [tripId, studentId, stopId]
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Subscription required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Trip or student not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: No seats available or duplicate booking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/routes:
+    get:
+      summary: Get routes
+      description: Retrieve routes with optional filtering
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+          description: Filter by route status
+        - name: assignedBusId
+          in: query
+          schema:
+            type: string
+          description: Filter by assigned bus ID
+        - name: assignedSupervisorId
+          in: query
+          schema:
+            type: string
+          description: Filter by assigned supervisor ID
+      responses:
+        '200':
+          description: List of routes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Route'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a route
+      description: Creates a new transportation route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteInput'
+      responses:
+        '201':
+          description: Route created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/trips:
+    get:
+      summary: Get trips
+      description: Retrieve trips with optional filtering
+      parameters:
+        - name: driverId
+          in: query
+          schema:
+            type: string
+          description: Filter by driver ID
+        - name: supervisorId
+          in: query
+          schema:
+            type: string
+          description: Filter by supervisor ID
+        - name: busId
+          in: query
+          schema:
+            type: string
+          description: Filter by bus ID
+        - name: routeId
+          in: query
+          schema:
+            type: string
+          description: Filter by route ID
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, in_progress, completed, cancelled]
+          description: Filter by trip status
+        - name: available
+          in: query
+          schema:
+            type: string
+            enum: [true, false]
+          description: Filter for available trips only
+      responses:
+        '200':
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trip'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a trip
+      description: Creates a new transportation trip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripInput'
+      responses:
+        '201':
+          description: Trip created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Trip already exists or ID conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    put:
+      summary: Update a trip
+      description: Updates an existing trip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripUpdate'
+      responses:
+        '200':
+          description: Trip updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+        '400':
+          description: Trip ID required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete a trip
+      description: Deletes a trip by ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Trip ID to delete
+      responses:
+        '200':
+          description: Trip deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Trip ID required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/buses:
+    get:
+      summary: Get buses
+      description: Retrieve buses with optional filtering
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+          description: Filter by bus status
+        - name: driverId
+          in: query
+          schema:
+            type: string
+          description: Filter by assigned driver ID
+        - name: currentRouteId
+          in: query
+          schema:
+            type: string
+          description: Filter by current route ID
+        - name: assignedSupervisorId
+          in: query
+          schema:
+            type: string
+          description: Filter by assigned supervisor ID
+      responses:
+        '200':
+          description: List of buses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bus'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a bus
+      description: Creates a new bus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusInput'
+      responses:
+        '201':
+          description: Bus created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bus'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/subscription-plans:
+    get:
+      summary: Get subscription plans
+      description: Retrieve all available subscription plans
+      responses:
+        '200':
+          description: List of subscription plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionPlan'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a subscription plan
+      description: Creates a new subscription plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlanInput'
+      responses:
+        '201':
+          description: Subscription plan created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    patch:
+      summary: Update a subscription plan
+      description: Updates an existing subscription plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPlanUpdate'
+      responses:
+        '200':
+          description: Subscription plan updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPlan'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete a subscription plan
+      description: Deletes a subscription plan by ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Plan ID to delete
+      responses:
+        '200':
+          description: Plan deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  plan:
+                    $ref: '#/components/schemas/SubscriptionPlan'
+        '400':
+          description: Plan ID required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/student-subscription:
+    post:
+      summary: Create student subscription
+      description: Creates a subscription for a student with payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId:
+                  type: string
+                  description: ID of the student
+                planType:
+                  type: string
+                  description: Type of subscription plan
+                method:
+                  type: string
+                  enum: [cash, bank]
+                  description: Payment method
+                amount:
+                  type: number
+                  description: Payment amount
+              required: [studentId, planType, method]
+      responses:
+        '201':
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment:
+                    $ref: '#/components/schemas/Payment'
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Student not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/student-assign-bus:
+    post:
+      summary: Assign student to bus
+      description: Assigns a student to a specific bus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId:
+                  type: string
+                  description: ID of the student
+                busId:
+                  type: string
+                  description: ID of the bus
+              required: [studentId, busId]
+      responses:
+        '200':
+          description: Student assigned to bus successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: '#/components/schemas/User'
+                  bus:
+                    $ref: '#/components/schemas/Bus'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Subscription inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Student or bus not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Student already assigned or bus full
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users:
+    get:
+      summary: Get users
+      description: Retrieve users with optional filtering by role, status, or subscription
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [admin, student, driver, supervisor, movementManager]
+          description: Filter by user role
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended]
+          description: Filter by user status
+        - name: subscriptionStatus
+          in: query
+          schema:
+            type: string
+            enum: [active, pending, inactive]
+          description: Filter by subscription status
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/assign:
+    post:
+      summary: Assign user to entity
+      description: Assigns a driver or supervisor to a bus or trip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entity:
+                  type: string
+                  enum: [bus, trip]
+                  description: Entity type to assign to
+                entityId:
+                  type: string
+                  description: ID of the entity
+                role:
+                  type: string
+                  enum: [driver, supervisor]
+                  description: Role to assign
+                userId:
+                  type: string
+                  description: ID of the user to assign
+              required: [entity, entityId, role, userId]
+      responses:
+        '200':
+          description: User assigned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: Missing required fields or unsupported entity/role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User or entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/supervisor/broadcast:
+    post:
+      summary: Broadcast message to students
+      description: Sends a broadcast message to all students on a supervisor's bus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                supervisorId:
+                  type: string
+                  description: ID of the supervisor
+                busId:
+                  type: string
+                  description: Optional specific bus ID
+                message:
+                  type: string
+                  description: Message to broadcast
+              required: [supervisorId, message]
+      responses:
+        '200':
+          description: Message broadcast successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  notified:
+                    type: integer
+                    description: Number of students notified
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No bus assigned to supervisor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/notifications:
+    get:
+      summary: Get notifications
+      description: Retrieve notifications with optional filtering
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+          description: Filter by user ID
+        - name: unread
+          in: query
+          schema:
+            type: string
+            enum: [true, false]
+          description: Filter for unread notifications only
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create notification
+      description: Creates a new notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationInput'
+      responses:
+        '201':
+          description: Notification created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/payments:
+    get:
+      summary: Get payments
+      description: Retrieve payments with optional filtering
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: string
+          description: Filter by student ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, completed, failed]
+          description: Filter by payment status
+        - name: method
+          in: query
+          schema:
+            type: string
+            enum: [cash, bank]
+          description: Filter by payment method
+        - name: tripId
+          in: query
+          schema:
+            type: string
+          description: Filter by trip ID
+        - name: date_gte
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by date greater than or equal
+        - name: date_lte
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by date less than or equal
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create payment
+      description: Creates a new payment record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInput'
+      responses:
+        '201':
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Student or trip not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/settings:
+    get:
+      summary: Get system settings
+      description: Retrieve system configuration settings
+      responses:
+        '200':
+          description: System settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    patch:
+      summary: Update system settings
+      description: Updates system configuration settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingsUpdate'
+      responses:
+        '200':
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/forms:
+    get:
+      summary: Get form configuration
+      description: Retrieve form field configurations for different user roles
+      responses:
+        '200':
+          description: Form configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormConfig'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    patch:
+      summary: Update form configuration
+      description: Updates form field configurations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormConfigUpdate'
+      responses:
+        '200':
+          description: Form configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormConfig'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/attendance:
+    get:
+      summary: Get attendance records
+      description: Retrieve attendance records with optional filtering
+      parameters:
+        - name: tripId
+          in: query
+          schema:
+            type: string
+          description: Filter by trip ID
+        - name: studentId
+          in: query
+          schema:
+            type: string
+          description: Filter by student ID
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by date
+      responses:
+        '200':
+          description: List of attendance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Attendance'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create attendance record
+      description: Creates a new attendance record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceInput'
+      responses:
+        '201':
+          description: Attendance record created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attendance'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/stops:
+    get:
+      summary: Get stops
+      description: Retrieve stops with optional filtering
+      parameters:
+        - name: routeId
+          in: query
+          schema:
+            type: string
+          description: Filter by route ID
+        - name: stopName
+          in: query
+          schema:
+            type: string
+          description: Filter by stop name
+      responses:
+        '200':
+          description: List of stops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stop'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create stop
+      description: Creates a new stop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopInput'
+      responses:
+        '201':
+          description: Stop created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stop'
+        '400':
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth:
+    post:
+      summary: Authenticate user
+      description: Authenticates a user and returns JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: User email
+                password:
+                  type: string
+                  description: User password
+              required: [email, password]
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT token
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Missing credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/reports:
+    get:
+      summary: Get reports
+      description: Retrieve various system reports
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [attendance, revenue, trips, students]
+          description: Type of report to generate
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date for report
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date for report
+      responses:
+        '200':
+          description: Report generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          description: Invalid report type or date range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    # Core Entities
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "user-1755508240426-ne21hbyhc"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        role:
+          type: string
+          enum: [admin, student, driver, supervisor, movementManager]
+          example: "student"
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+          example: "active"
+        subscriptionPlan:
+          type: string
+          example: "Term"
+        subscriptionStatus:
+          type: string
+          enum: [active, pending, inactive]
+          example: "active"
+        assignedBusId:
+          type: string
+          example: "bus-123"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, email, role, status]
+
+    Bus:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "bus-123"
+        number:
+          type: string
+          example: "BUS-001"
+        capacity:
+          type: integer
+          example: 50
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+          example: "active"
+        speed:
+          type: number
+          example: 60.5
+        fuelLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 85
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+              example: 40.7128
+            lng:
+              type: number
+              example: -74.006
+        driverId:
+          type: string
+          nullable: true
+          example: "driver-123"
+        currentRouteId:
+          type: string
+          nullable: true
+          example: "route-456"
+        assignedSupervisorId:
+          type: string
+          nullable: true
+          example: "supervisor-789"
+        assignedStudents:
+          type: array
+          items:
+            type: string
+          example: ["student-1", "student-2"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, number, capacity, status]
+
+    Route:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "route-123"
+        name:
+          type: string
+          example: "Downtown Express"
+        startPoint:
+          type: string
+          example: "Central Station"
+        endPoint:
+          type: string
+          example: "Downtown Mall"
+        startLocation:
+          type: object
+          nullable: true
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+        endLocation:
+          type: object
+          nullable: true
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+        distance:
+          type: number
+          example: 15.5
+        estimatedDuration:
+          type: number
+          example: 45
+        schedule:
+          type: object
+          properties:
+            departureTime:
+              type: string
+              example: "08:00"
+            arrivalTime:
+              type: string
+              example: "08:45"
+            frequency:
+              type: string
+              enum: [daily, weekdays, weekends, once]
+              example: "daily"
+            days:
+              type: array
+              items:
+                type: string
+              example: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+          example: "active"
+        stops:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              stopName:
+                type: string
+              stopTime:
+                type: string
+        assignedBuses:
+          type: array
+          items:
+            type: string
+        assignedSupervisors:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, startPoint, endPoint, status]
+
+    Trip:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "trip-123"
+        busId:
+          type: string
+          example: "bus-456"
+        routeId:
+          type: string
+          example: "route-789"
+        driverId:
+          type: string
+          example: "driver-123"
+        supervisorId:
+          type: string
+          example: "supervisor-456"
+        date:
+          type: string
+          format: date
+          example: "2025-01-20"
+        status:
+          type: string
+          enum: [scheduled, in_progress, completed, cancelled]
+          example: "scheduled"
+        startTime:
+          type: string
+          example: "08:00"
+        endTime:
+          type: string
+          example: "08:45"
+        passengers:
+          type: integer
+          example: 25
+        revenue:
+          type: number
+          example: 125.50
+        frequency:
+          type: string
+          enum: [once, daily, weekly]
+          example: "once"
+        repeatUntil:
+          type: string
+          format: date
+          nullable: true
+        assignedStudents:
+          type: array
+          items:
+            type: string
+        stops:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              stopName:
+                type: string
+              stopTime:
+                type: string
+        capacity:
+          type: integer
+          example: 50
+        startLocation:
+          type: object
+          nullable: true
+        endLocation:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, busId, routeId, driverId, supervisorId, date, startTime, endTime, status]
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "booking-123"
+        tripId:
+          type: string
+          example: "trip-456"
+        studentId:
+          type: string
+          example: "student-789"
+        stopId:
+          type: string
+          example: "stop-123"
+        status:
+          type: string
+          enum: [confirmed, cancelled, completed]
+          example: "confirmed"
+        date:
+          type: string
+          format: date
+          example: "2025-01-20"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, tripId, studentId, stopId, status, date]
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "payment-123"
+        studentId:
+          type: string
+          example: "student-456"
+        tripId:
+          type: string
+          nullable: true
+          example: "trip-789"
+        amount:
+          type: number
+          example: 25.00
+        method:
+          type: string
+          enum: [cash, bank]
+          example: "bank"
+        status:
+          type: string
+          enum: [pending, completed, failed]
+          example: "completed"
+        description:
+          type: string
+          example: "Subscription Term"
+        date:
+          type: string
+          format: date
+          example: "2025-01-20"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, studentId, amount, method, status, date]
+
+    SubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "plan-term"
+        name:
+          type: string
+          example: "Term"
+        type:
+          type: string
+          example: "Term"
+        price:
+          type: number
+          example: 0.00
+        duration:
+          type: string
+          example: "1 term"
+        status:
+          type: string
+          enum: [active, inactive]
+          example: "active"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, type, price, duration, status]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "notification-123"
+        userId:
+          type: string
+          example: "user-456"
+        senderId:
+          type: string
+          example: "system"
+        type:
+          type: string
+          enum: [booking, trip_created, payment, alert]
+          example: "booking"
+        priority:
+          type: string
+          enum: [low, medium, high]
+          example: "medium"
+        status:
+          type: string
+          enum: [unread, read]
+          example: "unread"
+        read:
+          type: boolean
+          example: false
+        title:
+          type: string
+          example: "New Booking"
+        message:
+          type: string
+          example: "Your booking has been confirmed"
+        busId:
+          type: string
+          nullable: true
+        tripId:
+          type: string
+          nullable: true
+        actionUrl:
+          type: string
+          example: "/dashboard/student/bookings"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, userId, type, status, title, message]
+
+    SystemSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "system-settings"
+        systemName:
+          type: string
+          example: "Bus Management System"
+        logo:
+          type: string
+          example: "/logo.png"
+        primaryColor:
+          type: string
+          example: "#3B82F6"
+        secondaryColor:
+          type: string
+          example: "#10B981"
+        maintenanceMode:
+          type: boolean
+          example: false
+        notificationsEnabled:
+          type: boolean
+          example: true
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, systemName]
+
+    FormConfig:
+      type: object
+      properties:
+        commonFields:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              label:
+                type: string
+              type:
+                type: string
+              required:
+                type: boolean
+        roleSpecificFields:
+          type: object
+          properties:
+            student:
+              type: array
+              items:
+                type: object
+            driver:
+              type: array
+              items:
+                type: object
+            supervisor:
+              type: array
+              items:
+                type: object
+
+    # Input Schemas
+    RouteInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "New Route"
+        startPoint:
+          type: string
+          example: "Start Location"
+        endPoint:
+          type: string
+          example: "End Location"
+        distance:
+          type: number
+          example: 20.0
+        estimatedDuration:
+          type: number
+          example: 60
+        schedule:
+          type: object
+          properties:
+            departureTime:
+              type: string
+              example: "09:00"
+            arrivalTime:
+              type: string
+              example: "10:00"
+            frequency:
+              type: string
+              enum: [daily, weekdays, weekends]
+            days:
+              type: array
+              items:
+                type: string
+        stops:
+          type: array
+          items:
+            type: object
+            properties:
+              stopName:
+                type: string
+              stopTime:
+                type: string
+        assignedBuses:
+          type: array
+          items:
+            type: string
+        assignedSupervisors:
+          type: array
+          items:
+            type: string
+      required: [name, startPoint, endPoint]
+
+    TripInput:
+      type: object
+      properties:
+        busId:
+          type: string
+          example: "bus-123"
+        routeId:
+          type: string
+          example: "route-456"
+        driverId:
+          type: string
+          example: "driver-789"
+        supervisorId:
+          type: string
+          example: "supervisor-123"
+        date:
+          type: string
+          format: date
+          example: "2025-01-20"
+        startTime:
+          type: string
+          example: "08:00"
+        endTime:
+          type: string
+          example: "08:45"
+        stops:
+          type: array
+          items:
+            type: object
+            properties:
+              stopName:
+                type: string
+              stopTime:
+                type: string
+      required: [busId, routeId, driverId, supervisorId, date, startTime, endTime]
+
+    TripUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "trip-123"
+        busId:
+          type: string
+        routeId:
+          type: string
+        driverId:
+          type: string
+        supervisorId:
+          type: string
+        date:
+          type: string
+          format: date
+        startTime:
+          type: string
+        endTime:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, in_progress, completed, cancelled]
+        stops:
+          type: array
+          items:
+            type: object
+      required: [id]
+
+    BusInput:
+      type: object
+      properties:
+        number:
+          type: string
+          example: "BUS-002"
+        capacity:
+          type: integer
+          example: 45
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+        speed:
+          type: number
+          example: 65.0
+        fuelLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+        driverId:
+          type: string
+        currentRouteId:
+          type: string
+        assignedSupervisorId:
+          type: string
+        assignedStudents:
+          type: array
+          items:
+            type: string
+
+    SubscriptionPlanInput:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Monthly Plan"
+        type:
+          type: string
+          example: "Monthly"
+        price:
+          type: number
+          example: 50.00
+        duration:
+          type: string
+          example: "1 month"
+        status:
+          type: string
+          enum: [active, inactive]
+      required: [name, type, price, duration]
+
+    SubscriptionPlanUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "plan-123"
+        name:
+          type: string
+        type:
+          type: string
+        price:
+          type: number
+        duration:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+      required: [id]
+
+    PaymentInput:
+      type: object
+      properties:
+        studentId:
+          type: string
+          example: "student-123"
+        tripId:
+          type: string
+          example: "trip-456"
+        amount:
+          type: number
+          example: 25.00
+        method:
+          type: string
+          enum: [cash, bank]
+          example: "bank"
+      required: [studentId, tripId, amount, method]
+
+    NotificationInput:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: "user-123"
+        senderId:
+          type: string
+          example: "system"
+        type:
+          type: string
+          enum: [booking, trip_created, payment, alert]
+        priority:
+          type: string
+          enum: [low, medium, high]
+        title:
+          type: string
+          example: "Notification Title"
+        message:
+          type: string
+          example: "Notification message content"
+        busId:
+          type: string
+          nullable: true
+        tripId:
+          type: string
+          nullable: true
+        actionUrl:
+          type: string
+          example: "/dashboard/notifications"
+      required: [userId, type, title, message]
+
+    SystemSettingsUpdate:
+      type: object
+      properties:
+        systemName:
+          type: string
+        logo:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        maintenanceMode:
+          type: boolean
+        notificationsEnabled:
+          type: boolean
+
+    FormConfigUpdate:
+      type: object
+      properties:
+        commonFields:
+          type: array
+          items:
+            type: object
+        roleSpecificFields:
+          type: object
+
+    # Additional Schemas
+    Stop:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "stop-123"
+        stopName:
+          type: string
+          example: "Central Station"
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+              example: 40.7128
+            lng:
+              type: number
+              example: -74.006
+        stopTime:
+          type: string
+          example: "08:00"
+        routeId:
+          type: string
+          example: "route-456"
+      required: [id, stopName, stopTime]
+
+    Location:
+      type: object
+      properties:
+        lat:
+          type: number
+          example: 40.7128
+        lng:
+          type: number
+          example: -74.006
+      required: [lat, lng]
+
+    Attendance:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "attendance-123"
+        tripId:
+          type: string
+          example: "trip-456"
+        studentId:
+          type: string
+          example: "student-789"
+        status:
+          type: string
+          enum: [present, absent, late]
+          example: "present"
+        date:
+          type: string
+          format: date
+          example: "2025-01-20"
+        checkInTime:
+          type: string
+          format: date-time
+          example: "2025-01-20T08:00:00Z"
+        checkOutTime:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          example: "Student arrived on time"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, tripId, studentId, status, date]
+
+    AttendanceInput:
+      type: object
+      properties:
+        tripId:
+          type: string
+          example: "trip-456"
+        studentId:
+          type: string
+          example: "student-789"
+        status:
+          type: string
+          enum: [present, absent, late]
+          example: "present"
+        date:
+          type: string
+          format: date
+          example: "2025-01-20"
+        checkInTime:
+          type: string
+          format: date-time
+          example: "2025-01-20T08:00:00Z"
+        notes:
+          type: string
+          example: "Student arrived on time"
+      required: [tripId, studentId, status, date]
+
+    StopInput:
+      type: object
+      properties:
+        stopName:
+          type: string
+          example: "New Stop"
+        location:
+          type: object
+          properties:
+            lat:
+              type: number
+              example: 40.7128
+            lng:
+              type: number
+              example: -74.006
+        stopTime:
+          type: string
+          example: "08:30"
+        routeId:
+          type: string
+          example: "route-456"
+      required: [stopName, stopTime, routeId]
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "report-123"
+        type:
+          type: string
+          enum: [attendance, revenue, trips, students]
+          example: "attendance"
+        startDate:
+          type: string
+          format: date
+          example: "2025-01-01"
+        endDate:
+          type: string
+          format: date
+          example: "2025-01-31"
+        data:
+          type: object
+          description: Report data based on type
+        generatedAt:
+          type: string
+          format: date-time
+          example: "2025-01-20T10:00:00Z"
+        generatedBy:
+          type: string
+          example: "admin-123"
+      required: [id, type, startDate, endDate, data]
+
+    # Error Schema
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Internal server error"
+        message:
+          type: string
+          example: "Detailed error message"
+      required: [error]
+
+tags:
+  - name: Bookings
+    description: Manage student trip bookings
+  - name: Routes
+    description: Manage transportation routes
+  - name: Trips
+    description: Manage transportation trips
+  - name: Buses
+    description: Manage bus fleet
+  - name: Subscriptions
+    description: Manage subscription plans and student subscriptions
+  - name: Users
+    description: Manage user assignments and roles
+  - name: Notifications
+    description: Manage system notifications
+  - name: Payments
+    description: Manage payment records
+  - name: Settings
+    description: Manage system configuration
+  - name: Forms
+    description: Manage form configurations
+  - name: Attendance
+    description: Manage student attendance records
+  - name: Stops
+    description: Manage transportation stops
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Reports
+    description: Generate and retrieve system reports
+
+securitySchemes:
+  BearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+    description: JWT token for authentication

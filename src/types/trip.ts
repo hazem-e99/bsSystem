@@ -1,0 +1,37 @@
+// Trip types rebuilt to strictly match backend API spec
+
+export interface StopLocationDTO {
+  id?: number;
+  address: string;
+  arrivalTimeOnly: string; // HH:mm
+  departureTimeOnly: string; // HH:mm
+}
+
+export interface CreateTripDTO {
+  busId: number;
+  driverId: number;
+  conductorId: number;
+  startLocation: string; // max 200
+  endLocation: string; // max 200
+  tripDate: string; // YYYY-MM-DD
+  departureTimeOnly: string; // HH:mm
+  arrivalTimeOnly: string; // HH:mm
+  stopLocations: StopLocationDTO[];
+}
+
+export interface TripResponse {
+  id: number;
+  busId: number;
+  driverId: number;
+  conductorId: number;
+  totalSeats: number;
+  bookedSeats: number;
+  avalableSeates: number; // note spelling from backend
+  tripDate: string; // YYYY-MM-DD
+  departureTimeOnly: string; // HH:mm
+  arrivalTimeOnly: string; // HH:mm
+  status: string; // e.g., Scheduled
+  stopLocations: StopLocationDTO[] | null;
+}
+
+

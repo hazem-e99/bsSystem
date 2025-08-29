@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Admin Trip Creation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .required { color: red; }
+        .debug-info { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Admin Trip Creation</h1>
+    
+    <div class="test-section info">
+        <h3>🔧 API Configuration</h3>
+        <p><strong>Base URL:</strong> <span id="baseUrl">http://localhost:5000/api</span></p>
+        <button onclick="updateBaseUrl()">Change Base URL</button>
+        <button onclick="testAuthentication()">Test Authentication</button>
+    </div>
+
+    <div class="test-section">
+        <h3>1️⃣ Test Dependencies Loading</h3>
+        <button onclick="loadDependencies()">Load Dependencies</button>
+        <div id="dependenciesResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2️⃣ Test Trip Creation (Admin Style)</h3>
+        <form id="adminTripForm">
+            <div class="form-group">
+                <label for="busId">Bus <span class="required">*</span></label>
+                <select id="busId" required>
+                    <option value="">Select a bus</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="driverId">Driver <span class="required">*</span></label>
+                <select id="driverId" required>
+                    <option value="">Select a driver</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="conductorId">Conductor <span class="required">*</span></label>
+                <select id="conductorId" required>
+                    <option value="">Select a conductor</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="startLocation">Start Location <span class="required">*</span></label>
+                <input type="text" id="startLocation" required placeholder="e.g., Main Campus" maxlength="200">
+            </div>
+            
+            <div class="form-group">
+                <label for="endLocation">End Location <span class="required">*</span></label>
+                <input type="text" id="endLocation" required placeholder="e.g., Downtown Station" maxlength="200">
+            </div>
+            
+            <div class="form-group">
+                <label for="tripDate">Trip Date <span class="required">*</span></label>
+                <input type="date" id="tripDate" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="departureTime">Departure Time <span class="required">*</span></label>
+                <input type="time" id="departureTime" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="arrivalTime">Arrival Time <span class="required">*</span></label>
+                <input type="time" id="arrivalTime" required>
+            </div>
+            
+            <button type="submit">Create Trip (Admin)</button>
+        </form>
+        <div id="creationResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3️⃣ Debug Information</h3>
+        <div class="debug-info">
+            <h4>Current State:</h4>
+            <p><strong>Dependencies Loaded:</strong> <span id="depsStatus">❌ No</span></p>
+            <p><strong>Form Data:</strong> <span id="formDataStatus">❌ Empty</span></p>
+            <p><strong>API Status:</strong> <span id="apiStatus">❌ Not Tested</span></p>
+        </div>
+        <button onclick="showDebugInfo()">Refresh Debug Info</button>
+        <div id="debugResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let dependencies = { buses: [], drivers: [], conductors: [] };
+        let lastFormData = null;
+        let lastApiResponse = null;
+        
+        function updateBaseUrl() {
+            const newUrl = prompt('Enter new base URL:', API_BASE);
+            if (newUrl) {
+                document.getElementById('baseUrl').textContent = newUrl;
+                window.API_BASE = newUrl;
+            }
+        }
+
+        async function testAuthentication() {
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Users`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    alert('✅ Authentication successful!');
+                } else if (response.status === 401) {
+                    alert('❌ Authentication failed - Unauthorized');
+                } else {
+                    alert(`⚠️ Authentication status: ${response.status}`);
+                }
+            } catch (error) {
+                alert(`❌ Authentication error: ${error.message}`);
+            }
+        }
+
+        async function loadDependencies() {
+            const resultDiv = document.getElementById('dependenciesResult');
+            resultDiv.innerHTML = '<p>🔄 Loading dependencies...</p>';
+            
+            try {
+                const [busesRes, driversRes, conductorsRes] = await Promise.all([
+                    fetch(`${window.API_BASE || API_BASE}/Buses`),
+                    fetch(`${window.API_BASE || API_BASE}/Users/by-role/Driver`),
+                    fetch(`${window.API_BASE || API_BASE}/Users/by-role/Conductor`)
+                ]);
+                
+                const busesData = await busesRes.json();
+                const driversData = await driversRes.json();
+                const conductorsData = await conductorsRes.json();
+                
+                dependencies.buses = busesData.data || [];
+                dependencies.drivers = driversData.data || [];
+                dependencies.conductors = conductorsData.data || [];
+                
+                // Populate form dropdowns
+                populateDropdown('busId', dependencies.buses, 'busNumber', 'capacity');
+                populateDropdown('driverId', dependencies.drivers, 'firstName', 'lastName');
+                populateDropdown('conductorId', dependencies.conductors, 'firstName', 'lastName');
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Dependencies Loaded Successfully</h4>
+                        <div class="debug-info">
+                            <p><strong>Buses:</strong> ${dependencies.buses.length}</p>
+                            <p><strong>Drivers:</strong> ${dependencies.drivers.length}</p>
+                            <p><strong>Conductors:</strong> ${dependencies.conductors.length}</p>
+                        </div>
+                        
+                        <h5>📋 Sample Data:</h5>
+                        <details>
+                            <summary>First Bus</summary>
+                            <pre>${JSON.stringify(dependencies.buses[0] || {}, null, 2)}</pre>
+                        </details>
+                        <details>
+                            <summary>First Driver</summary>
+                            <pre>${JSON.stringify(dependencies.drivers[0] || {}, null, 2)}</pre>
+                        </details>
+                        <details>
+                            <summary>First Conductor</summary>
+                            <pre>${JSON.stringify(dependencies.conductors[0] || {}, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+                
+                updateDebugInfo();
+                
+            } catch (error) {
+                console.error('❌ Error loading dependencies:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error Loading Dependencies</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Check if the API server is running and accessible.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function populateDropdown(selectId, items, field1, field2) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Select...</option>';
+            
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                
+                if (field1 === 'busNumber') {
+                    option.textContent = `${item.busNumber} - ${item.capacity} seats`;
+                } else {
+                    option.textContent = item[field1] && item[field2] ? 
+                        `${item[field1]} ${item[field2]}` : 
+                        item.name || `${field1} ${item.id}`;
+                }
+                
+                select.appendChild(option);
+            });
+        }
+
+        document.getElementById('adminTripForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('creationResult');
+            resultDiv.innerHTML = '<p>🔄 Creating trip...</p>';
+            
+            try {
+                const formData = {
+                    busId: parseInt(document.getElementById('busId').value),
+                    driverId: parseInt(document.getElementById('driverId').value),
+                    conductorId: parseInt(document.getElementById('conductorId').value),
+                    startLocation: document.getElementById('startLocation').value,
+                    endLocation: document.getElementById('endLocation').value,
+                    tripDate: document.getElementById('tripDate').value,
+                    departureTimeOnly: document.getElementById('departureTime').value,
+                    arrivalTimeOnly: document.getElementById('arrivalTime').value,
+                    stopLocations: []
+                };
+                
+                lastFormData = formData;
+                console.log('📝 Admin form data:', formData);
+                
+                const response = await fetch(`${window.API_BASE || API_BASE}/Trip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                lastApiResponse = { status: response.status, data: result };
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Trip Created Successfully!</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Response:</strong></p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Trip Creation Failed</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error Response:</strong></p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+                updateDebugInfo();
+                
+            } catch (error) {
+                console.error('❌ Error creating trip:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error Creating Trip</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>This might be a network error or API server issue.</p>
+                    </div>
+                `;
+            }
+        });
+
+        function updateDebugInfo() {
+            document.getElementById('depsStatus').textContent = 
+                dependencies.buses.length > 0 ? '✅ Yes' : '❌ No';
+            
+            document.getElementById('formDataStatus').textContent = 
+                lastFormData ? '✅ Available' : '❌ Empty';
+            
+            document.getElementById('apiStatus').textContent = 
+                lastApiResponse ? `✅ ${lastApiResponse.status}` : '❌ Not Tested';
+        }
+
+        function showDebugInfo() {
+            const debugDiv = document.getElementById('debugResult');
+            
+            let debugInfo = '<div class="debug-info"><h4>🔍 Detailed Debug Information</h4>';
+            
+            // Dependencies info
+            debugInfo += `
+                <h5>📊 Dependencies:</h5>
+                <p><strong>Buses:</strong> ${dependencies.buses.length}</p>
+                <p><strong>Drivers:</strong> ${dependencies.drivers.length}</p>
+                <p><strong>Conductors:</strong> ${dependencies.conductors.length}</p>
+            `;
+            
+            // Form data info
+            if (lastFormData) {
+                debugInfo += `
+                    <h5>📝 Last Form Data:</h5>
+                    <pre>${JSON.stringify(lastFormData, null, 2)}</pre>
+                `;
+            }
+            
+            // API response info
+            if (lastApiResponse) {
+                debugInfo += `
+                    <h5>🌐 Last API Response:</h5>
+                    <p><strong>Status:</strong> ${lastApiResponse.status}</p>
+                    <pre>${JSON.stringify(lastApiResponse.data, null, 2)}</pre>
+                `;
+            }
+            
+            debugInfo += '</div>';
+            debugDiv.innerHTML = debugInfo;
+        }
+
+        // Set default date to today
+        document.getElementById('tripDate').value = new Date().toISOString().split('T')[0];
+        
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Admin Trip Creation Test Page Loaded');
+            console.log('🔗 API Base URL:', window.API_BASE || API_BASE);
+            updateDebugInfo();
+        });
+    </script>
+</body>
+</html>

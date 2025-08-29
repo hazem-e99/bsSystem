@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Trip Form Data Loading</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .data-display { margin: 10px 0; }
+        .count { font-weight: bold; color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Trip Form Data Loading</h1>
+    
+    <div class="test-section info">
+        <h3>API Configuration</h3>
+        <p><strong>Base URL:</strong> <span id="baseUrl">http://localhost:5000/api</span></p>
+        <button onclick="updateBaseUrl()">Change Base URL</button>
+    </div>
+
+    <div class="test-section">
+        <h3>1️⃣ Test Data Loading (Same as TripForm)</h3>
+        <button onclick="testTripFormData()">Test All Dependencies</button>
+        <div id="tripFormResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2️⃣ Individual Endpoint Tests</h3>
+        <button onclick="testBuses()">Test Buses</button>
+        <button onclick="testDrivers()">Test Drivers</button>
+        <button onclick="testConductors()">Test Conductors</button>
+        <div id="individualResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3️⃣ Data Structure Analysis</h3>
+        <button onclick="analyzeDataStructure()">Analyze Response Structure</button>
+        <div id="structureResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let cachedData = { buses: [], drivers: [], conductors: [] };
+        
+        function updateBaseUrl() {
+            const newUrl = prompt('Enter new base URL:', API_BASE);
+            if (newUrl) {
+                document.getElementById('baseUrl').textContent = newUrl;
+                window.API_BASE = newUrl;
+            }
+        }
+
+        async function testTripFormData() {
+            const resultDiv = document.getElementById('tripFormResult');
+            resultDiv.innerHTML = '<p>🔄 Testing trip form data loading...</p>';
+            
+            try {
+                console.log('🧪 Starting trip form data test...');
+                
+                // نفس الطريقة المستخدمة في fetchDependencies
+                const [busesRes, driversRes, conductorsRes] = await Promise.all([
+                    fetch(`${window.API_BASE || API_BASE}/Buses`),
+                    fetch(`${window.API_BASE || API_BASE}/Users/by-role/Driver`),
+                    fetch(`${window.API_BASE || API_BASE}/Users/by-role/Conductor`)
+                ]);
+                
+                console.log('📊 Raw responses received');
+                
+                // معالجة البيانات بنفس الطريقة
+                const busesData = await busesRes.json();
+                const driversData = await driversRes.json();
+                const conductorsData = await conductorsRes.json();
+                
+                console.log('📊 Parsed responses:', { busesData, driversData, conductorsData });
+                
+                // استخراج البيانات
+                const buses = busesData.data || [];
+                const drivers = driversData.data || [];
+                const conductors = conductorsData.data || [];
+                
+                // حفظ البيانات للتشغيل
+                cachedData = { buses, drivers, conductors };
+                
+                console.log('✅ Data extracted:', { buses, drivers, conductors });
+                
+                // عرض النتائج
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Trip Form Data Loaded Successfully</h4>
+                        <div class="data-display">
+                            <p><span class="count">Buses:</span> ${buses.length}</p>
+                            <p><span class="count">Drivers:</span> ${drivers.length}</p>
+                            <p><span class="count">Conductors:</span> ${conductors.length}</p>
+                        </div>
+                        
+                        <h5>📋 Sample Data:</h5>
+                        <details>
+                            <summary>Buses (${buses.length})</summary>
+                            <pre>${JSON.stringify(buses.slice(0, 3), null, 2)}</pre>
+                        </details>
+                        
+                        <details>
+                            <summary>Drivers (${drivers.length})</summary>
+                            <pre>${JSON.stringify(drivers.slice(0, 3), null, 2)}</pre>
+                        </details>
+                        
+                        <details>
+                            <summary>Conductors (${conductors.length})</summary>
+                            <pre>${JSON.stringify(conductors.slice(0, 3), null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+                
+                // التحقق من البيانات
+                if (drivers.length === 0) {
+                    resultDiv.innerHTML += `
+                        <div class="warning">
+                            <h4>⚠️  Warning: No Drivers Found</h4>
+                            <p>This might cause issues in the trip form.</p>
+                        </div>
+                    `;
+                }
+                
+                if (conductors.length === 0) {
+                    resultDiv.innerHTML += `
+                        <div class="warning">
+                            <h4>⚠️  Warning: No Conductors Found</h4>
+                            <p>This might cause issues in the trip form.</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error in trip form data test:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error Loading Trip Form Data</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Check the console for more details.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testBuses() {
+            const resultDiv = document.getElementById('individualResults');
+            resultDiv.innerHTML = '<p>Testing buses...</p>';
+            
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Buses`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Buses Test (${response.status})</h4>
+                            <p><strong>Count:</strong> ${result.data ? result.data.length : 'N/A'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Buses Error (${response.status})</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Buses Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testDrivers() {
+            const resultDiv = document.getElementById('individualResults');
+            resultDiv.innerHTML = '<p>Testing drivers...</p>';
+            
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Users/by-role/Driver`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Drivers Test (${response.status})</h4>
+                            <p><strong>Count:</strong> ${result.data ? result.data.length : 'N/A'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Drivers Error (${response.status})</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Drivers Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testConductors() {
+            const resultDiv = document.getElementById('individualResults');
+            resultDiv.innerHTML = '<p>Testing conductors...</p>';
+            
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Users/by-role/Conductor`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Conductors Test (${response.status})</h4>
+                            <p><strong>Count:</strong> ${result.data ? result.data.length : 'N/A'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Conductors Error (${response.status})</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Conductors Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function analyzeDataStructure() {
+            const resultDiv = document.getElementById('structureResult');
+            
+            if (cachedData.buses.length === 0 && cachedData.drivers.length === 0 && cachedData.conductors.length === 0) {
+                resultDiv.innerHTML = `
+                    <div class="warning">
+                        <h4>⚠️  No Data to Analyze</h4>
+                        <p>Please run the "Test All Dependencies" first to load data.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let analysis = '<div class="info"><h4>🔍 Data Structure Analysis</h4>';
+            
+            // تحليل الحافلات
+            if (cachedData.buses.length > 0) {
+                const sampleBus = cachedData.buses[0];
+                analysis += `
+                    <h5>🚌 Bus Structure:</h5>
+                    <p><strong>Sample Bus:</strong></p>
+                    <pre>${JSON.stringify(sampleBus, null, 2)}</pre>
+                    <p><strong>Available Fields:</strong> ${Object.keys(sampleBus).join(', ')}</p>
+                `;
+            }
+            
+            // تحليل السائقين
+            if (cachedData.drivers.length > 0) {
+                const sampleDriver = cachedData.drivers[0];
+                analysis += `
+                    <h5>👨‍💼 Driver Structure:</h5>
+                    <p><strong>Sample Driver:</strong></p>
+                    <pre>${JSON.stringify(sampleDriver, null, 2)}</pre>
+                    <p><strong>Available Fields:</strong> ${Object.keys(sampleDriver).join(', ')}</p>
+                    <p><strong>Name Display:</strong> ${sampleDriver.firstName && sampleDriver.lastName ? 
+                        `${sampleDriver.firstName} ${sampleDriver.lastName}` : 
+                        sampleDriver.name || `Driver ${sampleDriver.id}`}</p>
+                `;
+            }
+            
+            // تحليل الكندكتور
+            if (cachedData.conductors.length > 0) {
+                const sampleConductor = cachedData.conductors[0];
+                analysis += `
+                    <h5>🎫 Conductor Structure:</h5>
+                    <p><strong>Sample Conductor:</strong></p>
+                    <pre>${JSON.stringify(sampleConductor, null, 2)}</pre>
+                    <p><strong>Available Fields:</strong> ${Object.keys(sampleConductor).join(', ')}</p>
+                    <p><strong>Name Display:</strong> ${sampleConductor.firstName && sampleConductor.lastName ? 
+                        `${sampleConductor.firstName} ${sampleConductor.lastName}` : 
+                        sampleConductor.name || `Conductor ${sampleConductor.id}`}</p>
+                `;
+            }
+            
+            analysis += '</div>';
+            resultDiv.innerHTML = analysis;
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Trip Form Data Test Page Loaded');
+            console.log('🔗 API Base URL:', window.API_BASE || API_BASE);
+        });
+    </script>
+</body>
+</html>

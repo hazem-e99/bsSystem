@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Trip Creation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .required { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Trip Creation</h1>
+    
+    <div class="test-section info">
+        <h3>API Configuration</h3>
+        <p><strong>Base URL:</strong> <span id="baseUrl">http://localhost:5000/api</span></p>
+        <button onclick="updateBaseUrl()">Change Base URL</button>
+    </div>
+
+    <div class="test-section">
+        <h3>1️⃣ Test Data Loading</h3>
+        <button onclick="loadDependencies()">Load Dependencies</button>
+        <div id="dependenciesResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2️⃣ Test Trip Creation Form</h3>
+        <form id="tripForm">
+            <div class="form-group">
+                <label for="busId">Bus <span class="required">*</span></label>
+                <select id="busId" required>
+                    <option value="">Select a bus</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="driverId">Driver <span class="required">*</span></label>
+                <select id="driverId" required>
+                    <option value="">Select a driver</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="conductorId">Conductor <span class="required">*</span></label>
+                <select id="conductorId" required>
+                    <option value="">Select a conductor</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="startLocation">Start Location <span class="required">*</span></label>
+                <input type="text" id="startLocation" required placeholder="e.g., Main Campus" maxlength="200">
+            </div>
+            
+            <div class="form-group">
+                <label for="endLocation">End Location <span class="required">*</span></label>
+                <input type="text" id="endLocation" required placeholder="e.g., Downtown Station" maxlength="200">
+            </div>
+            
+            <div class="form-group">
+                <label for="tripDate">Trip Date <span class="required">*</span></label>
+                <input type="date" id="tripDate" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="departureTime">Departure Time <span class="required">*</span></label>
+                <input type="time" id="departureTime" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="arrivalTime">Arrival Time <span class="required">*</span></label>
+                <input type="time" id="arrivalTime" required>
+            </div>
+            
+            <button type="submit">Create Trip</button>
+        </form>
+        <div id="creationResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3️⃣ Test Raw API Call</h3>
+        <button onclick="testRawApiCall()">Test Raw API Call</button>
+        <div id="rawApiResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let dependencies = { buses: [], drivers: [], conductors: [] };
+        
+        function updateBaseUrl() {
+            const newUrl = prompt('Enter new base URL:', API_BASE);
+            if (newUrl) {
+                document.getElementById('baseUrl').textContent = newUrl;
+                window.API_BASE = newUrl;
+            }
+        }
+
+        async function loadDependencies() {
+            const resultDiv = document.getElementById('dependenciesResult');
+            resultDiv.innerHTML = '<p>🔄 Loading dependencies...</p>';
+            
+            try {
+                const [busesRes, driversRes, conductorsRes] = await Promise.all([
+                    fetch(`${window.API_BASE || API_BASE}/Buses`),
+                    fetch(`${window.API_BASE || API_BASE}/Users/by-role/Driver`),
+                    fetch(`${window.API_BASE || API_BASE}/Users/by-role/Conductor`)
+                ]);
+                
+                const busesData = await busesRes.json();
+                const driversData = await driversRes.json();
+                const conductorsData = await conductorsRes.json();
+                
+                dependencies.buses = busesData.data || [];
+                dependencies.drivers = driversData.data || [];
+                dependencies.conductors = conductorsData.data || [];
+                
+                // Populate form dropdowns
+                populateDropdown('busId', dependencies.buses, 'busNumber', 'capacity');
+                populateDropdown('driverId', dependencies.drivers, 'firstName', 'lastName');
+                populateDropdown('conductorId', dependencies.conductors, 'firstName', 'lastName');
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Dependencies Loaded Successfully</h4>
+                        <p><strong>Buses:</strong> ${dependencies.buses.length}</p>
+                        <p><strong>Drivers:</strong> ${dependencies.drivers.length}</p>
+                        <p><strong>Conductors:</strong> ${dependencies.conductors.length}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Error loading dependencies:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error Loading Dependencies</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function populateDropdown(selectId, items, field1, field2) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Select...</option>';
+            
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                
+                if (field1 === 'busNumber') {
+                    option.textContent = `${item.busNumber} - ${item.capacity} seats`;
+                } else {
+                    option.textContent = item[field1] && item[field2] ? 
+                        `${item[field1]} ${item[field2]}` : 
+                        item.name || `${field1} ${item.id}`;
+                }
+                
+                select.appendChild(option);
+            });
+        }
+
+        document.getElementById('tripForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('creationResult');
+            resultDiv.innerHTML = '<p>🔄 Creating trip...</p>';
+            
+            try {
+                const formData = {
+                    busId: parseInt(document.getElementById('busId').value),
+                    driverId: parseInt(document.getElementById('driverId').value),
+                    conductorId: parseInt(document.getElementById('conductorId').value),
+                    startLocation: document.getElementById('startLocation').value,
+                    endLocation: document.getElementById('endLocation').value,
+                    tripDate: document.getElementById('tripDate').value,
+                    departureTimeOnly: document.getElementById('departureTime').value,
+                    arrivalTimeOnly: document.getElementById('arrivalTime').value,
+                    stopLocations: []
+                };
+                
+                console.log('📝 Form data:', formData);
+                
+                const response = await fetch(`${window.API_BASE || API_BASE}/Trip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Trip Created Successfully</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Trip Creation Failed</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error creating trip:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error Creating Trip</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        });
+
+        async function testRawApiCall() {
+            const resultDiv = document.getElementById('rawApiResult');
+            resultDiv.innerHTML = '<p>🔄 Testing raw API call...</p>';
+            
+            try {
+                const testData = {
+                    busId: 1,
+                    driverId: 1,
+                    conductorId: 1,
+                    startLocation: "Test Start",
+                    endLocation: "Test End",
+                    tripDate: "2024-01-01",
+                    departureTimeOnly: "08:00",
+                    arrivalTimeOnly: "09:00",
+                    stopLocations: []
+                };
+                
+                console.log('🧪 Test data:', testData);
+                
+                const response = await fetch(`${window.API_BASE || API_BASE}/Trip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Raw API Call Successful</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Raw API Call Failed</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error in raw API call:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Error in Raw API Call</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Set default date to today
+        document.getElementById('tripDate').value = new Date().toISOString().split('T')[0];
+        
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Trip Creation Test Page Loaded');
+            console.log('🔗 API Base URL:', window.API_BASE || API_BASE);
+        });
+    </script>
+</body>
+</html>

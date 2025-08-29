@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Validation Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .required { color: red; }
+        .debug-info { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Validation Fix</h1>
+    
+    <div class="test-section info">
+        <h3>🔧 What Was Fixed</h3>
+        <ul>
+            <li><strong>Time Format Validation:</strong> Removed strict HH:mm regex that was causing issues</li>
+            <li><strong>12/24 Hour Support:</strong> Added helper function to handle both formats</li>
+            <li><strong>Time Comparison:</strong> Fixed time comparison logic for validation</li>
+            <li><strong>Debug Logging:</strong> Added console logging to track validation state</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h3>1️⃣ Test Time Format Conversion</h3>
+        <div class="form-group">
+            <label>Test Time Input:</label>
+            <input type="text" id="testTime" placeholder="e.g., 02:05 AM or 14:05" value="02:05 AM">
+            <button onclick="testTimeConversion()">Test Conversion</button>
+        </div>
+        <div id="timeConversionResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2️⃣ Test Validation Logic</h3>
+        <div class="form-group">
+            <label>Departure Time:</label>
+            <input type="text" id="departureTime" value="02:05 AM" placeholder="e.g., 02:05 AM">
+        </div>
+        <div class="form-group">
+            <label>Arrival Time:</label>
+            <input type="text" id="arrivalTime" value="06:02 PM" placeholder="e.g., 06:02 PM">
+        </div>
+        <button onclick="testTimeValidation()">Test Time Validation</button>
+        <div id="timeValidationResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3️⃣ Test Complete Validation</h3>
+        <form id="testForm">
+            <div class="form-group">
+                <label for="busId">Bus <span class="required">*</span></label>
+                <select id="busId" required>
+                    <option value="">Select a bus</option>
+                    <option value="1">Bus 1</option>
+                    <option value="2">Bus 2</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="driverId">Driver <span class="required">*</span></label>
+                <select id="driverId" required>
+                    <option value="">Select a driver</option>
+                    <option value="1">Driver 1</option>
+                    <option value="2">Driver 2</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="conductorId">Conductor <span class="required">*</span></label>
+                <select id="conductorId" required>
+                    <option value="">Select a conductor</option>
+                    <option value="1">Conductor 1</option>
+                    <option value="2">Conductor 2</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="startLocation">Start Location <span class="required">*</span></label>
+                <input type="text" id="startLocation" required value="Location A">
+            </div>
+            
+            <div class="form-group">
+                <label for="endLocation">End Location <span class="required">*</span></label>
+                <input type="text" id="endLocation" required value="Location B">
+            </div>
+            
+            <div class="form-group">
+                <label for="tripDate">Trip Date <span class="required">*</span></label>
+                <input type="date" id="tripDate" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="departureTimeForm">Departure Time <span class="required">*</span></label>
+                <input type="text" id="departureTimeForm" required value="02:05 AM">
+            </div>
+            
+            <div class="form-group">
+                <label for="arrivalTimeForm">Arrival Time <span class="required">*</span></label>
+                <input type="text" id="arrivalTimeForm" required value="06:02 PM">
+            </div>
+            
+            <button type="submit">Test Complete Validation</button>
+        </form>
+        <div id="completeValidationResult"></div>
+    </div>
+
+    <script>
+        // Helper function to convert 12-hour format to 24-hour format
+        function convertTo24Hour(time12h) {
+            try {
+                // Handle both "HH:mm" and "HH:mm AM/PM" formats
+                if (time12h.includes('AM') || time12h.includes('PM')) {
+                    const [time, period] = time12h.split(' ');
+                    let [hours, minutes] = time.split(':').map(Number);
+                    
+                    if (period === 'PM' && hours !== 12) {
+                        hours += 12;
+                    } else if (period === 'AM' && hours === 12) {
+                        hours = 0;
+                    }
+                    
+                    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                } else {
+                    // Already in 24-hour format
+                    return time12h;
+                }
+            } catch (error) {
+                console.error('Error converting time format:', error);
+                return null;
+            }
+        }
+
+        function testTimeConversion() {
+            const testTime = document.getElementById('testTime').value;
+            const result = convertTo24Hour(testTime);
+            
+            document.getElementById('timeConversionResult').innerHTML = `
+                <div class="debug-info">
+                    <h4>Time Conversion Test</h4>
+                    <p><strong>Input:</strong> ${testTime}</p>
+                    <p><strong>Output:</strong> ${result}</p>
+                    <p><strong>Valid:</strong> ${result ? '✅ Yes' : '❌ No'}</p>
+                </div>
+            `;
+        }
+
+        function testTimeValidation() {
+            const departureTime = document.getElementById('departureTime').value;
+            const arrivalTime = document.getElementById('arrivalTime').value;
+            
+            const departure24 = convertTo24Hour(departureTime);
+            const arrival24 = convertTo24Hour(arrivalTime);
+            
+            let isValid = false;
+            let message = '';
+            
+            if (departure24 && arrival24) {
+                const departure = new Date(`2000-01-01T${departure24}`);
+                const arrival = new Date(`2000-01-01T${arrival24}`);
+                isValid = arrival > departure;
+                message = isValid ? '✅ Valid: Arrival time is after departure time' : '❌ Invalid: Arrival time must be after departure time';
+            } else {
+                message = '❌ Error: Could not convert time formats';
+            }
+            
+            document.getElementById('timeValidationResult').innerHTML = `
+                <div class="debug-info ${isValid ? 'success' : 'error'}">
+                    <h4>Time Validation Test</h4>
+                    <p><strong>Departure:</strong> ${departureTime} → ${departure24}</p>
+                    <p><strong>Arrival:</strong> ${arrivalTime} → ${arrival24}</p>
+                    <p><strong>Result:</strong> ${message}</p>
+                </div>
+            `;
+        }
+
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                busId: document.getElementById('busId').value,
+                driverId: document.getElementById('driverId').value,
+                conductorId: document.getElementById('conductorId').value,
+                startLocation: document.getElementById('startLocation').value,
+                endLocation: document.getElementById('endLocation').value,
+                tripDate: document.getElementById('tripDate').value,
+                departureTimeOnly: document.getElementById('departureTimeForm').value,
+                arrivalTimeOnly: document.getElementById('arrivalTimeForm').value
+            };
+            
+            // Validation
+            const errors = [];
+            
+            if (!formData.busId) errors.push('Bus is required');
+            if (!formData.driverId) errors.push('Driver is required');
+            if (!formData.conductorId) errors.push('Conductor is required');
+            if (!formData.startLocation) errors.push('Start location is required');
+            if (!formData.endLocation) errors.push('End location is required');
+            if (!formData.tripDate) errors.push('Trip date is required');
+            if (!formData.departureTimeOnly) errors.push('Departure time is required');
+            if (!formData.arrivalTimeOnly) errors.push('Arrival time is required');
+            
+            if (formData.startLocation === formData.endLocation) {
+                errors.push('Start and end locations must be different');
+            }
+            
+            if (formData.departureTimeOnly && formData.arrivalTimeOnly) {
+                const departure24 = convertTo24Hour(formData.departureTimeOnly);
+                const arrival24 = convertTo24Hour(formData.arrivalTimeOnly);
+                
+                if (departure24 && arrival24) {
+                    const departure = new Date(`2000-01-01T${departure24}`);
+                    const arrival = new Date(`2000-01-01T${arrival24}`);
+                    
+                    if (arrival <= departure) {
+                        errors.push('Arrival time must be after departure time');
+                    }
+                }
+            }
+            
+            if (errors.length > 0) {
+                document.getElementById('completeValidationResult').innerHTML = `
+                    <div class="error">
+                        <h4>❌ Validation Failed</h4>
+                        <ul>
+                            ${errors.map(error => `<li>${error}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                document.getElementById('completeValidationResult').innerHTML = `
+                    <div class="success">
+                        <h4>✅ Validation Passed!</h4>
+                        <p>All validation rules are satisfied.</p>
+                        <div class="debug-info">
+                            <h5>Form Data:</h5>
+                            <pre>${JSON.stringify(formData, null, 2)}</pre>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Set default date to today
+        document.getElementById('tripDate').value = new Date().toISOString().split('T')[0];
+        
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Validation Fix Test Page Loaded');
+            testTimeConversion();
+            testTimeValidation();
+        });
+    </script>
+</body>
+</html>

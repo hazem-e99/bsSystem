@@ -1,0 +1,21 @@
+    <div class="test-section">
+        <h3>4️⃣ اختبار API Endpoints</h3>
+        <div class="form-group">
+            <label for="apiPort">API Port:</label>
+            <select id="apiPort" onchange="changeApiPort()">
+                <option value="5000">Port 5000 (Default)</option>
+                <option value="5001">Port 5001</option>
+                <option value="3000">Port 3000</option>
+                <option value="8080">Port 8080</option>
+                <option value="7000">Port 7000</option>
+            </select>
+        </div>
+        <button onclick="testEndpoints()">🔗 Test All Endpoints</button>
+        <div id="endpointsResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>5️⃣ اختبار اتصال Backend</h3>
+        <button onclick="testBackendConnection()">🔌 Test Backend Connection</button>
+        <div id="connectionResult"></div>
+    </div>

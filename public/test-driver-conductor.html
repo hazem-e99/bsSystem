@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Driver & Conductor Endpoints</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Driver & Conductor Endpoints</h1>
+    
+    <div class="test-section info">
+        <h3>API Configuration</h3>
+        <p><strong>Base URL:</strong> <span id="baseUrl">http://localhost:5000/api</span></p>
+        <button onclick="updateBaseUrl()">Change Base URL</button>
+    </div>
+
+    <div class="test-section">
+        <h3>1️⃣ Test Get All Drivers</h3>
+        <button onclick="testGetDrivers()">Test /Users/by-role/Driver</button>
+        <div id="driversResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2️⃣ Test Get All Conductors</h3>
+        <button onclick="testGetConductors()">Test /Users/by-role/Conductor</button>
+        <div id="conductorsResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3️⃣ Test Get All Users</h3>
+        <button onclick="testGetAllUsers()">Test /Users</button>
+        <div id="allUsersResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4️⃣ Test with Authentication</h3>
+        <input type="text" id="authToken" placeholder="Bearer token (optional)" style="width: 300px; margin: 5px;">
+        <button onclick="testWithAuth()">Test with Auth</button>
+        <div id="authResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        
+        function updateBaseUrl() {
+            const newUrl = prompt('Enter new base URL:', API_BASE);
+            if (newUrl) {
+                document.getElementById('baseUrl').textContent = newUrl;
+                window.API_BASE = newUrl;
+            }
+        }
+
+        async function testGetDrivers() {
+            const resultDiv = document.getElementById('driversResult');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Users/by-role/Driver`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Success (${response.status})</h4>
+                            <p><strong>Count:</strong> ${result.data ? result.data.length : 'N/A'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Error (${response.status})</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testGetConductors() {
+            const resultDiv = document.getElementById('conductorsResult');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Users/by-role/Conductor`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Success (${response.status})</h4>
+                            <p><strong>Count:</strong> ${result.data ? result.data.length : 'N/A'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Error (${response.status})</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testGetAllUsers() {
+            const resultDiv = document.getElementById('allUsersResult');
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Users`);
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Success (${response.status})</h4>
+                            <p><strong>Count:</strong> ${result.data ? result.data.length : 'N/A'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Error (${response.status})</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testWithAuth() {
+            const resultDiv = document.getElementById('authResult');
+            const token = document.getElementById('authToken').value;
+            resultDiv.innerHTML = '<p>Testing...</p>';
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="error"><h4>❌ No Token</h4><p>Please enter a Bearer token</p></div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${window.API_BASE || API_BASE}/Users/by-role/Driver`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Authenticated Success (${response.status})</h4>
+                            <p><strong>Count:</strong> ${result.data ? result.data.length : 'N/A'}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ Authenticated Error (${response.status})</h4>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 Driver & Conductor Endpoints Test Page Loaded');
+            console.log('🔗 API Base URL:', window.API_BASE || API_BASE);
+        });
+    </script>
+</body>
+</html>
