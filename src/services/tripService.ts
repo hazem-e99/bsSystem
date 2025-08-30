@@ -1,5 +1,5 @@
-import { api } from '@/lib/api';
-import { CreateTripDTO, UpdateTripDTO, TripViewModel } from '@/types/trip';
+import { api } from "@/lib/api";
+import { CreateTripDTO, UpdateTripDTO, TripViewModel } from "@/types/trip";
 
 // Central Trip Service matching Swagger endpoints at base URL http://busmanagementsystem.runasp.net
 // Endpoints (relative to /api):
@@ -12,12 +12,12 @@ import { CreateTripDTO, UpdateTripDTO, TripViewModel } from '@/types/trip';
 // GET    /Trip/by-driver/{driverId}
 // GET    /Trip/by-bus/{busId}
 
-const unwrap = (resp: any) => (resp?.data ?? resp ?? null);
+const unwrap = (resp: any) => resp?.data ?? resp ?? null;
 
 export const tripService = {
   // List all trips
   async getAll(): Promise<TripViewModel[]> {
-    const resp = await api.get<any>('/Trip');
+    const resp = await api.get<any>("/Trip");
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },
@@ -29,21 +29,63 @@ export const tripService = {
     return item ?? null;
   },
 
-  // Create trip
+  // Create trip using the specified API format
   async create(payload: CreateTripDTO): Promise<any> {
-    const body = {
-      ...payload,
-      busId: Number((payload as any).busId),
-      driverId: Number((payload as any).driverId),
-      conductorId: Number((payload as any).conductorId),
-      stopLocations: (payload.stopLocations && payload.stopLocations.length > 0) ? payload.stopLocations : undefined,
-    } as any;
-    const resp = await api.post<any>('/Trip', body);
-    const unwrapped = unwrap(resp);
-    if (unwrapped && typeof unwrapped === 'object' && 'success' in unwrapped && (unwrapped as any).success === false) {
-      throw new Error((unwrapped as any).message || 'Trip creation failed');
+    const baseUrl = "http://busmanagementsystem.runasp.net";
+
+    // Get token from localStorage
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('access_token');
+
+    const myHeaders = new Headers();
+    myHeaders.append("Content-Type", "application/json");
+    myHeaders.append("Accept", "text/plain");
+    
+    // Add authorization header with token from localStorage
+    if (token) {
+      myHeaders.append("Authorization", `Bearer ${token}`);
+    } else {
+      console.warn('No authentication token found in localStorage');
     }
-    return unwrapped ?? resp;
+
+    const body = {
+      arrivalTimeOnly: payload.arrivalTimeOnly,
+      busId: Number(payload.busId),
+      conductorId: Number(payload.conductorId),
+      departureTimeOnly: payload.departureTimeOnly,
+      driverId: Number(payload.driverId),
+      endLocation: payload.endLocation,
+      startLocation: payload.startLocation,
+      tripDate: payload.tripDate,
+      stopLocations: payload.stopLocations || [],
+    };
+
+    const raw = JSON.stringify(body);
+
+    const requestOptions: RequestInit = {
+      method: "POST",
+      headers: myHeaders,
+      body: raw,
+      redirect: "follow" as RequestRedirect,
+    };
+
+    try {
+      const response = await fetch(`${baseUrl}/api/Trip`, requestOptions);
+      const result = await response.text();
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${result}`);
+      }
+
+      // Try to parse as JSON, fallback to text
+      try {
+        return JSON.parse(result);
+      } catch {
+        return result;
+      }
+    } catch (error: any) {
+      console.error("Trip creation error:", error);
+      throw new Error(error?.message || "Trip creation failed");
+    }
   },
 
   // Update trip
@@ -53,8 +95,13 @@ export const tripService = {
       body.stopLocations = undefined;
     }
     const resp = await api.put<any>(`/Trip/${id}`, body);
-    if (resp && typeof resp === 'object' && 'success' in resp && resp.success === false) {
-      throw new Error(resp.message || 'Trip update failed');
+    if (
+      resp &&
+      typeof resp === "object" &&
+      "success" in resp &&
+      resp.success === false
+    ) {
+      throw new Error(resp.message || "Trip update failed");
     }
     return resp;
   },
@@ -62,15 +109,22 @@ export const tripService = {
   // Delete trip
   async remove(id: number | string): Promise<any> {
     const resp = await api.delete<any>(`/Trip/${id}`);
-    if (resp && typeof resp === 'object' && 'success' in resp && resp.success === false) {
-      throw new Error(resp.message || 'Trip delete failed');
+    if (
+      resp &&
+      typeof resp === "object" &&
+      "success" in resp &&
+      resp.success === false
+    ) {
+      throw new Error(resp.message || "Trip delete failed");
     }
     return resp;
   },
 
   // Filters
   async getByDate(date: string): Promise<TripViewModel[]> {
-    const resp = await api.get<any>(`/Trip/by-date/${encodeURIComponent(date)}`);
+    const resp = await api.get<any>(
+      `/Trip/by-date/${encodeURIComponent(date)}`
+    );
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },
@@ -89,5 +143,3 @@ export const tripService = {
 };
 
 export default tripService;
-
-

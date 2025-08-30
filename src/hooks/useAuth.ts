@@ -29,6 +29,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 	useEffect(() => {
 		const storedUser = localStorage.getItem('user');
+		const storedToken = localStorage.getItem('token') || localStorage.getItem('authToken');
+		
 		if (storedUser) {
 			try {
 				const parsed: User = JSON.parse(storedUser);
@@ -43,12 +45,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 				};
 				const apiRole = String((parsed as any)?.role || '').trim();
 				const normalizedRole: User['role'] = roleMap[apiRole] || (apiRole.toLowerCase() as User['role']) || 'student';
-				const normalizedUser: User = { ...parsed, role: normalizedRole };
+				const normalizedUser: User = { 
+					...parsed, 
+					role: normalizedRole,
+					token: storedToken || parsed.token || '' // Use stored token if available
+				};
 				setUser(normalizedUser);
 				// Persist normalized role back to storage to avoid flicker
 				localStorage.setItem('user', JSON.stringify(normalizedUser));
 			} catch (error) {
 				localStorage.removeItem('user');
+				localStorage.removeItem('token');
+				localStorage.removeItem('authToken');
 			}
 		}
 		setIsLoading(false);
@@ -112,6 +120,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 				setUser(foundUser);
 				localStorage.setItem('user', JSON.stringify(foundUser));
 				
+				// Store token separately for API calls
+				if (userData.token) {
+					localStorage.setItem('token', userData.token);
+					localStorage.setItem('authToken', userData.token);
+				}
+				
 				// Set cookie expiration based on rememberMe
 				const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days or 1 day
 				document.cookie = `user=${encodeURIComponent(JSON.stringify(foundUser))}; path=/; max-age=${maxAge}`;
@@ -132,6 +146,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		try {
 			setUser(null);
 			localStorage.removeItem('user');
+			localStorage.removeItem('token');
+			localStorage.removeItem('authToken');
+			localStorage.removeItem('access_token');
 			document.cookie = 'user=; path=/; max-age=0';
 		} catch (error) {
 			console.error('Logout error:', error);

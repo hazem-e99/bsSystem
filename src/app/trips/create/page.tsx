@@ -190,7 +190,7 @@ export default function CreateTripPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit">Save</Button>
+            <Button type="submit">Create Trip</Button>
             <Button type="button" variant="secondary" onClick={() => history.back()}>Cancel</Button>
           </div>
         </form>
