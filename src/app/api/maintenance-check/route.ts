@@ -9,14 +9,14 @@ export async function GET() {
       maintenanceMode,
       timestamp: new Date().toISOString()
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Maintenance check API error:', error);
     
-    // Return false as default if there's an error
+    // Return false as default if there's an error (especially 404)
     return NextResponse.json({
       maintenanceMode: false,
       timestamp: new Date().toISOString(),
-      error: 'Failed to check maintenance mode'
+      error: error?.message?.includes('404') ? 'Maintenance endpoint not available' : 'Failed to check maintenance mode'
     });
   }
 }

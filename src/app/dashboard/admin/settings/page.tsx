@@ -84,13 +84,29 @@ export default function SettingsPage() {
       setSettings(normalized);
       // apply theme immediately after loading
       applyThemeColors(normalized.primaryColor, normalized.secondaryColor);
-    } catch (error) {
-      console.error('Error loading settings:', error);
-      showToast({
-        type: 'error',
-        title: 'Error!',
-        message: 'Failed to load system settings. Please try again.'
-      });
+    } catch (error: any) {
+      // Handle 404 errors gracefully by using defaults
+      if (error?.message?.includes('404')) {
+        const defaults: SystemSettings = {
+          id: 'system-settings',
+          systemName: 'University Bus Management System',
+          logo: '/logo.png',
+          primaryColor: '#3B82F6',
+          secondaryColor: '#10B981',
+          maintenanceMode: false,
+          language: 'en',
+          updatedAt: new Date().toISOString()
+        };
+        setSettings(defaults);
+        applyThemeColors(defaults.primaryColor, defaults.secondaryColor);
+      } else {
+        console.error('Error loading settings:', error);
+        showToast({
+          type: 'error',
+          title: 'Error!',
+          message: 'Failed to load system settings. Please try again.'
+        });
+      }
     } finally {
       setLoading(false);
     }

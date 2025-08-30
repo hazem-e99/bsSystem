@@ -120,8 +120,12 @@ export function useLanguage(): LanguageContextType {
       try {
         const settings = await settingsAPI.get();
         setLanguageState(settings.language || 'en');
-      } catch (error) {
-        console.error('Failed to load language setting:', error);
+      } catch (error: any) {
+        // Silently ignore 404 errors and use default language
+        if (!error?.message?.includes('404')) {
+          console.error('Failed to load language setting:', error);
+        }
+        setLanguageState('en'); // Default to English
       }
     };
 
@@ -132,12 +136,19 @@ export function useLanguage(): LanguageContextType {
     try {
       setLanguageState(lang);
       
-      // Update language in settings
-      const currentSettings = await settingsAPI.get();
-      await settingsAPI.update({
-        ...currentSettings,
-        language: lang
-      });
+      // Update language in settings (skip if settings API is not available)
+      try {
+        const currentSettings = await settingsAPI.get();
+        await settingsAPI.update({
+          ...currentSettings,
+          language: lang
+        });
+      } catch (settingsError: any) {
+        // Ignore 404 errors for settings API
+        if (!settingsError?.message?.includes('404')) {
+          console.error('Failed to update language in settings:', settingsError);
+        }
+      }
       
       // Apply RTL if needed
       document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';

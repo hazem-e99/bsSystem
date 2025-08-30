@@ -106,14 +106,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 					updatedAt: new Date().toISOString()
 				};
 				
-				// Check maintenance mode and block non-admin logins
+				// Check maintenance mode and block non-admin logins (optional - ignore if endpoint doesn't exist)
 				try {
 					const maintenanceResponse = await settingsAPI.getMaintenanceMode();
 					if (maintenanceResponse && maintenanceResponse.maintenanceMode && foundUser.role !== 'admin') {
 						return false;
 					}
-				} catch (error) {
-					console.error('Failed to check maintenance mode:', error);
+				} catch (error: any) {
+					// Silently ignore 404 errors for maintenance mode check
+					if (!error?.message?.includes('404')) {
+						console.error('Failed to check maintenance mode:', error);
+					}
 				}
 				
 				// Set user and store in localStorage/cookie
