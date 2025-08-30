@@ -23,6 +23,7 @@ import {
   Phone
 } from 'lucide-react';
 import { userAPI, authAPI } from '@/lib/api';
+import { getApiConfig } from '@/lib/config';
 import { useAuth } from '@/hooks/useAuth';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
@@ -204,11 +205,52 @@ export default function UsersPage() {
 
   const [confirmState, setConfirmState] = useState<{ open: boolean; userId?: string; message?: string }>({ open: false });
   const handleDeleteConfirmed = async () => {
-    if (!confirmState.userId) return;
+    const userId = confirmState.userId;
+    if (!userId) return;
+
     try {
-      await userAPI.delete(confirmState.userId);
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== confirmState.userId));
-      showToast({ type: 'success', title: 'Success!', message: 'User deleted successfully!' });
+      // Build URL from config to ensure correct backend base
+      const api = getApiConfig();
+      const url = api.buildUrl(`/Users/${encodeURIComponent(userId)}`);
+      // Read token from localStorage (same shape used elsewhere)
+      let token: string | undefined;
+      try {
+        const raw = typeof window !== 'undefined' ? window.localStorage.getItem('user') : null;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          token = parsed?.token || parsed?.accessToken;
+        }
+      } catch (e) {
+        console.warn('Failed to read auth token from localStorage', e);
+      }
+
+      if (!token) {
+        showToast({ type: 'error', title: 'Unauthorized', message: 'No auth token found. Please login again.' });
+        setConfirmState({ open: false });
+        return;
+      }
+
+      const resp = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json, text/plain',
+          'Authorization': `Bearer ${token}`,
+        },
+        redirect: 'follow',
+      });
+
+      const ct = resp.headers.get('content-type') || '';
+      const body = ct.toLowerCase().includes('application/json') ? await resp.json().catch(() => null) : await resp.text().catch(() => null);
+
+      if (!resp.ok) {
+        const msg = typeof body === 'string' ? body : (body?.message || JSON.stringify(body) || `Status ${resp.status}`);
+        console.error('Delete failed:', msg);
+        showToast({ type: 'error', title: 'Error!', message: `Failed to delete user. ${msg}` });
+      } else {
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+        showToast({ type: 'success', title: 'Success!', message: 'User deleted successfully!' });
+        console.log('Delete result:', body);
+      }
     } catch (err) {
       console.error('Failed to delete user:', err);
       showToast({ type: 'error', title: 'Error!', message: 'Failed to delete user. Please try again.' });

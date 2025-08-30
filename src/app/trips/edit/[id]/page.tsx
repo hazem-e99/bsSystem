@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import tripService from '@/services/tripService';
+import { busAPI, userAPI } from '@/lib/api';
+import { getApiConfig } from '@/lib/config';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 import { Card } from '@/components/ui/Card';
@@ -37,6 +39,10 @@ export default function EditTripPage() {
   const { toast } = useToast();
   const form = useForm<UpdateTripForm>({ resolver: zodResolver(updateTripSchema), defaultValues: { stopLocations: [] } });
   const { fields, append, remove, replace } = useFieldArray({ control: form.control, name: 'stopLocations' as const });
+  const [loadingLookups, setLoadingLookups] = useState<boolean>(true);
+  const [buses, setBuses] = useState<Array<{ id: number; busNumber?: string }>>([]);
+  const [drivers, setDrivers] = useState<Array<{ id: number; fullName?: string; name?: string; email?: string }>>([]);
+  const [conductors, setConductors] = useState<Array<{ id: number; fullName?: string; name?: string; email?: string }>>([]);
 
   useEffect(() => {
     const id = params?.id as string;
@@ -49,13 +55,13 @@ export default function EditTripPage() {
             busId: data.busId,
             driverId: data.driverId,
             conductorId: data.conductorId,
-            startLocation: undefined,
-            endLocation: undefined,
+            startLocation: data.startLocation ?? '',
+            endLocation: data.endLocation ?? '',
             tripDate: data.tripDate,
             departureTimeOnly: data.departureTimeOnly,
             arrivalTimeOnly: data.arrivalTimeOnly,
           });
-          replace((data.stopLocations || []).map(s => ({ ...s })));
+          replace((data.stopLocations || []).map((s: any) => ({ ...s })));
         }
       } catch (e: any) {
         toast({ title: 'Failed to load trip', description: String(e?.message || e), variant: 'destructive' });
@@ -63,10 +69,66 @@ export default function EditTripPage() {
     })();
   }, [params, form, replace, toast]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingLookups(true);
+        const [busesResp, driverUsers, conductorUsers] = await Promise.all([
+          busAPI.getAll(),
+          userAPI.getByRole('Driver'),
+          userAPI.getByRole('Conductor'),
+        ]);
+        const busList = (busesResp as any)?.data ?? busesResp ?? [];
+        setBuses(Array.isArray(busList) ? busList : []);
+        setDrivers(Array.isArray(driverUsers) ? driverUsers : []);
+        setConductors(Array.isArray(conductorUsers) ? conductorUsers : []);
+      } catch (e: any) {
+        toast({ title: 'Failed to load lookups', description: String(e?.message || e), variant: 'destructive' });
+      } finally {
+        setLoadingLookups(false);
+      }
+    })();
+  }, [toast]);
+
   const onSubmit = async (values: UpdateTripForm) => {
     try {
       const id = params?.id as string;
-      await tripService.update(id, values);
+      const url = getApiConfig().buildUrl(`/Trip/${id}`);
+
+      // read token from localStorage if present
+      let token: string | undefined;
+      try {
+        if (typeof window !== 'undefined') {
+          const raw = window.localStorage.getItem('user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            token = parsed?.token || parsed?.accessToken;
+          }
+        }
+      } catch {}
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'text/plain',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const resp = await fetch(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(values),
+        redirect: 'follow',
+      });
+
+      const text = await resp.text();
+      if (!resp.ok) {
+        // try to extract message from text
+        let msg = text || `${resp.status} ${resp.statusText}`;
+        try { const j = JSON.parse(text); msg = j?.message || JSON.stringify(j); } catch {}
+        throw new Error(msg);
+      }
+
+      // success
       toast({ title: 'Trip updated' });
       router.push('/trips');
     } catch (e: any) {
@@ -83,21 +145,35 @@ export default function EditTripPage() {
             <div>
               <label className="block text-sm font-medium">Bus ID</label>
               <select {...form.register('busId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
-                <option value="">Select a bus</option>
-              </select>
+                  <option value="">{loadingLookups ? 'Loading...' : 'Select a bus'}</option>
+                  {buses.map((b) => {
+                    const label = `${b.busNumber ? b.busNumber : 'Bus'} (ID: ${b.id})`;
+                    return <option key={b.id} value={b.id}>{label}</option>;
+                  })}
+                </select>
               {form.formState.errors.busId && <p className="text-red-600 text-sm">{form.formState.errors.busId.message as string}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium">Driver ID</label>
               <select {...form.register('driverId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
-                <option value="">Select a driver</option>
+                <option value="">{loadingLookups ? 'Loading...' : 'Select a driver'}</option>
+                {drivers.map((u) => {
+                  const name = u.fullName || u.name || u.email || `User`;
+                  const label = `${name} (ID: ${u.id})`;
+                  return <option key={u.id} value={u.id}>{label}</option>;
+                })}
               </select>
               {form.formState.errors.driverId && <p className="text-red-600 text-sm">{form.formState.errors.driverId.message as string}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium">Conductor ID</label>
               <select {...form.register('conductorId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
-                <option value="">Select a conductor</option>
+                <option value="">{loadingLookups ? 'Loading...' : 'Select a conductor'}</option>
+                {conductors.map((u) => {
+                  const name = u.fullName || u.name || u.email || `User`;
+                  const label = `${name} (ID: ${u.id})`;
+                  return <option key={u.id} value={u.id}>{label}</option>;
+                })}
               </select>
               {form.formState.errors.conductorId && <p className="text-red-600 text-sm">{form.formState.errors.conductorId.message as string}</p>}
             </div>

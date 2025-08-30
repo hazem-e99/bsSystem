@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/hooks/useAuth';
+
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { ToastProvider } from '@/components/ui/Toast';
 import ConsoleSilencer from '@/components/layout/ConsoleSilencer';
 import ThemeInitializer from '@/components/layout/ThemeInitializer';
+import LayoutShell from '@/components/layout/LayoutShell';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -13,11 +15,9 @@ export const metadata: Metadata = {
   description: 'A comprehensive bus management system for university transportation',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={inter.className}>
@@ -25,7 +25,7 @@ export default function RootLayout({
           <ToastProvider>
             <ConsoleSilencer />
             <ThemeInitializer />
-            {children}
+            <LayoutShell>{children}</LayoutShell>
           </ToastProvider>
         </AuthProvider>
       </body>

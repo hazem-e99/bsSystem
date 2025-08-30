@@ -904,59 +904,74 @@ export default function BusesPage() {
       >
         {selectedBus && (
           <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <Bus className="w-8 h-8 text-blue-600" />
+            {/* Header */}
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center shadow">
+                  <Bus className="w-10 h-10 text-blue-600" />
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-medium">Bus {selectedBus.busNumber}</h3>
-                <p className="text-sm text-gray-500">ID: {selectedBus.id}</p>
+
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Bus {selectedBus.busNumber ?? '—'}</h3>
+                    <p className="text-sm text-gray-500">ID: <span className="font-medium text-gray-700">{selectedBus.id ?? 'N/A'}</span></p>
+                  </div>
+
+                  <div>
+                    <Badge
+                      variant={
+                        selectedBus.status === 'Active' ? 'default' :
+                        selectedBus.status === 'UnderMaintenance' ? 'secondary' :
+                        selectedBus.status === 'Inactive' ? 'secondary' : 'destructive'
+                      }
+                    >
+                      {selectedBus.status ? (selectedBus.status === 'UnderMaintenance' ? 'Under Maintenance' : selectedBus.status === 'OutOfService' ? 'Out of Service' : selectedBus.status) : 'Unknown'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <p className="mt-2 text-sm text-gray-600">A quick overview of the vehicle status and recent telemetry.</p>
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Status:</span>
-                <Badge 
-                  variant={
-                    selectedBus.status === 'Active' ? 'default' :
-                    selectedBus.status === 'UnderMaintenance' ? 'secondary' :
-                    selectedBus.status === 'Inactive' ? 'secondary' : 'destructive'
-                  }
-                >
-                  {selectedBus.status === 'UnderMaintenance' ? 'Under Maintenance' : selectedBus.status === 'OutOfService' ? 'Out of Service' : selectedBus.status}
-                </Badge>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-sm">
+                <p className="text-xs text-gray-400">Capacity</p>
+                <div className="mt-1 text-lg font-semibold text-gray-800">{selectedBus.capacity ?? 'N/A'} seats</div>
               </div>
-              <div>
-                <span className="text-gray-500">Capacity:</span>
-                <p className="font-medium">{selectedBus.capacity} seats</p>
+
+              <div className="p-3 bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-sm">
+                <p className="text-xs text-gray-400">Speed</p>
+                <div className="mt-1 text-lg font-semibold text-gray-800">{selectedBus.speed != null ? `${selectedBus.speed} km/h` : 'N/A'}</div>
               </div>
-              <div>
-                <span className="text-gray-500">Driver:</span>
-                <p className="font-medium">{getDriverName(selectedBus.driverId)}</p>
+
+              <div className="col-span-2 p-3 bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-sm">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-400">Fuel Level</p>
+                  <p className="text-sm font-medium text-gray-700">{selectedBus.fuelLevel != null ? `${selectedBus.fuelLevel}%` : 'N/A'}</p>
+                </div>
+                <div className="w-full bg-slate-200 h-2 rounded mt-2 overflow-hidden">
+                  <div
+                    className={`h-2 ${((selectedBus.fuelLevel ?? 0) > 30) ? 'bg-emerald-500' : ((selectedBus.fuelLevel ?? 0) > 10) ? 'bg-yellow-400' : 'bg-red-500'}`}
+                    style={{ width: `${Math.max(0, Math.min(100, Number(selectedBus.fuelLevel ?? 0)))}%` }}
+                  />
+                </div>
               </div>
-              <div>
-                <span className="text-gray-500">Route:</span>
-                <p className="font-medium">{getRouteName(selectedBus.currentRouteId)}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Fuel Level:</span>
-                <p className="font-medium">{selectedBus.fuelLevel}%</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Speed:</span>
-                <p className="font-medium">{selectedBus.speed} km/h</p>
-              </div>
-              <div>
-                <span className="text-gray-500">Location:</span>
-                <p className="font-medium">
-                  {selectedBus.location.lat.toFixed(6)}, {selectedBus.location.lng.toFixed(6)}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-500">Last Updated:</span>
-                <p className="font-medium">{formatDate(selectedBus.lastUpdated)}</p>
-              </div>
+            </div>
+
+            {/* Footer lines */}
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <div>Last updated: <span className="text-gray-700 font-medium">{selectedBus.updatedAt ? formatDate(selectedBus.updatedAt) : 'Unknown'}</span></div>
+              <div>Location: <span className="text-gray-700 font-medium">{selectedBus.location?.lat != null ? `${String(selectedBus.location.lat).slice(0,10)}, ${String(selectedBus.location?.lng).slice(0,10)}` : 'N/A'}</span></div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowViewModal(false)}>Close</Button>
+              <Button type="button" onClick={() => { setShowEditModal(true); setShowViewModal(false); }}>Edit Bus</Button>
             </div>
           </div>
         )}
