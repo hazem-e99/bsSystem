@@ -32,7 +32,7 @@ export default function TripsPage() {
         data = await tripService.getAll();
       }
       setTrips(data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: 'Failed to load trips', description: String(e?.message || e), variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -49,7 +49,7 @@ export default function TripsPage() {
       await tripService.remove(id);
       toast({ title: 'Trip deleted' });
       fetchTrips();
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: 'Delete failed', description: String(e?.message || e), variant: 'destructive' });
     }
   };

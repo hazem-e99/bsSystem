@@ -22,9 +22,29 @@ export interface User {
   expiration?: string;
 }
 
+// StudentViewModel from Swagger API
+export interface StudentViewModel {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  nationalId?: string;
+  profilePictureUrl?: string;
+  status: 'Active' | 'Inactive' | 'Suspended';
+  role: 'Student' | 'Driver' | 'Conductor' | 'MovementManager' | 'Admin';
+  studentProfileId: number;
+  studentAcademicNumber?: string;
+  department?: string;
+  yearOfStudy?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+}
+
 export interface Student extends User {
   role: 'student';
   studentId?: string;
+  studentAcademicNumber?: string;
   department: string;
   academicYear: string;
   subscriptionStatus: 'active' | 'expired' | 'none';
@@ -33,6 +53,8 @@ export interface Student extends User {
   pickupPoint?: string;
   // Additional fields for compatibility
   yearOfStudy?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
 }
 
 export interface Driver extends User {

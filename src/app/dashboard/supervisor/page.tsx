@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { 
@@ -19,7 +19,6 @@ import {
   AlertTriangle,
   Calendar,
   TrendingUp,
-  CheckCircle,
   XCircle,
   Clock3,
   Activity,
@@ -158,7 +157,7 @@ export default function SupervisorDashboard() {
           setLoading(false);
           return;
         }
-        const supervisorId = user.id;
+        const supervisorId = user.id.toString();
         
         // Fetch supervisor data by id (global backend)
         const supervisor = await userAPI.getById(String(supervisorId));
@@ -207,16 +206,16 @@ export default function SupervisorDashboard() {
             userAPI.getById(String(nextTrip.driverId)).catch(() => null),
             Promise.resolve(null), // No longer using routes
           ]);
-          if (bus) setTripBus(bus as any);
-          if (driver) setTripDriver(driver as any);
-          if (route) setTripRoute(route as any);
+          if (bus) setTripBus(bus);
+          if (driver) setTripDriver(driver);
+          if (route) setTripRoute(route);
         }
 
         // Fetch notifications
         try {
           const notificationsData = await notificationAPI.getByUser(String(supervisorId));
-          setNotifications((notificationsData || []).slice(0, 4) as any);
-        } catch (error) {
+          setNotifications((notificationsData || []).slice(0, 4));
+        } catch {
           console.log('No notifications available');
         }
 
@@ -229,7 +228,7 @@ export default function SupervisorDashboard() {
         });
         
         setLoading(false);
-    } catch (error) {
+    } catch {
         console.error('Error fetching data from global API:', error);
         setError('Failed to load dashboard data. Please refresh the page.');
         setLoading(false);

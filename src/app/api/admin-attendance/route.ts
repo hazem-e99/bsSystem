@@ -2,6 +2,47 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface AttendanceRecord {
+  id: string;
+  status: string;
+  date: string;
+  tripId: string;
+  studentId: string;
+  bookingId: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+}
+
+interface Trip {
+  id: string;
+  routeId: string;
+  startTime: string;
+  date: string;
+  status: string;
+  passengers?: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+}
+
+interface Booking {
+  id: string;
+}
+
+interface EnrichedAttendance extends AttendanceRecord {
+  trip?: Trip;
+  route?: Route;
+  student?: User;
+  booking?: Booking;
+  metrics: {
+    isOnTime: boolean;
+    delayMinutes: number;
+    timeSpent: number;
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -28,35 +69,35 @@ export async function GET(request: NextRequest) {
     let filteredAttendance = attendance;
     
     if (status) {
-      filteredAttendance = filteredAttendance.filter((record: any) => record.status === status);
+      filteredAttendance = filteredAttendance.filter((record: AttendanceRecord) => record.status === status);
     }
     
     if (date) {
-      filteredAttendance = filteredAttendance.filter((record: any) => record.date === date);
+      filteredAttendance = filteredAttendance.filter((record: AttendanceRecord) => record.date === date);
     }
     
     if (tripId) {
-      filteredAttendance = filteredAttendance.filter((record: any) => record.tripId === tripId);
+      filteredAttendance = filteredAttendance.filter((record: AttendanceRecord) => record.tripId === tripId);
     }
     
     if (studentId) {
-      filteredAttendance = filteredAttendance.filter((record: any) => record.studentId === studentId);
+      filteredAttendance = filteredAttendance.filter((record: AttendanceRecord) => record.studentId === studentId);
     }
     
     if (routeId) {
-      const routeTrips = trips.filter((trip: any) => trip.routeId === routeId);
-      const routeTripIds = routeTrips.map((trip: any) => trip.id);
-      filteredAttendance = filteredAttendance.filter((record: any) => 
+      const routeTrips = trips.filter((trip: Trip) => trip.routeId === routeId);
+      const routeTripIds = routeTrips.map((trip: Trip) => trip.id);
+      filteredAttendance = filteredAttendance.filter((record: AttendanceRecord) => 
         routeTripIds.includes(record.tripId)
       );
     }
     
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredAttendance = filteredAttendance.filter((record: any) => {
-        const trip = trips.find((t: any) => t.id === record.tripId);
-        const route = trip ? routes.find((r: any) => r.id === trip.routeId) : null;
-        const student = users.find((u: any) => u.id === record.studentId);
+      filteredAttendance = filteredAttendance.filter((record: AttendanceRecord) => {
+        const trip = trips.find((t: Trip) => t.id === record.tripId);
+        const route = trip ? routes.find((r: Route) => r.id === trip.routeId) : null;
+        const student = users.find((u: User) => u.id === record.studentId);
         
         return (
           record.id?.toLowerCase().includes(searchLower) ||
@@ -69,11 +110,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Enrich attendance data with additional information
-    const enrichedAttendance = filteredAttendance.map((record: any) => {
-      const trip = trips.find((t: any) => t.id === record.tripId);
-      const route = trip ? routes.find((r: any) => r.id === trip.routeId) : null;
-      const student = users.find((u: any) => u.id === record.studentId);
-      const booking = bookings.find((b: any) => b.id === record.bookingId);
+    const enrichedAttendance = filteredAttendance.map((record: AttendanceRecord) => {
+      const trip = trips.find((t: Trip) => t.id === record.tripId);
+      const route = trip ? routes.find((r: Route) => r.id === trip.routeId) : null;
+      const student = users.find((u: User) => u.id === record.studentId);
+      const booking = bookings.find((b: Booking) => b.id === record.bookingId);
       
       // Calculate attendance metrics
       const isPresent = record.status === 'present';
@@ -181,14 +222,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort attendance by date (newest first)
-    enrichedAttendance.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    enrichedAttendance.sort((a: EnrichedAttendance, b: EnrichedAttendance) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculate attendance summary
     const totalRecords = enrichedAttendance.length;
-    const presentRecords = enrichedAttendance.filter((record: any) => record.status === 'present').length;
-    const absentRecords = enrichedAttendance.filter((record: any) => record.status === 'absent').length;
-    const lateRecords = enrichedAttendance.filter((record: any) => record.status === 'late').length;
-    const onTimeRecords = enrichedAttendance.filter((record: any) => record.metrics.isOnTime).length;
+    const presentRecords = enrichedAttendance.filter((record: EnrichedAttendance) => record.status === 'present').length;
+    const absentRecords = enrichedAttendance.filter((record: EnrichedAttendance) => record.status === 'absent').length;
+    const lateRecords = enrichedAttendance.filter((record: EnrichedAttendance) => record.status === 'late').length;
+    const onTimeRecords = enrichedAttendance.filter((record: EnrichedAttendance) => record.metrics.isOnTime).length;
     
     const attendanceRate = totalRecords > 0 ? (presentRecords / totalRecords) * 100 : 0;
     const absenceRate = totalRecords > 0 ? (absentRecords / totalRecords) * 100 : 0;
@@ -196,18 +237,18 @@ export async function GET(request: NextRequest) {
     const onTimeRate = totalRecords > 0 ? (onTimeRecords / totalRecords) * 100 : 0;
     
     const totalDelayMinutes = enrichedAttendance
-      .filter((record: any) => record.metrics.delayMinutes > 0)
-      .reduce((sum: number, record: any) => sum + record.metrics.delayMinutes, 0);
+      .filter((record: EnrichedAttendance) => record.metrics.delayMinutes > 0)
+      .reduce((sum: number, record: EnrichedAttendance) => sum + record.metrics.delayMinutes, 0);
     
-    const averageDelayMinutes = enrichedAttendance.filter((record: any) => record.metrics.delayMinutes > 0).length > 0 ? 
-      totalDelayMinutes / enrichedAttendance.filter((record: any) => record.metrics.delayMinutes > 0).length : 0;
+    const averageDelayMinutes = enrichedAttendance.filter((record: EnrichedAttendance) => record.metrics.delayMinutes > 0).length > 0 ? 
+      totalDelayMinutes / enrichedAttendance.filter((record: EnrichedAttendance) => record.metrics.delayMinutes > 0).length : 0;
     
     const totalTimeSpent = enrichedAttendance
-      .filter((record: any) => record.metrics.timeSpent > 0)
-      .reduce((sum: number, record: any) => sum + record.metrics.timeSpent, 0);
+      .filter((record: EnrichedAttendance) => record.metrics.timeSpent > 0)
+      .reduce((sum: number, record: EnrichedAttendance) => sum + record.metrics.timeSpent, 0);
     
-    const averageTimeSpent = enrichedAttendance.filter((record: any) => record.metrics.timeSpent > 0).length > 0 ? 
-      totalTimeSpent / enrichedAttendance.filter((record: any) => record.metrics.timeSpent > 0).length : 0;
+    const averageTimeSpent = enrichedAttendance.filter((record: EnrichedAttendance) => record.metrics.timeSpent > 0).length > 0 ? 
+      totalTimeSpent / enrichedAttendance.filter((record: EnrichedAttendance) => record.metrics.timeSpent > 0).length : 0;
 
     const summary = {
       totalRecords,
@@ -227,7 +268,7 @@ export async function GET(request: NextRequest) {
       attendance: enrichedAttendance,
       summary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching attendance data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -265,7 +306,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newRecord, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating attendance record:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

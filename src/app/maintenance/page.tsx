@@ -23,7 +23,7 @@ export default function MaintenancePage() {
           ...prev,
           systemName: settings.systemName || 'University Bus Management System'
         }));
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Silently ignore 404 errors and use default system name
         if (!error?.message?.includes('404')) {
           console.error('Failed to load system info:', error);

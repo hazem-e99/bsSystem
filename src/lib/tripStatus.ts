@@ -8,6 +8,11 @@ export interface TripRecord {
 	actualEndTime?: string;
 }
 
+// Database interface
+interface Database {
+	trips: TripRecord[];
+}
+
 function isValidDate(dateStr: string): boolean {
 	if (!dateStr) return false;
 	const d = new Date(dateStr);
@@ -23,11 +28,11 @@ function toDateTime(dateStr?: string, timeStr?: string): Date | null {
 
 // Updates trips in-place to: scheduled (before start), in-progress (between start/end), completed (after end).
 // Leaves cancelled as-is.
-export function autoUpdateTripStatuses(db: any): boolean {
+export function autoUpdateTripStatuses(db: Database): boolean {
 	if (!db || !Array.isArray(db.trips)) return false;
 	const now = new Date();
 	let changed = false;
-	for (const trip of db.trips as TripRecord[]) {
+	for (const trip of db.trips) {
 		if (trip.status === 'cancelled') continue;
 		const startDT = toDateTime(trip.date, trip.startTime);
 		const endDT = toDateTime(trip.date, trip.endTime);
@@ -49,7 +54,7 @@ export function autoUpdateTripStatuses(db: any): boolean {
 }
 
 // Backwards compatibility: previously only auto-completed scheduled trips
-export function autoCompleteTrips(db: any): boolean {
+export function autoCompleteTrips(db: Database): boolean {
 	return autoUpdateTripStatuses(db);
 }
 

@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+  licenseNumber?: string;
+  licenseExpiry?: string;
+  incidents?: number;
+  lastIncident?: string;
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -19,8 +31,8 @@ export async function PUT(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find the supervisor
-    const supervisorIndex = db.users.findIndex((user: any) => 
-      user.id === id && user.role === 'supervisor'
+    const supervisorIndex = db.users.findIndex((user: User) => 
+      user.id.toString() === id && user.role === 'supervisor'
     );
 
     if (supervisorIndex === -1) {
@@ -71,8 +83,8 @@ export async function GET(request: NextRequest) {
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
 
-    const supervisor = db.users.find((user: any) => 
-      user.id === id && user.role === 'supervisor'
+    const supervisor = db.users.find((user: User) => 
+      user.id.toString() === id && user.role === 'supervisor'
     );
 
     if (!supervisor) {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -17,6 +17,7 @@ export default function RegisterPage() {
 	const [phoneNumber, setPhoneNumber] = useState('');
 	const [nationalId, setNationalId] = useState('');
 	const [email, setEmail] = useState('');
+	const [studentAcademicNumber, setStudentAcademicNumber] = useState('');
 	const [department, setDepartment] = useState('');
 	const [yearOfStudy, setYearOfStudy] = useState('');
 	const [password, setPassword] = useState('');
@@ -62,6 +63,7 @@ export default function RegisterPage() {
 			nationalId,
 			email,
 			phoneNumber,
+			studentAcademicNumber,
 			department,
 			yearOfStudy,
 			password,
@@ -97,11 +99,12 @@ export default function RegisterPage() {
 
 			// Redirect to verification page with email
 			router.push(`/auth/verification?email=${encodeURIComponent(email)}`);
-		} catch (err: any) {
+		} catch (err: unknown) {
+			const errorMessage = err instanceof Error ? err.message : 'Please try again.';
 			showToast({ 
 				type: 'error', 
 				title: 'Registration Failed', 
-				message: err.message || 'Please try again.' 
+				message: errorMessage 
 			});
 		} finally {
 			setLoading(false);
@@ -201,6 +204,20 @@ export default function RegisterPage() {
 										/>
 									</div>
 									<div>
+										<label className="block text-sm font-medium text-text-primary mb-1">Student Academic Number *</label>
+										<Input 
+											type="text" 
+											value={studentAcademicNumber} 
+											onChange={(e) => setStudentAcademicNumber(e.target.value)} 
+											placeholder="Enter student academic number"
+											required 
+											maxLength={20}
+										/>
+									</div>
+								</div>
+								
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div>
 										<label className="block text-sm font-medium text-text-primary mb-1">Department *</label>
 										<Select 
 											value={department} 
@@ -213,20 +230,19 @@ export default function RegisterPage() {
 											))}
 										</Select>
 									</div>
-								</div>
-								
-								<div>
-									<label className="block text-sm font-medium text-text-primary mb-1">Year of Study *</label>
-									<Select 
-										value={yearOfStudy} 
-										onChange={(e) => setYearOfStudy(e.target.value)}
-										required
-									>
-										<option value="">Select Year of Study</option>
-										{yearsOfStudy.map(year => (
-											<option key={year} value={year}>{year}</option>
-										))}
-									</Select>
+									<div>
+										<label className="block text-sm font-medium text-text-primary mb-1">Year of Study *</label>
+										<Select 
+											value={yearOfStudy} 
+											onChange={(e) => setYearOfStudy(e.target.value)}
+											required
+										>
+											<option value="">Select Year of Study</option>
+											{yearsOfStudy.map(year => (
+												<option key={year} value={year}>{year}</option>
+											))}
+										</Select>
+									</div>
 								</div>
 							</div>
 
@@ -243,7 +259,7 @@ export default function RegisterPage() {
 												onChange={(e) => setPassword(e.target.value)} 
 												placeholder="Enter password"
 												required 
-												minLength={1}
+												minLength={6}
 											/>
 											<button
 												type="button"
@@ -264,7 +280,7 @@ export default function RegisterPage() {
 												onChange={(e) => setConfirmPassword(e.target.value)} 
 												placeholder="Confirm password"
 												required 
-												minLength={1}
+												minLength={6}
 											/>
 											<button
 												type="button"

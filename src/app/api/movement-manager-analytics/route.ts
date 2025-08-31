@@ -2,6 +2,47 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Trip {
+  id: string;
+  date: string;
+  busId: string;
+  driverId: string;
+  status: string;
+  passengers: number;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  model: string;
+  capacity: number;
+}
+
+interface User {
+  id: string;
+  role: string;
+  name: string;
+}
+
+interface Payment {
+  id: string;
+  tripId: string;
+  status: string;
+  amount: number;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
+interface AttendanceRecord {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -25,43 +66,43 @@ export async function GET(request: NextRequest) {
     // Filter data by date range if provided
     let filteredTrips = trips;
     if (startDate && endDate) {
-      filteredTrips = trips.filter((trip: any) => 
+      filteredTrips = trips.filter((trip: Trip) => 
         trip.date >= startDate && trip.date <= endDate
       );
     }
     
     // Filter other data based on filtered trips
-    const tripIds = filteredTrips.map((trip: any) => trip.id);
-    const filteredPayments = payments.filter((payment: any) => 
+    const tripIds = filteredTrips.map((trip: Trip) => trip.id);
+    const filteredPayments = payments.filter((payment: Payment) => 
       tripIds.includes(payment.tripId)
     );
-    const filteredBookings = bookings.filter((booking: any) => 
+    const filteredBookings = bookings.filter((booking: Booking) => 
       tripIds.includes(booking.tripId)
     );
-    const filteredAttendance = attendance.filter((record: any) => 
+    const filteredAttendance = attendance.filter((record: AttendanceRecord) => 
       tripIds.includes(record.tripId)
     );
 
     // Calculate fleet performance metrics
-    const fleetPerformance = buses.map((bus: any) => {
-      const busTrips = filteredTrips.filter((trip: any) => trip.busId === bus.id);
-      const completedTrips = busTrips.filter((trip: any) => trip.status === 'completed');
-      const activeTrips = busTrips.filter((trip: any) => trip.status === 'active');
-      const cancelledTrips = busTrips.filter((trip: any) => trip.status === 'cancelled');
+    const fleetPerformance = buses.map((bus: Bus) => {
+      const busTrips = filteredTrips.filter((trip: Trip) => trip.busId === bus.id);
+      const completedTrips = busTrips.filter((trip: Trip) => trip.status === 'completed');
+      const activeTrips = busTrips.filter((trip: Trip) => trip.status === 'active');
+      const cancelledTrips = busTrips.filter((trip: Trip) => trip.status === 'cancelled');
       
-      const busBookings = filteredBookings.filter((booking: any) => 
-        busTrips.some((trip: any) => trip.id === booking.tripId)
+      const busBookings = filteredBookings.filter((booking: Booking) => 
+        busTrips.some((trip: Trip) => trip.id === booking.tripId)
       );
       
-      const busPayments = filteredPayments.filter((payment: any) => 
-        busTrips.some((trip: any) => trip.id === payment.tripId)
+      const busPayments = filteredPayments.filter((payment: Payment) => 
+        busTrips.some((trip: Trip) => trip.id === payment.tripId)
       );
       
       const totalRevenue = busPayments
-        .filter((p: any) => p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'completed')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
       
-      const totalPassengers = busTrips.reduce((sum: number, trip: any) => 
+      const totalPassengers = busTrips.reduce((sum: number, trip: Trip) => 
         sum + (trip.passengers || 0), 0
       );
       
@@ -87,25 +128,25 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate driver performance metrics
-    const drivers = users.filter((user: any) => user.role === 'driver');
-    const driverPerformance = drivers.map((driver: any) => {
-      const driverTrips = filteredTrips.filter((trip: any) => trip.driverId === driver.id);
-      const completedTrips = driverTrips.filter((trip: any) => trip.status === 'completed');
-      const activeTrips = driverTrips.filter((trip: any) => trip.status === 'active');
+    const drivers = users.filter((user: User) => user.role === 'driver');
+    const driverPerformance = drivers.map((driver: User) => {
+      const driverTrips = filteredTrips.filter((trip: Trip) => trip.driverId === driver.id);
+      const completedTrips = driverTrips.filter((trip: Trip) => trip.status === 'completed');
+      const activeTrips = driverTrips.filter((trip: Trip) => trip.status === 'active');
       
-      const driverBookings = filteredBookings.filter((booking: any) => 
-        driverTrips.some((trip: any) => trip.id === booking.tripId)
+      const driverBookings = filteredBookings.filter((booking: Booking) => 
+        driverTrips.some((trip: Trip) => trip.id === booking.tripId)
       );
       
-      const driverPayments = filteredPayments.filter((payment: any) => 
-        driverTrips.some((trip: any) => trip.id === payment.tripId)
+      const driverPayments = filteredPayments.filter((payment: Payment) => 
+        driverTrips.some((trip: Trip) => trip.id === payment.tripId)
       );
       
       const totalRevenue = driverPayments
-        .filter((p: any) => p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'completed')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
       
-      const totalPassengers = driverTrips.reduce((sum: number, trip: any) => 
+      const totalPassengers = driverTrips.reduce((sum: number, trip: Trip) => 
         sum + (trip.passengers || 0), 0
       );
       
@@ -125,28 +166,28 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate route performance metrics
-    const routePerformance = routes.map((route: any) => {
-      const routeTrips = filteredTrips.filter((trip: any) => trip.routeId === route.id);
-      const completedTrips = routeTrips.filter((trip: any) => trip.status === 'completed');
+    const routePerformance = routes.map((route: Route) => {
+      const routeTrips = filteredTrips.filter((trip: Trip) => trip.routeId === route.id);
+      const completedTrips = routeTrips.filter((trip: Trip) => trip.status === 'completed');
       
-      const routeBookings = filteredBookings.filter((booking: any) => 
-        routeTrips.some((trip: any) => trip.id === booking.tripId)
+      const routeBookings = filteredBookings.filter((booking: Booking) => 
+        routeTrips.some((trip: Trip) => trip.id === booking.tripId)
       );
       
-      const routePayments = filteredPayments.filter((payment: any) => 
-        routeTrips.some((trip: any) => trip.id === payment.tripId)
+      const routePayments = filteredPayments.filter((payment: Payment) => 
+        routeTrips.some((trip: Trip) => trip.id === payment.tripId)
       );
       
       const totalRevenue = routePayments
-        .filter((p: any) => p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'completed')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
       
-      const totalPassengers = routeTrips.reduce((sum: number, trip: any) => 
+      const totalPassengers = routeTrips.reduce((sum: number, trip: Trip) => 
         sum + (trip.passengers || 0), 0
       );
       
-      const totalCapacity = routeTrips.reduce((sum: number, trip: any) => {
-        const bus = buses.find((b: any) => b.id === trip.busId);
+      const totalCapacity = routeTrips.reduce((sum: number, trip: Trip) => {
+        const bus = buses.find((b: Bus) => b.id === trip.busId);
         return sum + (bus?.capacity || 0);
       }, 0);
       
@@ -172,20 +213,20 @@ export async function GET(request: NextRequest) {
 
     // Calculate financial metrics
     const totalRevenue = filteredPayments
-      .filter((p: any) => p.status === 'completed')
-      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      .filter((p: Payment) => p.status === 'completed')
+      .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
     
     const pendingRevenue = filteredPayments
-      .filter((p: any) => p.status === 'pending')
-      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      .filter((p: Payment) => p.status === 'pending')
+      .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
     
     const failedRevenue = filteredPayments
-      .filter((p: any) => p.status === 'failed')
-      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      .filter((p: Payment) => p.status === 'failed')
+      .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
 
     // Calculate monthly trends
-    const monthlyTrends = {};
-    filteredTrips.forEach((trip: any) => {
+    const monthlyTrends: Record<string, { trips: number; passengers: number; revenue: number }> = {};
+    filteredTrips.forEach((trip: Trip) => {
       const month = new Date(trip.date).toISOString().slice(0, 7); // YYYY-MM
       if (!monthlyTrends[month]) {
         monthlyTrends[month] = {
@@ -199,9 +240,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Add revenue to monthly trends
-    filteredPayments.forEach((payment: any) => {
+    filteredPayments.forEach((payment: Payment) => {
       if (payment.status === 'completed') {
-        const trip = filteredTrips.find((t: any) => t.id === payment.tripId);
+        const trip = filteredTrips.find((t: Trip) => t.id === payment.tripId);
         if (trip) {
           const month = new Date(trip.date).toISOString().slice(0, 7);
           if (monthlyTrends[month]) {
@@ -212,17 +253,17 @@ export async function GET(request: NextRequest) {
     });
 
     // Convert monthly trends to array format
-    const monthlyTrendsArray = Object.entries(monthlyTrends).map(([month, stats]: [string, any]) => ({
+    const monthlyTrendsArray = Object.entries(monthlyTrends).map(([month, stats]: [string, { trips: number; passengers: number; revenue: number }]) => ({
       month,
       ...stats
     }));
 
     // Calculate attendance metrics
     const totalAttendance = filteredAttendance.length;
-    const presentStudents = filteredAttendance.filter((record: any) => 
+    const presentStudents = filteredAttendance.filter((record: AttendanceRecord) => 
       record.status === 'present'
     ).length;
-    const absentStudents = filteredAttendance.filter((record: any) => 
+    const absentStudents = filteredAttendance.filter((record: AttendanceRecord) => 
       record.status === 'absent'
     ).length;
     const overallAttendanceRate = totalAttendance > 0 ? (presentStudents / totalAttendance) * 100 : 0;
@@ -234,9 +275,9 @@ export async function GET(request: NextRequest) {
       },
       summary: {
         totalTrips: filteredTrips.length,
-        completedTrips: filteredTrips.filter((t: any) => t.status === 'completed').length,
-        activeTrips: filteredTrips.filter((t: any) => t.status === 'active').length,
-        cancelledTrips: filteredTrips.filter((t: any) => t.status === 'cancelled').length,
+        completedTrips: filteredTrips.filter((t: Trip) => t.status === 'completed').length,
+        activeTrips: filteredTrips.filter((t: Trip) => t.status === 'active').length,
+        cancelledTrips: filteredTrips.filter((t: Trip) => t.status === 'cancelled').length,
         totalBookings: filteredBookings.length,
         totalPayments: filteredPayments.length,
         totalAttendance,
@@ -255,18 +296,18 @@ export async function GET(request: NextRequest) {
       routePerformance,
       monthlyTrends: monthlyTrendsArray,
       topPerformingBuses: fleetPerformance
-        .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
+        .sort((a: Bus, b: Bus) => b.totalRevenue - a.totalRevenue)
         .slice(0, 5),
       topPerformingDrivers: driverPerformance
-        .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
+        .sort((a: User, b: User) => b.totalRevenue - a.totalRevenue)
         .slice(0, 5),
       topPerformingRoutes: routePerformance
-        .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
+        .sort((a: Route, b: Route) => b.totalRevenue - a.totalRevenue)
         .slice(0, 5)
     };
     
     return NextResponse.json(analyticsData);
-  } catch (error) {
+  } catch {
     console.error('Error calculating movement manager analytics:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

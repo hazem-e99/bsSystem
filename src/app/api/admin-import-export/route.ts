@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-  } catch (error) {
+  } catch {
     console.error('Error in import/export operation:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -35,7 +35,7 @@ async function handleExport(request: NextRequest, entity: string | null, format:
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
     
-    let exportData: any = {};
+    let exportData: Record<string, unknown> = {};
     let filename = 'export';
     
     if (entity) {
@@ -92,7 +92,7 @@ async function handleExport(request: NextRequest, entity: string | null, format:
         }
       });
     }
-  } catch (error) {
+  } catch {
     console.error('Error during export:', error);
     return NextResponse.json(
       { error: 'Export failed' },
@@ -113,7 +113,7 @@ async function handleImport(request: NextRequest, entity: string | null, format:
       );
     }
     
-    let importData: any;
+    let importData: unknown;
     const fileContent = await file.text();
     
     try {
@@ -124,7 +124,7 @@ async function handleImport(request: NextRequest, entity: string | null, format:
       } else {
         importData = JSON.parse(fileContent);
       }
-    } catch (parseError) {
+    } catch {
       return NextResponse.json(
         { error: `Failed to parse ${format.toUpperCase()} file` },
         { status: 400 }
@@ -158,7 +158,7 @@ async function handleImport(request: NextRequest, entity: string | null, format:
       skippedRecords: importResult.skippedRecords,
       errors: importResult.errors
     });
-  } catch (error) {
+  } catch {
     console.error('Error during import:', error);
     return NextResponse.json(
       { error: 'Import failed' },
@@ -167,7 +167,7 @@ async function handleImport(request: NextRequest, entity: string | null, format:
   }
 }
 
-function convertToCSV(data: any): string {
+function convertToCSV(data: Record<string, unknown>): string {
   const lines: string[] = [];
   
   // Handle single entity export
@@ -177,11 +177,11 @@ function convertToCSV(data: any): string {
     
     if (Array.isArray(entityData) && entityData.length > 0) {
       // Add headers
-      const headers = Object.keys(entityData[0]);
+      const headers = Object.keys(entityData[0] as Record<string, unknown>);
       lines.push(headers.join(','));
       
       // Add data rows
-      entityData.forEach((item: any) => {
+      (entityData as Record<string, unknown>[]).forEach((item: Record<string, unknown>) => {
         const row = headers.map(header => {
           const value = item[header];
           if (typeof value === 'string' && value.includes(',')) {
@@ -197,14 +197,14 @@ function convertToCSV(data: any): string {
   return lines.join('\n');
 }
 
-function convertToXML(data: any): string {
+function convertToXML(data: Record<string, unknown>): string {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<database>\n';
   
   Object.keys(data).forEach(key => {
     if (key !== '_exportMetadata') {
       xml += `  <${key}>\n`;
       if (Array.isArray(data[key])) {
-        data[key].forEach((item: any) => {
+        (data[key] as Record<string, unknown>[]).forEach((item: Record<string, unknown>) => {
           xml += `    <item>\n`;
           Object.keys(item).forEach(itemKey => {
             xml += `      <${itemKey}>${item[itemKey]}</${itemKey}>\n`;
@@ -220,18 +220,18 @@ function convertToXML(data: any): string {
   return xml;
 }
 
-function parseCSV(csvContent: string): any {
+function parseCSV(csvContent: string): Record<string, string>[] {
   const lines = csvContent.split('\n').filter(line => line.trim());
   if (lines.length < 2) {
     throw new Error('Invalid CSV format');
   }
   
   const headers = lines[0].split(',').map(h => h.trim());
-  const data: any[] = [];
+  const data: Record<string, string>[] = [];
   
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split(',').map(v => v.trim());
-    const item: any = {};
+    const item: Record<string, string> = {};
     
     headers.forEach((header, index) => {
       let value = values[index] || '';
@@ -247,17 +247,17 @@ function parseCSV(csvContent: string): any {
   return data;
 }
 
-function parseXML(xmlContent: string): any {
+function parseXML(xmlContent: string): Record<string, unknown> {
   // Simple XML parser - in production, use a proper XML parser
-  const data: any = {};
+  const data: Record<string, unknown> = {};
   
   // Extract items from XML
   const itemMatches = xmlContent.match(/<item>([\s\S]*?)<\/item>/g);
   if (itemMatches) {
-    const items: any[] = [];
+    const items: Record<string, string>[] = [];
     
     itemMatches.forEach(itemMatch => {
-      const item: any = {};
+      const item: Record<string, string> = {};
       const fieldMatches = itemMatch.match(/<(\w+)>([^<]*)<\/\w+>/g);
       
       fieldMatches?.forEach(fieldMatch => {
@@ -278,7 +278,7 @@ function parseXML(xmlContent: string): any {
   return data;
 }
 
-function validateImportData(data: any, entity: string | null): { isValid: boolean; error?: string } {
+function validateImportData(data: unknown, entity: string | null): { isValid: boolean; error?: string } {
   if (!data || typeof data !== 'object') {
     return { isValid: false, error: 'Invalid data format' };
   }
@@ -303,7 +303,7 @@ function validateImportData(data: any, entity: string | null): { isValid: boolea
   return { isValid: true };
 }
 
-async function performImport(db: any, importData: any, entity: string | null): Promise<{
+async function performImport(db: Record<string, unknown[]>, importData: unknown, entity: string | null): Promise<{
   importedRecords: number;
   updatedRecords: number;
   skippedRecords: number;
@@ -320,13 +320,13 @@ async function performImport(db: any, importData: any, entity: string | null): P
       db[entity] = [];
     }
     
-    const existingIds = new Set(db[entity].map((item: any) => item.id));
+    const existingIds = new Set(db[entity].map((item: Record<string, unknown>) => item.id as string));
     
-    importData.forEach((item: any) => {
+    (importData as Record<string, unknown>[]).forEach((item: Record<string, unknown>) => {
       try {
-        if (existingIds.has(item.id)) {
+        if (existingIds.has(item.id as string)) {
           // Update existing record
-          const existingIndex = db[entity].findIndex((existing: any) => existing.id === item.id);
+          const existingIndex = db[entity].findIndex((existing: Record<string, unknown>) => existing.id === item.id);
           if (existingIndex !== -1) {
             db[entity][existingIndex] = {
               ...db[entity][existingIndex],
@@ -351,19 +351,19 @@ async function performImport(db: any, importData: any, entity: string | null): P
     });
   } else {
     // Import all entities
-    Object.keys(importData).forEach(entityKey => {
-      if (entityKey !== '_exportMetadata' && Array.isArray(importData[entityKey])) {
+    Object.keys(importData as Record<string, unknown>).forEach(entityKey => {
+      if (entityKey !== '_exportMetadata' && Array.isArray((importData as Record<string, unknown>)[entityKey])) {
         if (!db[entityKey]) {
           db[entityKey] = [];
         }
         
-        const existingIds = new Set(db[entityKey].map((item: any) => item.id));
+        const existingIds = new Set(db[entityKey].map((item: Record<string, unknown>) => item.id as string));
         
-        importData[entityKey].forEach((item: any) => {
+        ((importData as Record<string, unknown>)[entityKey] as Record<string, unknown>[]).forEach((item: Record<string, unknown>) => {
           try {
-            if (existingIds.has(item.id)) {
+            if (existingIds.has(item.id as string)) {
               // Update existing record
-              const existingIndex = db[entityKey].findIndex((existing: any) => existing.id === item.id);
+              const existingIndex = db[entityKey].findIndex((existing: Record<string, unknown>) => existing.id === item.id);
               if (existingIndex !== -1) {
                 db[entityKey][existingIndex] = {
                   ...db[entityKey][existingIndex],

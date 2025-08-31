@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Booking {
+  id: string;
+  studentId: string;
+  tripId: string;
+  status: string;
+}
+
+interface Trip {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+}
+
 const dbPath = path.join(process.cwd(), 'db.json');
 
 // GET - Get student's current reservations
@@ -18,14 +33,14 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbData);
 
     // Get student's current reservations (active and pending)
-    const currentReservations = db.bookings?.filter((booking: any) => 
+    const currentReservations = db.bookings?.filter((booking: Booking) => 
       booking.studentId === studentId && 
       ['active', 'pending', 'confirmed'].includes(booking.status)
     ) || [];
 
     // Add trip details to each reservation
-    const reservationsWithDetails = currentReservations.map((reservation: any) => {
-      const trip = db.trips?.find((t: any) => t.id === reservation.tripId);
+    const reservationsWithDetails = currentReservations.map((reservation: Booking) => {
+      const trip = db.trips?.find((t: Trip) => t.id === reservation.tripId);
       return {
         ...reservation,
         trip: trip || null
@@ -33,7 +48,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(reservationsWithDetails);
-  } catch (error) {
+  } catch {
     console.error('Error reading reservations:', error);
     return NextResponse.json({ error: 'Failed to read reservations' }, { status: 500 });
   }

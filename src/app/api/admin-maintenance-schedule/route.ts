@@ -2,6 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Bus {
+  id: string;
+  number: string;
+  model: string;
+  capacity: number;
+  status: string;
+  lastMaintenance?: string;
+  nextMaintenance?: string;
+}
+
+interface MaintenanceRecord {
+  id: string;
+  type: string;
+  status: string;
+  priority: string;
+  busId: string;
+  scheduledDate?: string;
+  createdAt?: string;
+  date?: string;
+  completedDate?: string;
+  actualCost: number;
+  description: string;
+}
+
+interface Trip {
+  id: string;
+  busId: string;
+  status: string;
+  estimatedDistance?: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,31 +58,31 @@ export async function GET(request: NextRequest) {
     let filteredMaintenance = maintenance;
     
     if (busId) {
-      filteredBuses = filteredBuses.filter((bus: any) => bus.id === busId);
+      filteredBuses = filteredBuses.filter((bus: Bus) => bus.id === busId);
     }
     
     if (type) {
-      filteredMaintenance = filteredMaintenance.filter((m: any) => m.type === type);
+      filteredMaintenance = filteredMaintenance.filter((m: MaintenanceRecord) => m.type === type);
     }
     
     if (status) {
-      filteredMaintenance = filteredMaintenance.filter((m: any) => m.status === status);
+      filteredMaintenance = filteredMaintenance.filter((m: MaintenanceRecord) => m.status === status);
     }
     
     if (dateFrom || dateTo) {
       const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
       const toDate = dateTo ? new Date(dateTo) : new Date();
       
-      filteredMaintenance = filteredMaintenance.filter((record: any) => {
+      filteredMaintenance = filteredMaintenance.filter((record: MaintenanceRecord) => {
         const maintenanceDate = new Date(record.scheduledDate || record.createdAt || record.date);
         return maintenanceDate >= fromDate && maintenanceDate <= toDate;
       });
     }
 
     // Generate maintenance schedule for each bus
-    const maintenanceSchedule = filteredBuses.map((bus: any) => {
-      const busMaintenance = filteredMaintenance.filter((m: any) => m.busId === bus.id);
-      const busTrips = trips.filter((t: any) => t.busId === bus.id);
+    const maintenanceSchedule = filteredBuses.map((bus: Bus) => {
+      const busMaintenance = filteredMaintenance.filter((m: MaintenanceRecord) => m.busId === bus.id);
+      const busTrips = trips.filter((t: Trip) => t.busId === bus.id);
       
       // Calculate maintenance intervals
       const lastMaintenance = bus.lastMaintenance ? new Date(bus.lastMaintenance) : null;
@@ -90,27 +121,27 @@ export async function GET(request: NextRequest) {
       
       // Calculate bus utilization
       const totalTrips = busTrips.length;
-      const completedTrips = busTrips.filter((t: any) => t.status === 'completed').length;
-      const activeTrips = busTrips.filter((t: any) => t.status === 'active').length;
+      const completedTrips = busTrips.filter((t: Trip) => t.status === 'completed').length;
+      const activeTrips = busTrips.filter((t: Trip) => t.status === 'active').length;
       
       // Calculate mileage (estimated based on trips and routes)
-      const estimatedMileage = busTrips.reduce((total: number, trip: any) => {
+      const estimatedMileage = busTrips.reduce((total: number, trip: Trip) => {
         // This would need route distance data for accurate calculation
         return total + (trip.estimatedDistance || 50); // Default 50km per trip
       }, 0);
       
       // Get recent maintenance records
       const recentMaintenance = busMaintenance
-        .sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime())
+        .sort((a: MaintenanceRecord, b: MaintenanceRecord) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime())
         .slice(0, 5);
       
       // Calculate maintenance costs
       const totalMaintenanceCost = busMaintenance
-        .filter((m: any) => m.status === 'completed')
-        .reduce((sum: number, m: any) => sum + (m.actualCost || 0), 0);
+        .filter((m: MaintenanceRecord) => m.status === 'completed')
+        .reduce((sum: number, m: MaintenanceRecord) => sum + (m.actualCost || 0), 0);
       
-      const averageMaintenanceCost = busMaintenance.filter((m: any) => m.status === 'completed').length > 0 ? 
-        totalMaintenanceCost / busMaintenance.filter((m: any) => m.status === 'completed').length : 0;
+      const averageMaintenanceCost = busMaintenance.filter((m: MaintenanceRecord) => m.status === 'completed').length > 0 ? 
+        totalMaintenanceCost / busMaintenance.filter((m: MaintenanceRecord) => m.status === 'completed').length : 0;
 
       return {
         busId: bus.id,
@@ -131,7 +162,7 @@ export async function GET(request: NextRequest) {
         estimatedMileage,
         totalMaintenanceCost,
         averageMaintenanceCost: Math.round(averageMaintenanceCost * 100) / 100,
-        recentMaintenance: recentMaintenance.map((m: any) => ({
+        recentMaintenance: recentMaintenance.map((m: MaintenanceRecord) => ({
           id: m.id,
           type: m.type,
           status: m.status,
@@ -142,14 +173,14 @@ export async function GET(request: NextRequest) {
           description: m.description
         })),
         upcomingMaintenance: busMaintenance
-          .filter((m: any) => m.status === 'open' || m.status === 'scheduled')
-          .sort((a: any, b: any) => new Date(a.scheduledDate || a.createdAt).getTime() - new Date(b.scheduledDate || b.createdAt).getTime())
+          .filter((m: MaintenanceRecord) => m.status === 'open' || m.status === 'scheduled')
+          .sort((a: MaintenanceRecord, b: MaintenanceRecord) => new Date(a.scheduledDate || a.createdAt).getTime() - new Date(b.scheduledDate || b.createdAt).getTime())
           .slice(0, 3)
       };
     });
 
     // Sort by maintenance priority and status
-    maintenanceSchedule.sort((a: any, b: any) => {
+    maintenanceSchedule.sort((a: Bus, b: Bus) => {
       const priorityOrder = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
       const statusOrder = { 'overdue': 4, 'due_soon': 3, 'approaching': 2, 'up_to_date': 1 };
       
@@ -161,17 +192,17 @@ export async function GET(request: NextRequest) {
 
     // Calculate overall schedule summary
     const totalBuses = maintenanceSchedule.length;
-    const overdueMaintenance = maintenanceSchedule.filter((b: any) => b.maintenanceStatus === 'overdue').length;
-    const dueSoonMaintenance = maintenanceSchedule.filter((b: any) => b.maintenanceStatus === 'due_soon').length;
-    const approachingMaintenance = maintenanceSchedule.filter((b: any) => b.maintenanceStatus === 'approaching').length;
-    const upToDateMaintenance = maintenanceSchedule.filter((b: any) => b.maintenanceStatus === 'up_to_date').length;
+    const overdueMaintenance = maintenanceSchedule.filter((b: Bus) => b.maintenanceStatus === 'overdue').length;
+    const dueSoonMaintenance = maintenanceSchedule.filter((b: Bus) => b.maintenanceStatus === 'due_soon').length;
+    const approachingMaintenance = maintenanceSchedule.filter((b: Bus) => b.maintenanceStatus === 'approaching').length;
+    const upToDateMaintenance = maintenanceSchedule.filter((b: Bus) => b.maintenanceStatus === 'up_to_date').length;
     
-    const criticalPriority = maintenanceSchedule.filter((b: any) => b.maintenancePriority === 'critical').length;
-    const highPriority = maintenanceSchedule.filter((b: any) => b.maintenancePriority === 'high').length;
-    const mediumPriority = maintenanceSchedule.filter((b: any) => b.maintenancePriority === 'medium').length;
-    const lowPriority = maintenanceSchedule.filter((b: any) => b.maintenancePriority === 'low').length;
+    const criticalPriority = maintenanceSchedule.filter((b: Bus) => b.maintenancePriority === 'critical').length;
+    const highPriority = maintenanceSchedule.filter((b: Bus) => b.maintenancePriority === 'high').length;
+    const mediumPriority = maintenanceSchedule.filter((b: Bus) => b.maintenancePriority === 'medium').length;
+    const lowPriority = maintenanceSchedule.filter((b: Bus) => b.maintenancePriority === 'low').length;
     
-    const totalMaintenanceCost = maintenanceSchedule.reduce((sum: number, b: any) => sum + b.totalMaintenanceCost, 0);
+    const totalMaintenanceCost = maintenanceSchedule.reduce((sum: number, b: Bus) => sum + b.totalMaintenanceCost, 0);
     const averageMaintenanceCost = totalBuses > 0 ? totalMaintenanceCost / totalBuses : 0;
 
     const summary = {
@@ -266,7 +297,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const scheduleIndex = db.maintenanceSchedule.findIndex((s: any) => s.id === id);
+    const scheduleIndex = db.maintenanceSchedule.findIndex((s: MaintenanceRecord) => s.id === id);
     
     if (scheduleIndex === -1) {
       return NextResponse.json(
@@ -321,7 +352,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const scheduleIndex = db.maintenanceSchedule.findIndex((s: any) => s.id === id);
+    const scheduleIndex = db.maintenanceSchedule.findIndex((s: MaintenanceRecord) => s.id === id);
     
     if (scheduleIndex === -1) {
       return NextResponse.json(

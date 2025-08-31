@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest) {
     const db = JSON.parse(dbContent);
     const maintenance = Boolean(db?.systemSettings?.maintenanceMode);
     return NextResponse.json({ maintenanceMode: maintenance });
-  } catch (error) {
+  } catch {
     console.error('Error fetching maintenance mode:', error);
     return NextResponse.json({ maintenanceMode: false });
   }

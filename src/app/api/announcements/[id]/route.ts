@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  priority: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,7 +24,7 @@ export async function GET(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
     
-    const announcement = (db.announcements || []).find((announcement: any) => announcement.id === id);
+    const announcement = (db.announcements || []).find((announcement: Announcement) => announcement.id === id);
     
     if (!announcement) {
       return NextResponse.json(
@@ -23,7 +34,7 @@ export async function GET(
     }
     
     return NextResponse.json(announcement);
-  } catch (error) {
+  } catch {
     console.error('Error reading announcement data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -44,7 +55,7 @@ export async function PATCH(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
     
-    const announcementIndex = (db.announcements || []).findIndex((announcement: any) => announcement.id === id);
+    const announcementIndex = (db.announcements || []).findIndex((announcement: Announcement) => announcement.id === id);
     if (announcementIndex === -1) {
       return NextResponse.json(
         { error: 'Announcement not found' },
@@ -62,7 +73,7 @@ export async function PATCH(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(db.announcements[announcementIndex]);
-  } catch (error) {
+  } catch {
     console.error('Error updating announcement:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -82,7 +93,7 @@ export async function DELETE(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
     
-    const announcementIndex = (db.announcements || []).findIndex((announcement: any) => announcement.id === id);
+    const announcementIndex = (db.announcements || []).findIndex((announcement: Announcement) => announcement.id === id);
     if (announcementIndex === -1) {
       return NextResponse.json(
         { error: 'Announcement not found' },
@@ -95,7 +106,7 @@ export async function DELETE(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Announcement deleted successfully' });
-  } catch (error) {
+  } catch {
     console.error('Error deleting announcement:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

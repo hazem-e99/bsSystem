@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+// Notification interface
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  type?: string;
+  priority?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -26,26 +37,26 @@ export async function GET(request: NextRequest) {
     let filteredNotifications = notifications;
     
     if (type) {
-      filteredNotifications = filteredNotifications.filter((notification: any) => notification.type === type);
+      filteredNotifications = filteredNotifications.filter((notification: Notification) => notification.type === type);
     }
     
     if (priority) {
-      filteredNotifications = filteredNotifications.filter((notification: any) => notification.priority === priority);
+      filteredNotifications = filteredNotifications.filter((notification: Notification) => notification.priority === priority);
     }
     
     if (status) {
-      filteredNotifications = filteredNotifications.filter((notification: any) => notification.status === status);
+      filteredNotifications = filteredNotifications.filter((notification: Notification) => notification.status === status);
     }
     
     if (userId) {
-      filteredNotifications = filteredNotifications.filter((notification: any) => 
+      filteredNotifications = filteredNotifications.filter((notification: Notification) => 
         notification.userId === userId || notification.targetUsers?.includes(userId)
       );
     }
     
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredNotifications = filteredNotifications.filter((notification: any) => 
+      filteredNotifications = filteredNotifications.filter((notification: Notification) => 
         notification.title?.toLowerCase().includes(searchLower) ||
         notification.message?.toLowerCase().includes(searchLower) ||
         notification.type?.toLowerCase().includes(searchLower)
@@ -53,8 +64,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Enrich notification data with additional information
-    const enrichedNotifications = filteredNotifications.map((notification: any) => {
-      const sender = users.find((u: any) => u.id === notification.senderId);
+    const enrichedNotifications = filteredNotifications.map((notification: Notification) => {
+      const sender = users.find((u: User) => u.id === notification.senderId);
       
       // Calculate notification age
       const notificationDate = new Date(notification.createdAt || notification.date);
@@ -117,7 +128,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort notifications by priority and date (highest priority and newest first)
-    enrichedNotifications.sort((a: any, b: any) => {
+    enrichedNotifications.sort((a: Notification, b: Notification) => {
       if (a.metadata.priorityLevel !== b.metadata.priorityLevel) {
         return b.metadata.priorityLevel - a.metadata.priorityLevel;
       }
@@ -129,21 +140,21 @@ export async function GET(request: NextRequest) {
 
     // Calculate notifications summary
     const totalNotifications = enrichedNotifications.length;
-    const unreadNotifications = enrichedNotifications.filter((n: any) => n.status === 'unread').length;
-    const readNotifications = enrichedNotifications.filter((n: any) => n.status === 'read').length;
-    const archivedNotifications = enrichedNotifications.filter((n: any) => n.status === 'archived').length;
+    const unreadNotifications = enrichedNotifications.filter((n: Notification) => n.status === 'unread').length;
+    const readNotifications = enrichedNotifications.filter((n: Notification) => n.status === 'read').length;
+    const archivedNotifications = enrichedNotifications.filter((n: Notification) => n.status === 'archived').length;
     
-    const highPriorityNotifications = enrichedNotifications.filter((n: any) => n.priority === 'high').length;
-    const mediumPriorityNotifications = enrichedNotifications.filter((n: any) => n.priority === 'medium').length;
-    const lowPriorityNotifications = enrichedNotifications.filter((n: any) => n.priority === 'low').length;
+    const highPriorityNotifications = enrichedNotifications.filter((n: Notification) => n.priority === 'high').length;
+    const mediumPriorityNotifications = enrichedNotifications.filter((n: Notification) => n.priority === 'medium').length;
+    const lowPriorityNotifications = enrichedNotifications.filter((n: Notification) => n.priority === 'low').length;
     
-    const systemNotifications = enrichedNotifications.filter((n: any) => n.type === 'system').length;
-    const userNotifications = enrichedNotifications.filter((n: any) => n.type === 'user').length;
-    const alertNotifications = enrichedNotifications.filter((n: any) => n.type === 'alert').length;
-    const reminderNotifications = enrichedNotifications.filter((n: any) => n.type === 'reminder').length;
+    const systemNotifications = enrichedNotifications.filter((n: Notification) => n.type === 'system').length;
+    const userNotifications = enrichedNotifications.filter((n: Notification) => n.type === 'user').length;
+    const alertNotifications = enrichedNotifications.filter((n: Notification) => n.type === 'alert').length;
+    const reminderNotifications = enrichedNotifications.filter((n: Notification) => n.type === 'reminder').length;
     
-    const totalTargetUsers = enrichedNotifications.reduce((sum: number, n: any) => sum + n.metadata.targetUsersCount, 0);
-    const totalReadCount = enrichedNotifications.reduce((sum: number, n: any) => sum + n.metadata.readCount, 0);
+    const totalTargetUsers = enrichedNotifications.reduce((sum: number, n: Notification) => sum + n.metadata.targetUsersCount, 0);
+    const totalReadCount = enrichedNotifications.reduce((sum: number, n: Notification) => sum + n.metadata.readCount, 0);
     const overallEngagementRate = totalTargetUsers > 0 ? (totalReadCount / totalTargetUsers) * 100 : 0;
 
     const summary = {
@@ -173,7 +184,7 @@ export async function GET(request: NextRequest) {
       notifications: paginatedNotifications,
       summary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching notifications data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -215,7 +226,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newNotification, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating notification:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -249,7 +260,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const notificationIndex = db.notifications.findIndex((n: any) => n.id === id);
+    const notificationIndex = db.notifications.findIndex((n: Notification) => n.id === id);
     
     if (notificationIndex === -1) {
       return NextResponse.json(
@@ -271,7 +282,7 @@ export async function PUT(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(updatedNotification);
-  } catch (error) {
+  } catch {
     console.error('Error updating notification:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -304,7 +315,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const notificationIndex = db.notifications.findIndex((n: any) => n.id === id);
+    const notificationIndex = db.notifications.findIndex((n: Notification) => n.id === id);
     
     if (notificationIndex === -1) {
       return NextResponse.json(
@@ -320,7 +331,7 @@ export async function DELETE(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Notification deleted successfully', deletedNotification });
-  } catch (error) {
+  } catch {
     console.error('Error deleting notification:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

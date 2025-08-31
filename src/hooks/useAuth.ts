@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 					Supervisor: 'supervisor',
 					Student: 'student',
 				};
-				const apiRole = String((parsed as any)?.role || '').trim();
+				const apiRole = String((parsed as { role?: string })?.role || '').trim();
 				const normalizedRole: User['role'] = roleMap[apiRole] || (apiRole.toLowerCase() as User['role']) || 'student';
 				const normalizedUser: User = { 
 					...parsed, 
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 				setUser(normalizedUser);
 				// Persist normalized role back to storage to avoid flicker
 				localStorage.setItem('user', JSON.stringify(normalizedUser));
-			} catch (error) {
+			} catch {
 				localStorage.removeItem('user');
 				localStorage.removeItem('token');
 				localStorage.removeItem('authToken');
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 					if (maintenanceResponse && maintenanceResponse.maintenanceMode && foundUser.role !== 'admin') {
 						return false;
 					}
-				} catch (error: any) {
+				} catch (error: unknown) {
 					// Silently ignore 404 errors for maintenance mode check
 					if (!error?.message?.includes('404')) {
 						console.error('Failed to check maintenance mode:', error);
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 			}
 			
 			return false;
-		} catch (error) {
+		} catch {
 			console.error('Login error:', error);
 			return false;
 		} finally {
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 			localStorage.removeItem('authToken');
 			localStorage.removeItem('access_token');
 			document.cookie = 'user=; path=/; max-age=0';
-		} catch (error) {
+		} catch {
 			console.error('Logout error:', error);
 		}
 	};

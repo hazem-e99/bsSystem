@@ -19,7 +19,13 @@ export default function DashboardLayout({
       // Redirect to role-specific dashboard if on generic dashboard
       const currentPath = window.location.pathname;
       if (currentPath === '/dashboard') {
-        const rolePath = `/dashboard/${user.role.toLowerCase()}`;
+        let rolePath = `/dashboard/${user.role.toLowerCase()}`;
+        
+        // For admin users, redirect to users page instead of dashboard (temporary for production)
+        if (user.role.toLowerCase() === 'admin') {
+          rolePath = '/dashboard/admin/users';
+        }
+        
         console.log('🔄 Redirecting from generic dashboard to:', rolePath);
         router.push(rolePath);
       }

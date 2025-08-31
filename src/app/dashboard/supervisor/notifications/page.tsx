@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -13,6 +13,17 @@ import { formatDate } from '@/utils/formatDate';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { notificationAPI, tripAPI, bookingAPI, userAPI } from '@/lib/api';
+
+// Notification interface
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  type?: string;
+  priority?: string;
+}
 
 type NotificationItem = {
   id: string;
@@ -41,7 +52,7 @@ export default function SupervisorNotificationsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [sendModalOpen, setSendModalOpen] = useState(false);
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<unknown[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [notificationForm, setNotificationForm] = useState({
     title: '',
@@ -56,9 +67,9 @@ export default function SupervisorNotificationsPage() {
       if (!user) return;
       
       try {
-        const res = await notificationAPI.getByUser(user.id);
+        const res = await notificationAPI.getByUser(user.id.toString());
         setNotifications(res || []);
-      } catch (error) {
+      } catch {
         console.error('Failed to fetch notifications:', error);
         setNotifications([]);
       }
@@ -80,14 +91,14 @@ export default function SupervisorNotificationsPage() {
           const tripRes = await tripAPI.getById(n.tripId);
           const trip = tripRes ? tripRes : null;
           if (trip) {
-            let stopId = (n as any).stopId as string | undefined;
+            let stopId = (n as { stopId?: string }).stopId;
             if (!stopId && n.senderId) {
               const bkRes = await bookingAPI.getByTrip(n.tripId, n.senderId);
               const bks = bkRes ? bkRes : [];
               if (Array.isArray(bks) && bks[0]?.stopId) stopId = bks[0].stopId;
             }
             if (stopId && Array.isArray(trip.stops)) {
-              const st = trip.stops.find((s: any) => s.id === stopId);
+              const st = trip.stops.find((s: { id: string; stopName: string; stopTime: string }) => s.id === stopId);
               stopName = st?.stopName || stopName;
               stopTime = st?.stopTime || stopTime;
             }
@@ -168,7 +179,7 @@ export default function SupervisorNotificationsPage() {
           message: 'All notifications failed to send. Please try again.'
         });
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to send notifications:', error);
       showToast({
         type: 'error',
@@ -254,8 +265,8 @@ export default function SupervisorNotificationsPage() {
               <Filter className="absolute left-3 top-3 h-4 w-4 text-[#757575]" />
               <Input placeholder="Search title, message, stop..." value={search} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} />
-            <Select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value as any)} options={[{ value: 'all', label: 'All Priorities' }, { value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }]} />
+            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} />
+            <Select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} options={[{ value: 'all', label: 'All Priorities' }, { value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }]} />
             <div className="flex items-center text-sm text-[#757575]"><Calendar className="w-4 h-4 mr-2" /> {filtered.length} notification(s)</div>
           </div>
         </CardContent>
@@ -367,7 +378,7 @@ export default function SupervisorNotificationsPage() {
                 <label className="block text-sm font-medium mb-2">Priority</label>
                 <Select
                   value={notificationForm.priority}
-                  onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value as any }))}
+                  onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value }))}
                   options={[
                     { value: 'low', label: 'Low' },
                     { value: 'medium', label: 'Medium' },
@@ -380,7 +391,7 @@ export default function SupervisorNotificationsPage() {
                 <label className="block text-sm font-medium mb-2">Target</label>
                 <Select
                   value={notificationForm.target}
-                  onChange={(e) => setNotificationForm(prev => ({ ...prev, target: e.target.value as any }))}
+                  onChange={(e) => setNotificationForm(prev => ({ ...prev, target: e.target.value }))}
                   options={[
                     { value: 'all', label: 'All Students' },
                     { value: 'specific', label: 'Specific Students' }

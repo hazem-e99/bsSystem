@@ -61,9 +61,9 @@ export default function EditTripPage() {
             departureTimeOnly: data.departureTimeOnly,
             arrivalTimeOnly: data.arrivalTimeOnly,
           });
-          replace((data.stopLocations || []).map((s: any) => ({ ...s })));
+          replace((data.stopLocations || []).map((s: { id: string; stopName: string; stopTime: string }) => ({ ...s })));
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast({ title: 'Failed to load trip', description: String(e?.message || e), variant: 'destructive' });
       }
     })();
@@ -78,11 +78,11 @@ export default function EditTripPage() {
           userAPI.getByRole('Driver'),
           userAPI.getByRole('Conductor'),
         ]);
-        const busList = (busesResp as any)?.data ?? busesResp ?? [];
+        const busList = (busesResp as { data?: unknown })?.data ?? busesResp ?? [];
         setBuses(Array.isArray(busList) ? busList : []);
         setDrivers(Array.isArray(driverUsers) ? driverUsers : []);
         setConductors(Array.isArray(conductorUsers) ? conductorUsers : []);
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast({ title: 'Failed to load lookups', description: String(e?.message || e), variant: 'destructive' });
       } finally {
         setLoadingLookups(false);
@@ -131,7 +131,7 @@ export default function EditTripPage() {
       // success
       toast({ title: 'Trip updated' });
       router.push('/trips');
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: 'Update failed', description: String(e?.message || e), variant: 'destructive' });
     }
   };

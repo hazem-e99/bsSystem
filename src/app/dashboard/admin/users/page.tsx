@@ -1,38 +1,64 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { useToast } from '@/components/ui/Toast';
 import { 
   Users, 
   Search, 
-  Filter, 
-  Plus, 
-  Edit, 
   Trash2, 
   Eye,
   UserPlus,
   Shield,
-  Mail,
   Phone
 } from 'lucide-react';
-import { userAPI, authAPI } from '@/lib/api';
+import { userAPI, authAPI, studentAPI } from '@/lib/api';
 import { getApiConfig } from '@/lib/config';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDef } from '@tanstack/react-table';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { User, UserRole } from '@/types/user';
+import { User, UserRole, Student } from '@/types/user';
 import { formatDate } from '@/utils/formatDate';
+
+// Form field interfaces
+interface FormField {
+  name: string;
+  label: string;
+  type: 'text' | 'select' | 'email' | 'tel' | 'number' | 'password';
+  required?: boolean;
+  options?: string[] | { value: string; label: string }[];
+  optionsSource?: 'buses' | 'subscriptionPlans';
+  validation?: (value: string) => string | null;
+}
+
+interface FormsConfig {
+  commonFields: FormField[];
+  roleSpecificFields: {
+    [key: string]: FormField[];
+  };
+}
+
+// API response interfaces
+interface ApiResponse {
+  success: boolean;
+  message?: string;
+  data?: unknown;
+}
+
+interface ErrorWithMessage {
+  message?: string;
+}
 
 export default function UsersPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -51,10 +77,9 @@ export default function UsersPage() {
     nationalId: '',
     status: 'active' as 'active' | 'inactive' | 'suspended'
   });
-  const [formsConfig, setFormsConfig] = useState<any | null>(null);
-  const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
+  const [formsConfig, setFormsConfig] = useState<FormsConfig | null>(null);
+  const [dynamicValues, setDynamicValues] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
   const { showToast } = useToast();
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -69,16 +94,85 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       try {
         setIsLoadingUsers(true);
-        const usersData = roleFilter !== 'all' ? await userAPI.getByRole(roleFilter) : await userAPI.getAll();
+        let usersData;
+        
+        // Use specific student endpoints when filtering for students
+        if (roleFilter === 'student') {
+          usersData = await studentAPI.getAll();
+          // Map StudentViewModel to User interface for compatibility
+          usersData = usersData.map((student: Student) => ({
+            id: student.id,
+            name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+            firstName: student.firstName,
+            lastName: student.lastName,
+            email: student.email,
+            role: 'student',
+            phone: student.phoneNumber,
+            phoneNumber: student.phoneNumber,
+            nationalId: student.nationalId,
+            status: student.status?.toLowerCase() || 'active',
+            avatar: student.profilePictureUrl,
+            profilePictureUrl: student.profilePictureUrl,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            // Student specific fields
+            studentAcademicNumber: student.studentAcademicNumber,
+            department: student.department,
+            yearOfStudy: student.yearOfStudy,
+            emergencyContact: student.emergencyContact,
+            emergencyPhone: student.emergencyPhone
+          }));
+        } else if (roleFilter !== 'all') {
+          usersData = await userAPI.getByRole(roleFilter);
+        } else {
+          // Get all users including students
+          const [generalUsers, studentUsers] = await Promise.all([
+            userAPI.getAll(),
+            studentAPI.getAll()
+          ]);
+          
+          // Map student data to User format
+          const mappedStudents = studentUsers.map((student: Student) => ({
+            id: student.id,
+            name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+            firstName: student.firstName,
+            lastName: student.lastName,
+            email: student.email,
+            role: 'student',
+            phone: student.phoneNumber,
+            phoneNumber: student.phoneNumber,
+            nationalId: student.nationalId,
+            status: student.status?.toLowerCase() || 'active',
+            avatar: student.profilePictureUrl,
+            profilePictureUrl: student.profilePictureUrl,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            // Student specific fields
+            studentAcademicNumber: student.studentAcademicNumber,
+            department: student.department,
+            yearOfStudy: student.yearOfStudy,
+            emergencyContact: student.emergencyContact,
+            emergencyPhone: student.emergencyPhone
+          }));
+          
+          // Combine all users
+          usersData = [...generalUsers, ...mappedStudents];
+        }
+        
         setUsers(usersData);
-      } catch (err) {
+      } catch {
         console.error('Failed to fetch users:', err);
+        showToast({ 
+          type: 'error', 
+          title: 'Error', 
+          message: 'Failed to fetch users. Please try again.' 
+        });
       } finally {
         setIsLoadingUsers(false);
       }
     };
     fetchUsers();
-  }, [roleFilter]);
+  }, [roleFilter, showToast]);
 
   // Remove legacy db.json-driven dynamic forms/options
   useEffect(() => {
@@ -92,8 +186,10 @@ export default function UsersPage() {
 
   // Filter users based on search and filters
   const filteredUsers = users ? users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const userName = user.name || user.firstName || '';
+    const userEmail = user.email || '';
+    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         userEmail.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
     
@@ -166,12 +262,67 @@ export default function UsersPage() {
       // Create user via staff registration API
       const response = await authAPI.registerStaff(staffData);
       
-      if (!response || (response as any).success === false) {
-        throw new Error((response as any)?.message || 'Failed to create user');
+      if (!response || (response as ApiResponse).success === false) {
+        throw new Error((response as ApiResponse)?.message || 'Failed to create user');
       }
 
       // Refresh users list from server
-      const refreshed = roleFilter !== 'all' ? await userAPI.getByRole(roleFilter) : await userAPI.getAll();
+      let refreshed;
+      if (roleFilter === 'student') {
+        refreshed = await studentAPI.getAll();
+        refreshed = refreshed.map((student: Student) => ({
+          id: student.id,
+          name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          role: 'student',
+          phone: student.phoneNumber,
+          phoneNumber: student.phoneNumber,
+          nationalId: student.nationalId,
+          status: student.status?.toLowerCase() || 'active',
+          avatar: student.profilePictureUrl,
+          profilePictureUrl: student.profilePictureUrl,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          studentAcademicNumber: student.studentAcademicNumber,
+          department: student.department,
+          yearOfStudy: student.yearOfStudy,
+          emergencyContact: student.emergencyContact,
+          emergencyPhone: student.emergencyPhone
+        }));
+      } else if (roleFilter !== 'all') {
+        refreshed = await userAPI.getByRole(roleFilter);
+      } else {
+        const [generalUsers, studentUsers] = await Promise.all([
+          userAPI.getAll(),
+          studentAPI.getAll()
+        ]);
+        
+        const mappedStudents = studentUsers.map((student: Student) => ({
+          id: student.id,
+          name: `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          role: 'student',
+          phone: student.phoneNumber,
+          phoneNumber: student.phoneNumber,
+          nationalId: student.nationalId,
+          status: student.status?.toLowerCase() || 'active',
+          avatar: student.profilePictureUrl,
+          profilePictureUrl: student.profilePictureUrl,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          studentAcademicNumber: student.studentAcademicNumber,
+          department: student.department,
+          yearOfStudy: student.yearOfStudy,
+          emergencyContact: student.emergencyContact,
+          emergencyPhone: student.emergencyPhone
+        }));
+        
+        refreshed = [...generalUsers, ...mappedStudents];
+      }
       setUsers(refreshed);
       
       // Show success message
@@ -184,13 +335,14 @@ export default function UsersPage() {
       setShowAddModal(false);
       setNewUser({ firstName: '', lastName: '', email: '', role: 'driver', phoneNumber: '', nationalId: '', status: 'active' });
       setDynamicValues({});
-    } catch (err) {
+    } catch {
       console.error('Failed to add user:', err);
-      setError((err as any)?.message || 'Failed to add user. Please try again.');
+      const errorMessage = (err as ErrorWithMessage)?.message || 'Failed to add user. Please try again.';
+      setError(errorMessage);
       showToast({ 
         type: 'error', 
         title: 'Error!', 
-        message: (err as any)?.message || 'Failed to add user. Please try again.' 
+        message: errorMessage
       });
     } finally {
       setIsLoading(false);
@@ -220,7 +372,7 @@ export default function UsersPage() {
           const parsed = JSON.parse(raw);
           token = parsed?.token || parsed?.accessToken;
         }
-      } catch (e) {
+      } catch {
         console.warn('Failed to read auth token from localStorage', e);
       }
 
@@ -247,11 +399,11 @@ export default function UsersPage() {
         console.error('Delete failed:', msg);
         showToast({ type: 'error', title: 'Error!', message: `Failed to delete user. ${msg}` });
       } else {
-        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+        setUsers(prevUsers => prevUsers.filter(user => user.id.toString() !== userId));
         showToast({ type: 'success', title: 'Success!', message: 'User deleted successfully!' });
         console.log('Delete result:', body);
       }
-    } catch (err) {
+    } catch {
       console.error('Failed to delete user:', err);
       showToast({ type: 'error', title: 'Error!', message: 'Failed to delete user. Please try again.' });
     } finally {
@@ -260,22 +412,13 @@ export default function UsersPage() {
   };
 
   const handleViewUser = (user: User) => {
-    setSelectedUser(user);
-    setShowViewModal(true);
-  };
-
-  const handleEditUserClick = (user: User) => {
-    // Ensure all fields are properly loaded
-    const userWithDefaults = {
-      ...user,
-      nationalId: user.nationalId || '',
-      department: (user as any).department || '',
-      academicYear: (user as any).academicYear || '',
-      licenseNumber: (user as any).licenseNumber || '',
-      assignedBusId: (user as any).assignedBusId || ''
-    };
-    setSelectedUser(userWithDefaults);
-    setShowEditModal(true);
+    // For students, redirect to dedicated student view page
+    if (user.role === 'student') {
+      router.push(`/dashboard/admin/students/${user.id.toString()}`);
+    } else {
+      setSelectedUser(user);
+      setShowViewModal(true);
+    }
   };
 
   if (isLoadingUsers) {
@@ -515,9 +658,6 @@ export default function UsersPage() {
                     <Button variant="ghost" size="sm" onClick={() => handleViewUser(row.original)}>
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditUserClick(row.original)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -661,59 +801,64 @@ export default function UsersPage() {
             <div className="space-y-4">
               <h4 className="text-md font-semibold">Additional Details</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(Array.from(new Map([
-                  // Merge common + role fields
-                  ...(formsConfig.commonFields || []).map((f: any) => [f.name, f]),
-                  ...(((formsConfig.roleSpecificFields || {})[(newUser.role === 'movement-manager' ? 'movementManager' : newUser.role) as string] || [])
-                      .map((f: any) => [f.name, f]))
-                ]).values()) as any[])
-                  // Filter out fields already collected statically in the header of the form
-                  .filter((f: any) => {
+                {formsConfig && (() => {
+                  const allFields = Array.from(new Map([
+                    // Merge common + role fields
+                    ...(formsConfig.commonFields || []).map((f: FormField) => [f.name, f]),
+                    ...(((formsConfig.roleSpecificFields || {})[(newUser.role === 'movement-manager' ? 'movementManager' : newUser.role) as string] || [])
+                        .map((f: FormField) => [f.name, f]))
+                  ]).values()) as FormField[];
+                  
+                  const filteredFields = allFields.filter((f: FormField) => {
                     const excludedBase = ['name', 'email', 'password', 'role', 'phone', 'nationalId', 'status'];
                     return !excludedBase.includes(f.name);
-                  })
-                  .map((field: any) => {
-                  const key = field.name as string;
-                  const value = dynamicValues[key] ?? '';
-                  if (field.type === 'select') {
-                    // Options: from static, or from source
-                    let options: { value: string; label: string }[] = [];
-                    if (field.optionsSource === 'buses') {
-                      options = busesOptions;
-                    } else if (field.optionsSource === 'subscriptionPlans') {
-                      options = plansOptions;
-                    } else if (Array.isArray(field.options)) {
-                      options = field.options.map((o: any) => ({ value: String(o), label: String(o) }));
+                  });
+                  
+                  return filteredFields.map((field: FormField) => {
+                    const key = field.name as string;
+                    const value = dynamicValues[key] ?? '';
+                    if (field.type === 'select') {
+                      // Options: from static, or from source
+                      let options: { value: string; label: string }[] = [];
+                      if (field.optionsSource === 'buses') {
+                        options = busesOptions;
+                      } else if (field.optionsSource === 'subscriptionPlans') {
+                        options = plansOptions;
+                      } else if (Array.isArray(field.options)) {
+                        options = field.options.map((o: string | { value: string; label: string }) => 
+                          typeof o === 'string' ? { value: o, label: o } : o
+                        );
+                      }
+                      return (
+                        <div key={key}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                          <Select
+                            value={value}
+                            onChange={(e) => setDynamicValues(prev => ({ ...prev, [key]: e.target.value }))}
+                            required={!!field.required}
+                          >
+                            <option value="">Select {field.label}</option>
+                            {options.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </Select>
+                        </div>
+                      );
                     }
                     return (
                       <div key={key}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-                        <Select
+                        <Input
+                          type={field.type === 'email' ? 'email' : 'text'}
                           value={value}
                           onChange={(e) => setDynamicValues(prev => ({ ...prev, [key]: e.target.value }))}
+                          placeholder={`Enter ${field.label}`}
                           required={!!field.required}
-                        >
-                          <option value="">Select {field.label}</option>
-                          {options.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </Select>
+                        />
                       </div>
                     );
-                  }
-                  return (
-                    <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-                      <Input
-                        type={field.type === 'email' ? 'email' : 'text'}
-                        value={value}
-                        onChange={(e) => setDynamicValues(prev => ({ ...prev, [key]: e.target.value }))}
-                        placeholder={`Enter ${field.label}`}
-                        required={!!field.required}
-                      />
-                    </div>
-                  );
-                })}
+                  });
+                })()}
               </div>
             </div>
           )}
@@ -836,20 +981,22 @@ export default function UsersPage() {
               <div className="space-y-4">
                 <h4 className="text-md font-semibold">Additional Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(Array.from(new Map([
-                    // Merge common + role fields
-                    ...(formsConfig.commonFields || []).map((f: any) => [f.name, f]),
-                    ...(((formsConfig.roleSpecificFields || {})[(selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string] || [])
-                        .map((f: any) => [f.name, f]))
-                  ]).values()) as any[])
-                    // Filter out fields already collected statically
-                    .filter((f: any) => {
+                  {(() => {
+                    const allFields = Array.from(new Map([
+                      // Merge common + role fields
+                      ...(formsConfig.commonFields || []).map((f: FormField) => [f.name, f]),
+                      ...(((formsConfig.roleSpecificFields || {})[(selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string] || [])
+                          .map((f: FormField) => [f.name, f]))
+                    ]).values());
+                    
+                    const filteredFields = allFields.filter((f: FormField) => {
                       const excludedBase = ['name', 'email', 'role', 'phone', 'nationalId', 'status'];
                       return !excludedBase.includes(f.name);
-                    })
-                    .map((field: any) => {
+                    });
+                    
+                    return filteredFields.map((field: FormField) => {
                       const key = field.name as string;
-                      const value = (selectedUser as any)[key] || '';
+                      const value = (selectedUser as Record<string, unknown>)[key] || '';
                       
                       if (field.type === 'select') {
                         let options: { value: string; label: string }[] = [];
@@ -858,7 +1005,10 @@ export default function UsersPage() {
                         } else if (field.optionsSource === 'subscriptionPlans') {
                           options = plansOptions;
                         } else if (Array.isArray(field.options)) {
-                          options = field.options.map((o: any) => ({ value: String(o), label: String(o) }));
+                          options = field.options.map((o: string | { value: string; label: string }) => ({ 
+                            value: typeof o === 'string' ? o : o.value, 
+                            label: typeof o === 'string' ? o : o.label 
+                          }));
                         }
                         
                         return (
@@ -890,7 +1040,8 @@ export default function UsersPage() {
                           />
                         </div>
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -967,6 +1118,12 @@ export default function UsersPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">National ID</label>
                 <p className="text-text-primary">{selectedUser.nationalId || 'N/A'}</p>
               </div>
+              {selectedUser.role === 'student' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Student Academic Number</label>
+                  <p className="text-text-primary">{(selectedUser as Student).studentAcademicNumber || 'N/A'}</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
                 <p className="text-text-primary">{formatDate(selectedUser.createdAt)}</p>
@@ -982,20 +1139,22 @@ export default function UsersPage() {
               <div className="space-y-4">
                 <h4 className="text-md font-semibold">Additional Details</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  {(Array.from(new Map([
-                    // Merge common + role fields
-                    ...(formsConfig.commonFields || []).map((f: any) => [f.name, f]),
-                    ...(((formsConfig.roleSpecificFields || {})[(selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string] || [])
-                        .map((f: any) => [f.name, f]))
-                  ]).values()) as any[])
-                    // Filter out fields already displayed
-                    .filter((f: any) => {
+                  {(() => {
+                    const allFields = Array.from(new Map([
+                      // Merge common + role fields
+                      ...(formsConfig.commonFields || []).map((f: FormField) => [f.name, f]),
+                      ...(((formsConfig.roleSpecificFields || {})[(selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string] || [])
+                          .map((f: FormField) => [f.name, f]))
+                    ]).values());
+                    
+                    const filteredFields = allFields.filter((f: FormField) => {
                       const excludedBase = ['name', 'email', 'role', 'phone', 'nationalId', 'status'];
                       return !excludedBase.includes(f.name);
-                    })
-                    .map((field: any) => {
+                    });
+                    
+                    return filteredFields.map((field: FormField) => {
                       const key = field.name as string;
-                      const value = (selectedUser as any)[key] || 'N/A';
+                      const value = (selectedUser as Record<string, unknown>)[key] || 'N/A';
                       
                       return (
                         <div key={key}>
@@ -1003,7 +1162,8 @@ export default function UsersPage() {
                           <p className="text-text-primary">{value}</p>
                         </div>
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -1056,16 +1216,17 @@ export default function UsersPage() {
             setCpLoading(true);
             try {
               const resp = await userAPI.changePassword({ currentPassword: cpCurrent, password: cpNew, confirmPassword: cpConfirm });
-              if (resp && (resp as any).success) {
-                setCpMessage({ type: 'success', text: (resp as any).message || 'Password changed successfully.' });
+              if (resp && (resp as { success: boolean; message?: string }).success) {
+                setCpMessage({ type: 'success', text: (resp as { success: boolean; message?: string }).message || 'Password changed successfully.' });
                 showToast({ type: 'success', title: 'Success', message: 'Password updated.' });
                 setCpCurrent(''); setCpNew(''); setCpConfirm('');
                 setShowChangePasswordModal(false);
               } else {
-                setCpMessage({ type: 'error', text: (resp as any)?.message || 'Failed to change password.' });
+                setCpMessage({ type: 'error', text: (resp as { success: boolean; message?: string })?.message || 'Failed to change password.' });
               }
-            } catch (err: any) {
-              setCpMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
+            } catch (err: unknown) {
+              const error = err as Error;
+              setCpMessage({ type: 'error', text: error?.message || 'Failed to change password.' });
             } finally {
               setCpLoading(false);
             }

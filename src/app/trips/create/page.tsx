@@ -51,11 +51,11 @@ export default function CreateTripPage() {
           userAPI.getByRole('Driver'),
           userAPI.getByRole('Conductor'),
         ]);
-        const busList = (busesResp as any)?.data ?? busesResp ?? [];
+        const busList = (busesResp as { data?: unknown })?.data ?? busesResp ?? [];
         setBuses(Array.isArray(busList) ? busList : []);
         setDrivers(Array.isArray(driverUsers) ? driverUsers : []);
         setConductors(Array.isArray(conductorUsers) ? conductorUsers : []);
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast({ title: 'Failed to load lookups', description: String(e?.message || e), variant: 'destructive' });
       } finally {
         setLoadingLookups(false);
@@ -66,13 +66,13 @@ export default function CreateTripPage() {
   const onSubmit = async (values: CreateTripForm) => {
     try {
       // Validate selection IDs against loaded lists to avoid backend validation errors
-      if (!buses.find((b: any) => Number(b.id) === Number(values.busId))) {
+      if (!buses.find((b: { id: number }) => Number(b.id) === Number(values.busId))) {
         throw new Error('Selected bus is invalid');
       }
-      if (!drivers.find((u: any) => Number(u.id) === Number(values.driverId))) {
+      if (!drivers.find((u: User) => Number(u.id) === Number(values.driverId))) {
         throw new Error('Selected driver is invalid');
       }
-      if (!conductors.find((u: any) => Number(u.id) === Number(values.conductorId))) {
+      if (!conductors.find((u: User) => Number(u.id) === Number(values.conductorId))) {
         throw new Error('Selected conductor is invalid');
       }
       if (Number(values.driverId) === Number(values.conductorId)) {
@@ -81,11 +81,11 @@ export default function CreateTripPage() {
       const resp = await tripService.create(values);
       const ok = typeof resp === 'object' ? (resp?.success ?? resp?.data ?? true) : true;
       if (!ok) {
-        throw new Error((resp as any)?.message || 'Trip creation failed');
+        throw new Error((resp as { message?: string })?.message || 'Trip creation failed');
       }
       toast({ title: 'Trip created' });
       router.push('/trips');
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast({ title: 'Create failed', description: String(e?.message || e), variant: 'destructive' });
     }
   };
@@ -100,7 +100,7 @@ export default function CreateTripPage() {
               <label className="block text-sm font-medium">Bus ID</label>
               <select {...form.register('busId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
                 <option value="">{loadingLookups ? 'Loading...' : 'Select a bus'}</option>
-                {buses.map((b: any) => {
+                {buses.map((b: { id: number; busNumber?: string }) => {
                   const label = `${b.busNumber ? b.busNumber : 'Bus'} (ID: ${b.id})`;
                   return <option key={b.id} value={b.id}>{label}</option>;
                 })}
@@ -111,7 +111,7 @@ export default function CreateTripPage() {
               <label className="block text-sm font-medium">Driver ID</label>
               <select {...form.register('driverId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
                 <option value="">{loadingLookups ? 'Loading...' : 'Select a driver'}</option>
-                {drivers.map((u: any) => {
+                {drivers.map((u: User) => {
                   const name = u.fullName || u.name || u.email || `User`;
                   const label = `${name} (ID: ${u.id})`;
                   return <option key={u.id} value={u.id}>{label}</option>;
@@ -123,7 +123,7 @@ export default function CreateTripPage() {
               <label className="block text-sm font-medium">Conductor ID</label>
               <select {...form.register('conductorId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
                 <option value="">{loadingLookups ? 'Loading...' : 'Select a conductor'}</option>
-                {conductors.map((u: any) => {
+                {conductors.map((u: User) => {
                   const name = u.fullName || u.name || u.email || `User`;
                   const label = `${name} (ID: ${u.id})`;
                   return <option key={u.id} value={u.id}>{label}</option>;

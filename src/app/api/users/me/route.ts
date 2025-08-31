@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const raw = decodeURIComponent(match[1]);
     const user = JSON.parse(raw);
     return NextResponse.json(user);
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json({ error: e?.message || 'Failed' }, { status: 500 });
   }
 }

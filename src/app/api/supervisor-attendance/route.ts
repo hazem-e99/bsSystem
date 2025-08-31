@@ -2,6 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Trip {
+  id: string;
+  supervisorId: string;
+  routeId: string;
+  busId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  studentId: string;
+  department: string;
+  year: string;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+}
+
+interface AttendanceRecord {
+  id: string;
+  tripId: string;
+  studentId: string;
+  status: string;
+  timestamp: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -19,34 +58,34 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Get supervisor trips
-    let supervisorTrips = db.trips?.filter((trip: any) => 
+    let supervisorTrips = db.trips?.filter((trip: Trip) => 
       trip.supervisorId === supervisorId
     ) || [];
 
     // Filter by date if provided
     if (date) {
-      supervisorTrips = supervisorTrips.filter((trip: any) => trip.date === date);
+      supervisorTrips = supervisorTrips.filter((trip: Trip) => trip.date === date);
     }
 
     // Filter by specific trip if provided
     if (tripId) {
-      supervisorTrips = supervisorTrips.filter((trip: any) => trip.id === tripId);
+      supervisorTrips = supervisorTrips.filter((trip: Trip) => trip.id === tripId);
     }
 
     // Get trip IDs for attendance lookup
-    const tripIds = supervisorTrips.map((trip: any) => trip.id);
+    const tripIds = supervisorTrips.map((trip: Trip) => trip.id);
 
     // Get attendance records for these trips
-    let attendanceRecords = db.attendance?.filter((record: any) => 
+    let attendanceRecords = db.attendance?.filter((record: AttendanceRecord) => 
       tripIds.includes(record.tripId)
     ) || [];
 
     // Enrich attendance records with additional information
-    const enrichedAttendance = attendanceRecords.map((record: any) => {
-      const trip = db.trips?.find((t: any) => t.id === record.tripId);
-      const student = db.users?.find((u: any) => u.id === record.studentId);
-      const route = trip ? db.routes?.find((r: any) => r.id === trip.routeId) : null;
-      const bus = trip ? db.buses?.find((b: any) => b.id === trip.busId) : null;
+    const enrichedAttendance = attendanceRecords.map((record: AttendanceRecord) => {
+      const trip = db.trips?.find((t: Trip) => t.id === record.tripId);
+      const student = db.users?.find((u: User) => u.id === record.studentId);
+      const route = trip ? db.routes?.find((r: Route) => r.id === trip.routeId) : null;
+      const bus = trip ? db.buses?.find((b: Bus) => b.id === trip.busId) : null;
 
       return {
         ...record,
@@ -79,17 +118,17 @@ export async function GET(request: NextRequest) {
 
     // Calculate summary statistics
     const totalRecords = enrichedAttendance.length;
-    const presentStudents = enrichedAttendance.filter((record: any) => 
+    const presentStudents = enrichedAttendance.filter((record: AttendanceRecord) => 
       record.status === 'present'
     ).length;
-    const absentStudents = enrichedAttendance.filter((record: any) => 
+    const absentStudents = enrichedAttendance.filter((record: AttendanceRecord) => 
       record.status === 'absent'
     ).length;
     const attendanceRate = totalRecords > 0 ? (presentStudents / totalRecords) * 100 : 0;
 
     // Group by trip for better organization
-    const attendanceByTrip = {};
-    enrichedAttendance.forEach((record: any) => {
+    const attendanceByTrip: Record<string, unknown> = {};
+    enrichedAttendance.forEach((record: AttendanceRecord) => {
       const tripId = record.tripId;
       if (!attendanceByTrip[tripId]) {
         attendanceByTrip[tripId] = {
@@ -116,7 +155,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate rate for each trip
-    Object.values(attendanceByTrip).forEach((tripData: any) => {
+    Object.values(attendanceByTrip).forEach((tripData: { summary: { total: number; present: number; rate: number } }) => {
       tripData.summary.rate = tripData.summary.total > 0 ? 
         (tripData.summary.present / tripData.summary.total) * 100 : 0;
     });
@@ -134,7 +173,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(response);
-  } catch (error) {
+  } catch {
     console.error('Error fetching supervisor attendance:', error);
     return NextResponse.json(
       { error: 'Failed to fetch supervisor attendance' },
@@ -161,13 +200,13 @@ export async function POST(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Verify the trip belongs to the supervisor
-    const trip = db.trips?.find((t: any) => t.id === tripId);
+    const trip = db.trips?.find((t: Trip) => t.id === tripId);
     if (!trip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
 
     // Check if attendance record already exists
-    const existingRecordIndex = db.attendance?.findIndex((record: any) => 
+    const existingRecordIndex = db.attendance?.findIndex((record: AttendanceRecord) => 
       record.studentId === studentId && record.tripId === tripId
     ) || -1;
 
@@ -204,7 +243,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
 
     return NextResponse.json(attendanceRecord, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating/updating attendance record:', error);
     return NextResponse.json(
       { error: 'Failed to create/update attendance record' },

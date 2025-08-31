@@ -2,6 +2,85 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Booking {
+  id: string;
+  status: string;
+  date: string;
+  tripId: string;
+  studentId: string;
+}
+
+interface EnrichedBooking extends Booking {
+  trip: {
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+    isUpcoming: boolean;
+    isToday: boolean;
+    isPast: boolean;
+    passengers: number;
+  } | null;
+  route: {
+    id: string;
+    name: string;
+    startPoint: string;
+    endPoint: string;
+    distance: number;
+    estimatedDuration: number;
+  } | null;
+  student: {
+    id: string;
+    name: string;
+    email: string;
+    studentId: string;
+    department: string;
+    year: string;
+  } | null;
+  payment: {
+    id: string;
+    status: string;
+    amount: number;
+    date: string;
+    method: string;
+  } | null;
+  metadata: {
+    ageInDays: number;
+    paymentStatus: string;
+    paymentAmount: number;
+    paymentDate: string | null;
+  };
+}
+
+interface Trip {
+  id: string;
+  routeId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  passengers: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+  distance: number;
+  estimatedDuration: number;
+}
+
+interface Payment {
+  id: string;
+  status: string;
+  amount: number;
+  date: string;
+  method: string;
+  bookingId: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -28,35 +107,35 @@ export async function GET(request: NextRequest) {
     let filteredBookings = bookings;
     
     if (status) {
-      filteredBookings = filteredBookings.filter((booking: any) => booking.status === status);
+      filteredBookings = filteredBookings.filter((booking: Booking) => booking.status === status);
     }
     
     if (date) {
-      filteredBookings = filteredBookings.filter((booking: any) => booking.date === date);
+      filteredBookings = filteredBookings.filter((booking: Booking) => booking.date === date);
     }
     
     if (tripId) {
-      filteredBookings = filteredBookings.filter((booking: any) => booking.tripId === tripId);
+      filteredBookings = filteredBookings.filter((booking: Booking) => booking.tripId === tripId);
     }
     
     if (studentId) {
-      filteredBookings = filteredBookings.filter((booking: any) => booking.studentId === studentId);
+      filteredBookings = filteredBookings.filter((booking: Booking) => booking.studentId === studentId);
     }
     
     if (routeId) {
-      const routeTrips = trips.filter((trip: any) => trip.routeId === routeId);
-      const routeTripIds = routeTrips.map((trip: any) => trip.id);
-      filteredBookings = filteredBookings.filter((booking: any) => 
+      const routeTrips = trips.filter((trip: Trip) => trip.routeId === routeId);
+      const routeTripIds = routeTrips.map((trip: Trip) => trip.id);
+      filteredBookings = filteredBookings.filter((booking: Booking) => 
         routeTripIds.includes(booking.tripId)
       );
     }
     
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredBookings = filteredBookings.filter((booking: any) => {
-        const trip = trips.find((t: any) => t.id === booking.tripId);
-        const route = trip ? routes.find((r: any) => r.id === trip.routeId) : null;
-        const student = users.find((u: any) => u.id === booking.studentId);
+      filteredBookings = filteredBookings.filter((booking: Booking) => {
+        const trip = trips.find((t: Trip) => t.id === booking.tripId);
+        const route = trip ? routes.find((r: Route) => r.id === trip.routeId) : null;
+        const student = users.find((u: User) => u.id === booking.studentId);
         
         return (
           booking.id?.toLowerCase().includes(searchLower) ||
@@ -69,11 +148,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Enrich booking data with additional information
-    const enrichedBookings = filteredBookings.map((booking: any) => {
-      const trip = trips.find((t: any) => t.id === booking.tripId);
-      const route = trip ? routes.find((r: any) => r.id === trip.routeId) : null;
-      const student = users.find((u: any) => u.id === booking.studentId);
-      const payment = payments.find((p: any) => p.bookingId === booking.id);
+    const enrichedBookings = filteredBookings.map((booking: Booking) => {
+      const trip = trips.find((t: Trip) => t.id === booking.tripId);
+      const route = trip ? routes.find((r: Route) => r.id === trip.routeId) : null;
+      const student = users.find((u: User) => u.id === booking.studentId);
+      const payment = payments.find((p: Payment) => p.bookingId === booking.id);
       
       // Calculate booking age
       const bookingDate = new Date(booking.date);
@@ -162,29 +241,29 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort bookings by date (newest first)
-    enrichedBookings.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    enrichedBookings.sort((a: EnrichedBooking, b: EnrichedBooking) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculate bookings summary
     const totalBookings = enrichedBookings.length;
-    const confirmedBookings = enrichedBookings.filter((booking: any) => booking.status === 'confirmed').length;
-    const pendingBookings = enrichedBookings.filter((booking: any) => booking.status === 'pending').length;
-    const cancelledBookings = enrichedBookings.filter((booking: any) => booking.status === 'cancelled').length;
-    const completedBookings = enrichedBookings.filter((booking: any) => booking.status === 'completed').length;
+    const confirmedBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.status === 'confirmed').length;
+    const pendingBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.status === 'pending').length;
+    const cancelledBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.status === 'cancelled').length;
+    const completedBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.status === 'completed').length;
 
     const totalRevenue = enrichedBookings
-      .filter((booking: any) => booking.payment.status === 'completed')
-      .reduce((sum: number, booking: any) => sum + (booking.payment.amount || 0), 0);
+      .filter((booking: EnrichedBooking) => booking.payment?.status === 'completed')
+      .reduce((sum: number, booking: EnrichedBooking) => sum + (booking.payment?.amount || 0), 0);
     
     const pendingRevenue = enrichedBookings
-      .filter((booking: any) => booking.payment.status === 'pending')
-      .reduce((sum: number, booking: any) => sum + (booking.payment.amount || 0), 0);
+      .filter((booking: EnrichedBooking) => booking.payment?.status === 'pending')
+      .reduce((sum: number, booking: EnrichedBooking) => sum + (booking.payment?.amount || 0), 0);
     
-    const unpaidBookings = enrichedBookings.filter((booking: any) => booking.payment.status === 'unpaid').length;
-    const paidBookings = enrichedBookings.filter((booking: any) => booking.payment.status === 'completed').length;
+    const unpaidBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.payment?.status === 'unpaid').length;
+    const paidBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.payment?.status === 'completed').length;
     
-    const upcomingBookings = enrichedBookings.filter((booking: any) => booking.metadata.isUpcoming).length;
-    const todayBookings = enrichedBookings.filter((booking: any) => booking.metadata.isToday).length;
-    const pastBookings = enrichedBookings.filter((booking: any) => booking.metadata.isPast).length;
+    const upcomingBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.metadata.isUpcoming).length;
+    const todayBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.metadata.isToday).length;
+    const pastBookings = enrichedBookings.filter((booking: EnrichedBooking) => booking.metadata.isPast).length;
 
     const confirmationRate = totalBookings > 0 ? (confirmedBookings / totalBookings) * 100 : 0;
     const paymentRate = totalBookings > 0 ? (paidBookings / totalBookings) * 100 : 0;
@@ -212,7 +291,7 @@ export async function GET(request: NextRequest) {
       bookings: enrichedBookings,
       summary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching bookings data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -250,7 +329,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBooking, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating booking:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

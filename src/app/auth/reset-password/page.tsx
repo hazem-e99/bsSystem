@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
-import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 
 export default function ResetPasswordPage() {
@@ -68,7 +68,7 @@ export default function ResetPasswordPage() {
         });
       }
       
-    } catch (err) {
+    } catch {
       console.error('Failed to reset password:', err);
       setError('Failed to reset password. Please try again.');
       showToast({ 

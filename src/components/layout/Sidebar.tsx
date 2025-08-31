@@ -24,15 +24,22 @@ interface SidebarProps {
   userRole: UserRole;
 }
 
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  disabled?: boolean;
+}
+
 const navigationItems = {
   admin: [
-    { name: 'Dashboard', href: '/dashboard/admin', icon: Home },
+    { name: 'Dashboard', href: '/dashboard/admin', icon: Home, disabled: true },
     { name: 'Users', href: '/dashboard/admin/users', icon: Users },
     { name: 'Buses', href: '/dashboard/admin/buses', icon: Bus },
     { name: 'Trips', href: '/trips', icon: Calendar },
-    { name: 'Plans', href: '/dashboard/admin/plans', icon: CreditCard },
-    { name: 'Subscriptions', href: '/dashboard/admin/subscriptions', icon: LayoutDashboard },
-    { name: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
+    { name: 'Plans', href: '/dashboard/admin/plans', icon: CreditCard, disabled: true },
+    { name: 'Subscriptions', href: '/dashboard/admin/subscriptions', icon: LayoutDashboard, disabled: true },
+    { name: 'Settings', href: '/dashboard/admin/settings', icon: Settings, disabled: true },
   ],
   student: [
     { name: 'Dashboard', href: '/dashboard/student', icon: Home },
@@ -90,8 +97,28 @@ export const Sidebar = ({ userRole }: SidebarProps) => {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
-            {items.map((item) => {
+            {items.map((item: NavigationItem) => {
               const isActive = pathname === item.href;
+              const isDisabled = item.disabled;
+              
+              if (isDisabled) {
+                return (
+                  <div
+                    key={item.name}
+                    className={cn(
+                      'flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200',
+                      'text-text-muted cursor-not-allowed opacity-50 bg-gray-100'
+                    )}
+                  >
+                    <item.icon className="mr-3 h-5 w-5 text-text-muted" />
+                    {item.name}
+                    <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                      قريباً
+                    </span>
+                  </div>
+                );
+              }
+              
               return (
                 <Link
                   key={item.name}

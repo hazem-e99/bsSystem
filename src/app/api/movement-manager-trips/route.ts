@@ -3,6 +3,63 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { autoCompleteTrips } from '@/lib/tripStatus';
 
+interface Trip {
+  id: string;
+  status: string;
+  date: string;
+  routeId: string;
+  driverId: string;
+  busId: string;
+  supervisorId: string;
+  startTime: string;
+  endTime: string;
+  passengers: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+  distance: number;
+  estimatedDuration: number;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  model: string;
+  capacity: number;
+  status: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
+interface Payment {
+  id: string;
+  tripId: string;
+  status: string;
+  amount: number;
+}
+
+interface AttendanceRecord {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -35,50 +92,50 @@ export async function GET(request: NextRequest) {
     let filteredTrips = trips;
     
     if (status) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.status === status);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.status === status);
     }
     
     if (date) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.date === date);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.date === date);
     }
     
     if (routeId) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.routeId === routeId);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.routeId === routeId);
     }
     
     if (driverId) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.driverId === driverId);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.driverId === driverId);
     }
     
     if (busId) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.busId === busId);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.busId === busId);
     }
 
     // Enrich trip data with additional information
-    const enrichedTrips = filteredTrips.map((trip: any) => {
-      const route = routes.find((r: any) => r.id === trip.routeId);
-      const bus = buses.find((b: any) => b.id === trip.busId);
-      const driver = users.find((u: any) => u.id === trip.driverId);
-      const supervisor = users.find((u: any) => u.id === trip.supervisorId);
+    const enrichedTrips = filteredTrips.map((trip: Trip) => {
+      const route = routes.find((r: Route) => r.id === trip.routeId);
+      const bus = buses.find((b: Bus) => b.id === trip.busId);
+      const driver = users.find((u: User) => u.id === trip.driverId);
+      const supervisor = users.find((u: User) => u.id === trip.supervisorId);
       
-      const tripBookings = bookings.filter((booking: any) => booking.tripId === trip.id);
-      const tripPayments = payments.filter((payment: any) => payment.tripId === trip.id);
-      const tripAttendance = attendance.filter((record: any) => record.tripId === trip.id);
+      const tripBookings = bookings.filter((booking: Booking) => booking.tripId === trip.id);
+      const tripPayments = payments.filter((payment: Payment) => payment.tripId === trip.id);
+      const tripAttendance = attendance.filter((record: AttendanceRecord) => record.tripId === trip.id);
       
       const totalRevenue = tripPayments
-        .filter((p: any) => p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'completed')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
       
       const pendingRevenue = tripPayments
-        .filter((p: any) => p.status === 'pending')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'pending')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
       
-      const confirmedBookings = tripBookings.filter((b: any) => b.status === 'confirmed');
-      const pendingBookings = tripBookings.filter((b: any) => b.status === 'pending');
-      const cancelledBookings = tripBookings.filter((b: any) => b.status === 'cancelled');
+      const confirmedBookings = tripBookings.filter((b: Booking) => b.status === 'confirmed');
+      const pendingBookings = tripBookings.filter((b: Booking) => b.status === 'pending');
+      const cancelledBookings = tripBookings.filter((b: Booking) => b.status === 'cancelled');
       
-      const presentStudents = tripAttendance.filter((a: any) => a.status === 'present').length;
-      const absentStudents = tripAttendance.filter((a: any) => a.status === 'absent').length;
+      const presentStudents = tripAttendance.filter((a: AttendanceRecord) => a.status === 'present').length;
+      const absentStudents = tripAttendance.filter((a: AttendanceRecord) => a.status === 'absent').length;
       const attendanceRate = tripAttendance.length > 0 ? (presentStudents / tripAttendance.length) * 100 : 0;
       
       // Calculate trip duration
@@ -126,8 +183,8 @@ export async function GET(request: NextRequest) {
           confirmed: confirmedBookings.length,
           pending: pendingBookings.length,
           cancelled: cancelledBookings.length,
-          list: tripBookings.map((booking: any) => {
-            const student = users.find((u: any) => u.id === booking.studentId);
+          list: tripBookings.map((booking: Booking) => {
+            const student = users.find((u: User) => u.id === booking.studentId);
             return {
               id: booking.id,
               status: booking.status,
@@ -142,9 +199,9 @@ export async function GET(request: NextRequest) {
         },
         payments: {
           total: tripPayments.length,
-          completed: tripPayments.filter((p: any) => p.status === 'completed').length,
-          pending: tripPayments.filter((p: any) => p.status === 'pending').length,
-          failed: tripPayments.filter((p: any) => p.status === 'failed').length,
+          completed: tripPayments.filter((p: Payment) => p.status === 'completed').length,
+          pending: tripPayments.filter((p: Payment) => p.status === 'pending').length,
+          failed: tripPayments.filter((p: Payment) => p.status === 'failed').length,
           totalRevenue,
           pendingRevenue
         },
@@ -163,29 +220,29 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort trips by date (newest first)
-    enrichedTrips.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    enrichedTrips.sort((a: Trip, b: Trip) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculate trips summary
     const tripsSummary = {
       totalTrips: enrichedTrips.length,
-      completedTrips: enrichedTrips.filter((trip: any) => trip.status === 'completed').length,
-      activeTrips: enrichedTrips.filter((trip: any) => trip.status === 'active').length,
-      scheduledTrips: enrichedTrips.filter((trip: any) => trip.status === 'scheduled').length,
-      cancelledTrips: enrichedTrips.filter((trip: any) => trip.status === 'cancelled').length,
-      totalBookings: enrichedTrips.reduce((sum: number, trip: any) => sum + trip.bookings.total, 0),
-      totalRevenue: enrichedTrips.reduce((sum: number, trip: any) => sum + trip.payments.totalRevenue, 0),
-      totalPassengers: enrichedTrips.reduce((sum: number, trip: any) => sum + (trip.passengers || 0), 0),
+      completedTrips: enrichedTrips.filter((trip: Trip) => trip.status === 'completed').length,
+      activeTrips: enrichedTrips.filter((trip: Trip) => trip.status === 'active').length,
+      scheduledTrips: enrichedTrips.filter((trip: Trip) => trip.status === 'scheduled').length,
+      cancelledTrips: enrichedTrips.filter((trip: Trip) => trip.status === 'cancelled').length,
+      totalBookings: enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.bookings.total, 0),
+      totalRevenue: enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.payments.totalRevenue, 0),
+      totalPassengers: enrichedTrips.reduce((sum: number, trip: Trip) => sum + (trip.passengers || 0), 0),
       averageUtilization: enrichedTrips.length > 0 ? 
-        enrichedTrips.reduce((sum: number, trip: any) => sum + trip.metrics.utilizationRate, 0) / enrichedTrips.length : 0,
+        enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.metrics.utilizationRate, 0) / enrichedTrips.length : 0,
       averageAttendanceRate: enrichedTrips.length > 0 ? 
-        enrichedTrips.reduce((sum: number, trip: any) => sum + trip.attendance.rate, 0) / enrichedTrips.length : 0
+        enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.attendance.rate, 0) / enrichedTrips.length : 0
     };
 
     return NextResponse.json({
       trips: enrichedTrips,
       summary: tripsSummary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching trips data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -227,8 +284,8 @@ export async function POST(request: NextRequest) {
     // Create notifications for assigned supervisor and driver
     try {
       if (!db.notifications) db.notifications = [];
-      const bus = (db.buses || []).find((b: any) => b.id === newTrip.busId);
-      const route = (db.routes || []).find((r: any) => r.id === newTrip.routeId);
+      const bus = (db.buses || []).find((b: Bus) => b.id === newTrip.busId);
+      const route = (db.routes || []).find((r: Route) => r.id === newTrip.routeId);
       const startLoc = (route && (route.startLocation || route.startPoint)) || '';
       const endLoc = (route && (route.endLocation || route.endPoint)) || '';
       const busNumber = bus?.number || '';
@@ -272,13 +329,13 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date().toISOString()
         });
       }
-    } catch (e) { console.error('Failed to create notifications for new trip (movement manager):', e); }
+    } catch { console.error('Failed to create notifications for new trip (movement manager):', e); }
 
     // Write back to db.json
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newTrip, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating trip:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

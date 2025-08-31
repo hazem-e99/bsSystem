@@ -2,6 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Booking {
+  id: string;
+  tripId: string;
+  studentId: string;
+  stopId: string;
+  status: string;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Trip {
+  id: string;
+  busId: string;
+}
+
+interface User {
+  id: string;
+  role: string;
+}
+
+interface Payment {
+  id: string;
+  studentId: string;
+  status: string;
+}
+
+interface Bus {
+  id: string;
+  capacity: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,17 +47,17 @@ export async function GET(request: NextRequest) {
     let bookings = db.bookings || [];
 
     if (tripId) {
-      bookings = bookings.filter((b: any) => b.tripId === tripId);
+      bookings = bookings.filter((b: Booking) => b.tripId === tripId);
     }
     if (studentId) {
-      bookings = bookings.filter((b: any) => b.studentId === studentId);
+      bookings = bookings.filter((b: Booking) => b.studentId === studentId);
     }
     if (date) {
-      bookings = bookings.filter((b: any) => b.date === date);
+      bookings = bookings.filter((b: Booking) => b.date === date);
     }
 
     return NextResponse.json(bookings);
-  } catch (error) {
+  } catch {
     console.error('Error reading bookings data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -49,35 +81,35 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate trip exists
-    const trip = (db.trips || []).find((t: any) => t.id === tripId);
+    const trip = (db.trips || []).find((t: Trip) => t.id === tripId);
     if (!trip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
 
     // Validate student exists and role is student
-    const student = (db.users || []).find((u: any) => u.id === studentId && u.role === 'student');
+    const student = (db.users || []).find((u: User) => u.id === studentId && u.role === 'student');
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
     // Enforce active subscription
-    const studentPayments = (db.payments || []).filter((p: any) => p.studentId === studentId);
-    const hasActivePayment = studentPayments.some((p: any) => p.status === 'completed');
+    const studentPayments = (db.payments || []).filter((p: Payment) => p.studentId === studentId);
+    const hasActivePayment = studentPayments.some((p: Payment) => p.status === 'completed');
     if (!hasActivePayment) {
       return NextResponse.json({ message: 'You must have an active subscription' }, { status: 403 });
     }
 
     // Validate bus capacity and seat availability
-    const bus = (db.buses || []).find((b: any) => b.id === trip.busId);
+    const bus = (db.buses || []).find((b: Bus) => b.id === trip.busId);
     if (!bus) {
       return NextResponse.json({ error: 'Bus not found for trip' }, { status: 409 });
     }
     const capacity = Number(bus.capacity) || 0;
 
-    const existingTripBookings = (db.bookings || []).filter((b: any) => b.tripId === tripId);
+    const existingTripBookings = (db.bookings || []).filter((b: Booking) => b.tripId === tripId);
 
     // Optional: prevent multiple bookings for same student on same trip
-    if (existingTripBookings.some((b: any) => b.studentId === studentId)) {
+    if (existingTripBookings.some((b: Booking) => b.studentId === studentId)) {
       return NextResponse.json({ message: 'You already have a booking for this trip' }, { status: 409 });
     }
 
@@ -102,14 +134,14 @@ export async function POST(request: NextRequest) {
       db.bookings = [];
     }
     
-    if (db.bookings.some((b: any) => b.id === newBooking.id)) {
+    if (db.bookings.some((b: Booking) => b.id === newBooking.id)) {
       return NextResponse.json({ error: 'Booking ID already exists' }, { status: 409 });
     }
     db.bookings.push(newBooking);
 
     // Update trip passengers count and assignedStudents
     try {
-      const tripIndex = (db.trips || []).findIndex((t: any) => t.id === tripId);
+      const tripIndex = (db.trips || []).findIndex((t: Trip) => t.id === tripId);
       if (tripIndex >= 0) {
         const assignedStudents: string[] = Array.isArray(db.trips[tripIndex].assignedStudents)
           ? db.trips[tripIndex].assignedStudents
@@ -122,12 +154,12 @@ export async function POST(request: NextRequest) {
     
     // Send notification to supervisor (bus.assignedSupervisorId -> trip.supervisorId -> route.assignedSupervisors[0])
     try {
-      const busForNotification = (db.buses || []).find((b: any) => b.id === trip.busId);
-      const routeForTrip = (db.routes || []).find((r: any) => r.id === trip.routeId);
+      const busForNotification = (db.buses || []).find((b: Bus) => b.id === trip.busId);
+      const routeForTrip = (db.routes || []).find((r: Route) => r.id === trip.routeId);
       const supervisorId = busForNotification?.assignedSupervisorId
         || trip?.supervisorId
         || (Array.isArray(routeForTrip?.assignedSupervisors) ? routeForTrip.assignedSupervisors[0] : undefined);
-      const stop = Array.isArray(trip?.stops) ? trip.stops.find((s: any) => s.id === stopId) : null;
+      const stop = Array.isArray(trip?.stops) ? trip.stops.find((s: { id: string; stopName: string; stopTime: string }) => s.id === stopId) : null;
 
       if (supervisorId) {
         if (!db.notifications) db.notifications = [];
@@ -156,7 +188,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBooking, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating booking:', error);
     return NextResponse.json(
       { message: 'Internal server error' },

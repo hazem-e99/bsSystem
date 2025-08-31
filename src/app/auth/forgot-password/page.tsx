@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { authAPI } from '@/lib/api';
@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
         });
       }
       
-    } catch (err) {
+    } catch {
       console.error('Failed to send reset email:', err);
       setError('Failed to send reset email. Please try again.');
       showToast({ 

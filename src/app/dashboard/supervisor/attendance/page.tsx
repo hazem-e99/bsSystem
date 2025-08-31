@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,7 +9,6 @@ import { Select } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { 
   Users, 
-  CheckCircle, 
   XCircle, 
   Clock, 
   Search,
@@ -107,14 +106,14 @@ export default function SupervisorAttendancePage() {
           paymentAPI.getAll().catch(() => [])
         ]);
 
-        setStudents((studentsData || []) as any);
-        setBookings((bookingsData || []) as any);
-        setTrips((tripsData || []) as any);
-        setPayments((paymentsData || []) as any);
+        setStudents(studentsData || []);
+        setBookings(bookingsData || []);
+        setTrips(tripsData || []);
+        setPayments(paymentsData || []);
 
         // Generate initial attendance records
         generateInitialAttendanceRecords();
-      } catch (error) {
+      } catch {
         console.error('Failed to fetch data:', error);
       } finally {
         setIsLoading(false);

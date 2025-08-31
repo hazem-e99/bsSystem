@@ -2,6 +2,72 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Trip {
+  id: string;
+  date: string;
+  status: string;
+  routeId: string;
+  busId: string;
+  driverId: string;
+  supervisorId: string;
+  scheduledTime?: string;
+  actualStartTime?: string;
+}
+
+interface Booking {
+  id: string;
+  date: string;
+  status: string;
+  studentId: string;
+  tripId: string;
+}
+
+interface Payment {
+  id: string;
+  date: string;
+  status: string;
+  amount: number;
+  tripId: string;
+  bookingId: string;
+}
+
+interface AttendanceRecord {
+  id: string;
+  date: string;
+  status: string;
+  tripId: string;
+}
+
+interface MaintenanceRecord {
+  id: string;
+  status: string;
+  priority: string;
+  estimatedCost: number;
+  actualCost: number;
+  busId: string;
+  createdAt?: string;
+  date?: string;
+}
+
+interface Route {
+  id: string;
+  name: string;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  status: string;
+  lastMaintenance?: string;
+  nextMaintenance?: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -39,27 +105,27 @@ export async function GET(request: NextRequest) {
       const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
       const toDate = dateTo ? new Date(dateTo) : new Date();
       
-      filteredTrips = filteredTrips.filter((trip: any) => {
+      filteredTrips = filteredTrips.filter((trip: Trip) => {
         const tripDate = new Date(trip.date);
         return tripDate >= fromDate && tripDate <= toDate;
       });
       
-      filteredBookings = filteredBookings.filter((booking: any) => {
+      filteredBookings = filteredBookings.filter((booking: Booking) => {
         const bookingDate = new Date(booking.date);
         return bookingDate >= fromDate && bookingDate <= toDate;
       });
       
-      filteredPayments = filteredPayments.filter((payment: any) => {
+      filteredPayments = filteredPayments.filter((payment: Payment) => {
         const paymentDate = new Date(payment.date);
         return paymentDate >= fromDate && paymentDate <= toDate;
       });
       
-      filteredAttendance = filteredAttendance.filter((record: any) => {
+      filteredAttendance = filteredAttendance.filter((record: AttendanceRecord) => {
         const attendanceDate = new Date(record.date);
         return attendanceDate >= fromDate && attendanceDate <= toDate;
       });
       
-      filteredMaintenance = filteredMaintenance.filter((record: any) => {
+      filteredMaintenance = filteredMaintenance.filter((record: MaintenanceRecord) => {
         const maintenanceDate = new Date(record.createdAt || record.date);
         return maintenanceDate >= fromDate && maintenanceDate <= toDate;
       });
@@ -67,19 +133,19 @@ export async function GET(request: NextRequest) {
     
     // Filter by specific entities if provided
     if (routeId) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.routeId === routeId);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.routeId === routeId);
     }
     
     if (busId) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.busId === busId);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.busId === busId);
     }
     
     if (driverId) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.driverId === driverId);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.driverId === driverId);
     }
     
     if (supervisorId) {
-      filteredTrips = filteredTrips.filter((trip: any) => trip.supervisorId === supervisorId);
+      filteredTrips = filteredTrips.filter((trip: Trip) => trip.supervisorId === supervisorId);
     }
 
     // Generate comprehensive reports based on type
@@ -129,37 +195,37 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to generate overview report
-function generateOverviewReport(trips: any[], bookings: any[], payments: any[], attendance: any[], maintenance: any[], routes: any[], buses: any[], users: any[]) {
+function generateOverviewReport(trips: Trip[], bookings: Booking[], payments: Payment[], attendance: AttendanceRecord[], maintenance: MaintenanceRecord[], routes: Route[], buses: Bus[], users: User[]) {
   const totalTrips = trips.length;
-  const completedTrips = trips.filter((t: any) => t.status === 'completed').length;
-  const activeTrips = trips.filter((t: any) => t.status === 'active').length;
-  const scheduledTrips = trips.filter((t: any) => t.status === 'scheduled').length;
+  const completedTrips = trips.filter((t: Trip) => t.status === 'completed').length;
+  const activeTrips = trips.filter((t: Trip) => t.status === 'active').length;
+  const scheduledTrips = trips.filter((t: Trip) => t.status === 'scheduled').length;
   
   const totalBookings = bookings.length;
-  const confirmedBookings = bookings.filter((b: any) => b.status === 'confirmed').length;
-  const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
+  const confirmedBookings = bookings.filter((b: Booking) => b.status === 'confirmed').length;
+  const pendingBookings = bookings.filter((b: Booking) => b.status === 'pending').length;
   
   const totalRevenue = payments
-    .filter((p: any) => p.status === 'completed')
-    .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    .filter((p: Payment) => p.status === 'completed')
+    .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
   
   const totalAttendance = attendance.length;
-  const presentAttendance = attendance.filter((a: any) => a.status === 'present').length;
+  const presentAttendance = attendance.filter((a: AttendanceRecord) => a.status === 'present').length;
   const attendanceRate = totalAttendance > 0 ? (presentAttendance / totalAttendance) * 100 : 0;
   
   const totalMaintenance = maintenance.length;
-  const openMaintenance = maintenance.filter((m: any) => m.status === 'open').length;
-  const completedMaintenance = maintenance.filter((m: any) => m.status === 'completed').length;
+  const openMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'open').length;
+  const completedMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'completed').length;
   
   const totalRoutes = routes.length;
   const totalBuses = buses.length;
-  const activeBuses = buses.filter((b: any) => b.status === 'active').length;
+  const activeBuses = buses.filter((b: Bus) => b.status === 'active').length;
   
   const totalUsers = users.length;
-  const students = users.filter((u: any) => u.role === 'student').length;
-  const drivers = users.filter((u: any) => u.role === 'driver').length;
-  const supervisors = users.filter((u: any) => u.role === 'supervisor').length;
-  const admins = users.filter((u: any) => u.role === 'admin').length;
+  const students = users.filter((u: User) => u.role === 'student').length;
+  const drivers = users.filter((u: User) => u.role === 'driver').length;
+  const supervisors = users.filter((u: User) => u.role === 'supervisor').length;
+  const admins = users.filter((u: User) => u.role === 'admin').length;
 
   return {
     type: 'overview',
@@ -210,31 +276,31 @@ function generateOverviewReport(trips: any[], bookings: any[], payments: any[], 
 }
 
 // Helper function to generate financial report
-function generateFinancialReport(trips: any[], payments: any[], bookings: any[], routes: any[], buses: any[]) {
+function generateFinancialReport(trips: Trip[], payments: Payment[], bookings: Booking[], routes: Route[], buses: Bus[]) {
   const totalRevenue = payments
-    .filter((p: any) => p.status === 'completed')
-    .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    .filter((p: Payment) => p.status === 'completed')
+    .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
   
   const pendingRevenue = payments
-    .filter((p: any) => p.status === 'pending')
-    .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    .filter((p: Payment) => p.status === 'pending')
+    .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
   
   const failedRevenue = payments
-    .filter((p: any) => p.status === 'failed')
-    .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    .filter((p: Payment) => p.status === 'failed')
+    .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
   
   const totalTrips = trips.length;
   const revenuePerTrip = totalTrips > 0 ? totalRevenue / totalTrips : 0;
   
   // Revenue by route
-  const revenueByRoute = routes.map((route: any) => {
-    const routeTrips = trips.filter((t: any) => t.routeId === route.id);
-    const routePayments = payments.filter((p: any) => 
-      routeTrips.some((t: any) => t.id === p.tripId)
+  const revenueByRoute = routes.map((route: Route) => {
+    const routeTrips = trips.filter((t: Trip) => t.routeId === route.id);
+    const routePayments = payments.filter((p: Payment) => 
+      routeTrips.some((t: Trip) => t.id === p.tripId)
     );
     const routeRevenue = routePayments
-      .filter((p: any) => p.status === 'completed')
-      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      .filter((p: Payment) => p.status === 'completed')
+      .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
     
     return {
       routeId: route.id,
@@ -246,14 +312,14 @@ function generateFinancialReport(trips: any[], payments: any[], bookings: any[],
   });
   
   // Revenue by bus
-  const revenueByBus = buses.map((bus: any) => {
-    const busTrips = trips.filter((t: any) => t.busId === bus.id);
-    const busPayments = payments.filter((p: any) => 
-      busTrips.some((t: any) => t.id === p.tripId)
+  const revenueByBus = buses.map((bus: Bus) => {
+    const busTrips = trips.filter((t: Trip) => t.busId === bus.id);
+    const busPayments = payments.filter((p: Payment) => 
+      busTrips.some((t: Trip) => t.id === p.tripId)
     );
     const busRevenue = busPayments
-      .filter((p: any) => p.status === 'completed')
-      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      .filter((p: Payment) => p.status === 'completed')
+      .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
     
     return {
       busId: bus.id,
@@ -283,38 +349,38 @@ function generateFinancialReport(trips: any[], payments: any[], bookings: any[],
 }
 
 // Helper function to generate operational report
-function generateOperationalReport(trips: any[], bookings: any[], attendance: any[], routes: any[], buses: any[], users: any[]) {
+function generateOperationalReport(trips: Trip[], bookings: Booking[], attendance: AttendanceRecord[], routes: Route[], buses: Bus[], users: User[]) {
   const totalTrips = trips.length;
-  const completedTrips = trips.filter((t: any) => t.status === 'completed').length;
-  const cancelledTrips = trips.filter((t: any) => t.status === 'cancelled').length;
+  const completedTrips = trips.filter((t: Trip) => t.status === 'completed').length;
+  const cancelledTrips = trips.filter((t: Trip) => t.status === 'cancelled').length;
   
   const totalBookings = bookings.length;
-  const confirmedBookings = bookings.filter((b: any) => b.status === 'confirmed').length;
-  const cancelledBookings = bookings.filter((b: any) => b.status === 'cancelled').length;
+  const confirmedBookings = bookings.filter((b: Booking) => b.status === 'confirmed').length;
+  const cancelledBookings = bookings.filter((b: Booking) => b.status === 'cancelled').length;
   
   const totalAttendance = attendance.length;
-  const presentAttendance = attendance.filter((a: any) => a.status === 'present').length;
-  const absentAttendance = attendance.filter((a: any) => a.status === 'absent').length;
+  const presentAttendance = attendance.filter((a: AttendanceRecord) => a.status === 'present').length;
+  const absentAttendance = attendance.filter((a: AttendanceRecord) => a.status === 'absent').length;
   
   // Operational metrics by route
-  const operationalByRoute = routes.map((route: any) => {
-    const routeTrips = trips.filter((t: any) => t.routeId === route.id);
-    const routeBookings = bookings.filter((b: any) => 
-      routeTrips.some((t: any) => t.id === b.tripId)
+  const operationalByRoute = routes.map((route: Route) => {
+    const routeTrips = trips.filter((t: Trip) => t.routeId === route.id);
+    const routeBookings = bookings.filter((b: Booking) => 
+      routeTrips.some((t: Trip) => t.id === b.tripId)
     );
-    const routeAttendance = attendance.filter((a: any) => 
-      routeTrips.some((t: any) => t.id === a.tripId)
+    const routeAttendance = attendance.filter((a: AttendanceRecord) => 
+      routeTrips.some((t: Trip) => t.id === a.tripId)
     );
     
     return {
       routeId: route.id,
       routeName: route.name,
       trips: routeTrips.length,
-      completedTrips: routeTrips.filter((t: any) => t.status === 'completed').length,
+      completedTrips: routeTrips.filter((t: Trip) => t.status === 'completed').length,
       bookings: routeBookings.length,
-      confirmedBookings: routeBookings.filter((b: any) => b.status === 'confirmed').length,
+      confirmedBookings: routeBookings.filter((b: Booking) => b.status === 'confirmed').length,
       attendance: routeAttendance.length,
-      presentAttendance: routeAttendance.filter((a: any) => a.status === 'present').length
+      presentAttendance: routeAttendance.filter((a: AttendanceRecord) => a.status === 'present').length
     };
   });
 
@@ -347,9 +413,9 @@ function generateOperationalReport(trips: any[], bookings: any[], attendance: an
 }
 
 // Helper function to generate performance report
-function generatePerformanceReport(trips: any[], attendance: any[], maintenance: any[], routes: any[], buses: any[], users: any[]) {
+function generatePerformanceReport(trips: Trip[], attendance: AttendanceRecord[], maintenance: MaintenanceRecord[], routes: Route[], buses: Bus[], users: User[]) {
   const totalTrips = trips.length;
-  const onTimeTrips = trips.filter((t: any) => {
+  const onTimeTrips = trips.filter((t: Trip) => {
     if (!t.scheduledTime || !t.actualStartTime) return false;
     const scheduled = new Date(`2000-01-01T${t.scheduledTime}`);
     const actual = new Date(`2000-01-01T${t.actualStartTime}`);
@@ -358,22 +424,22 @@ function generatePerformanceReport(trips: any[], attendance: any[], maintenance:
   }).length;
   
   const totalAttendance = attendance.length;
-  const presentAttendance = attendance.filter((a: any) => a.status === 'present').length;
+  const presentAttendance = attendance.filter((a: AttendanceRecord) => a.status === 'present').length;
   
   const totalMaintenance = maintenance.length;
-  const completedMaintenance = maintenance.filter((m: any) => m.status === 'completed').length;
+  const completedMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'completed').length;
   
   // Performance by driver
   const performanceByDriver = users
-    .filter((u: any) => u.role === 'driver')
-    .map((driver: any) => {
-      const driverTrips = trips.filter((t: any) => t.driverId === driver.id);
-      const driverAttendance = attendance.filter((a: any) => 
-        driverTrips.some((t: any) => t.id === a.tripId)
+    .filter((u: User) => u.role === 'driver')
+    .map((driver: User) => {
+      const driverTrips = trips.filter((t: Trip) => t.driverId === driver.id);
+      const driverAttendance = attendance.filter((a: AttendanceRecord) => 
+        driverTrips.some((t: Trip) => t.id === a.tripId)
       );
       
-      const completedTrips = driverTrips.filter((t: any) => t.status === 'completed').length;
-      const onTimeTrips = driverTrips.filter((t: any) => {
+      const completedTrips = driverTrips.filter((t: Trip) => t.status === 'completed').length;
+      const onTimeTrips = driverTrips.filter((t: Trip) => {
         if (!t.scheduledTime || !t.actualStartTime) return false;
         const scheduled = new Date(`2000-01-01T${t.scheduledTime}`);
         const actual = new Date(`2000-01-01T${t.actualStartTime}`);
@@ -381,7 +447,7 @@ function generatePerformanceReport(trips: any[], attendance: any[], maintenance:
         return diffMinutes <= 5;
       }).length;
       
-      const presentAttendance = driverAttendance.filter((a: any) => a.status === 'present').length;
+      const presentAttendance = driverAttendance.filter((a: AttendanceRecord) => a.status === 'present').length;
       
       return {
         driverId: driver.id,
@@ -423,29 +489,29 @@ function generatePerformanceReport(trips: any[], attendance: any[], maintenance:
 }
 
 // Helper function to generate maintenance report
-function generateMaintenanceReport(maintenance: any[], trips: any[], buses: any[], users: any[]) {
+function generateMaintenanceReport(maintenance: MaintenanceRecord[], trips: Trip[], buses: Bus[], users: User[]) {
   const totalMaintenance = maintenance.length;
-  const openMaintenance = maintenance.filter((m: any) => m.status === 'open').length;
-  const inProgressMaintenance = maintenance.filter((m: any) => m.status === 'in_progress').length;
-  const completedMaintenance = maintenance.filter((m: any) => m.status === 'completed').length;
+  const openMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'open').length;
+  const inProgressMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'in_progress').length;
+  const completedMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'completed').length;
   
-  const criticalMaintenance = maintenance.filter((m: any) => m.priority === 'critical').length;
-  const highMaintenance = maintenance.filter((m: any) => m.priority === 'high').length;
+  const criticalMaintenance = maintenance.filter((m: MaintenanceRecord) => m.priority === 'critical').length;
+  const highMaintenance = maintenance.filter((m: MaintenanceRecord) => m.priority === 'high').length;
   
-  const totalEstimatedCost = maintenance.reduce((sum: number, m: any) => sum + (m.estimatedCost || 0), 0);
-  const totalActualCost = maintenance.reduce((sum: number, m: any) => sum + (m.actualCost || 0), 0);
+  const totalEstimatedCost = maintenance.reduce((sum: number, m: MaintenanceRecord) => sum + (m.estimatedCost || 0), 0);
+  const totalActualCost = maintenance.reduce((sum: number, m: MaintenanceRecord) => sum + (m.actualCost || 0), 0);
   
   // Maintenance by bus
-  const maintenanceByBus = buses.map((bus: any) => {
-    const busMaintenance = maintenance.filter((m: any) => m.busId === bus.id);
-    const busTrips = trips.filter((t: any) => t.busId === bus.id);
+  const maintenanceByBus = buses.map((bus: Bus) => {
+    const busMaintenance = maintenance.filter((m: MaintenanceRecord) => m.busId === bus.id);
+    const busTrips = trips.filter((t: Trip) => t.busId === bus.id);
     
     return {
       busId: bus.id,
       busNumber: bus.number,
       maintenanceCount: busMaintenance.length,
-      openMaintenance: busMaintenance.filter((m: any) => m.status === 'open').length,
-      criticalMaintenance: busMaintenance.filter((m: any) => m.priority === 'critical').length,
+      openMaintenance: busMaintenance.filter((m: MaintenanceRecord) => m.status === 'open').length,
+      criticalMaintenance: busMaintenance.filter((m: MaintenanceRecord) => m.priority === 'critical').length,
       trips: busTrips.length,
       lastMaintenance: bus.lastMaintenance,
       nextMaintenance: bus.nextMaintenance
@@ -472,37 +538,37 @@ function generateMaintenanceReport(maintenance: any[], trips: any[], buses: any[
 }
 
 // Helper function to generate user activity report
-function generateUserReport(trips: any[], bookings: any[], payments: any[], attendance: any[], users: any[]) {
-  const students = users.filter((u: any) => u.role === 'student');
-  const drivers = users.filter((u: any) => u.role === 'driver');
-  const supervisors = users.filter((u: any) => u.role === 'supervisor');
+function generateUserReport(trips: Trip[], bookings: Booking[], payments: Payment[], attendance: AttendanceRecord[], users: User[]) {
+  const students = users.filter((u: User) => u.role === 'student');
+  const drivers = users.filter((u: User) => u.role === 'driver');
+  const supervisors = users.filter((u: User) => u.role === 'supervisor');
   
   // Student activity
-  const studentActivity = students.map((student: any) => {
-    const studentBookings = bookings.filter((b: any) => b.studentId === student.id);
-    const studentPayments = payments.filter((p: any) => 
-      studentBookings.some((b: any) => b.id === p.bookingId)
+  const studentActivity = students.map((student: User) => {
+    const studentBookings = bookings.filter((b: Booking) => b.studentId === student.id);
+    const studentPayments = payments.filter((p: Payment) => 
+      studentBookings.some((b: Booking) => b.id === p.bookingId)
     );
-    const studentAttendance = attendance.filter((a: any) => 
-      studentBookings.some((b: any) => b.tripId === a.tripId)
+    const studentAttendance = attendance.filter((a: AttendanceRecord) => 
+      studentBookings.some((b: Booking) => b.tripId === a.tripId)
     );
     
     return {
       studentId: student.id,
       studentName: student.name,
       bookings: studentBookings.length,
-      confirmedBookings: studentBookings.filter((b: any) => b.status === 'confirmed').length,
+      confirmedBookings: studentBookings.filter((b: Booking) => b.status === 'confirmed').length,
       payments: studentPayments.length,
-      completedPayments: studentPayments.filter((p: any) => p.status === 'completed').length,
+      completedPayments: studentPayments.filter((p: Payment) => p.status === 'completed').length,
       attendance: studentAttendance.length,
-      presentAttendance: studentAttendance.filter((a: any) => a.status === 'present').length
+      presentAttendance: studentAttendance.filter((a: AttendanceRecord) => a.status === 'present').length
     };
   });
   
   // Driver activity
-  const driverActivity = drivers.map((driver: any) => {
-    const driverTrips = trips.filter((t: any) => t.driverId === driver.id);
-    const completedTrips = driverTrips.filter((t: any) => t.status === 'completed').length;
+  const driverActivity = drivers.map((driver: User) => {
+    const driverTrips = trips.filter((t: Trip) => t.driverId === driver.id);
+    const completedTrips = driverTrips.filter((t: Trip) => t.status === 'completed').length;
     
     return {
       driverId: driver.id,

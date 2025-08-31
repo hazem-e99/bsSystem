@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  studentId: string;
+  department: string;
+  year: string;
+  subscriptionStatus: string;
+  subscriptionExpiry: string;
+  avatar: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // GET: جلب بيانات الطالب
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +33,7 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find student by ID
-    const student = db.users?.find((user: any) => user.id === studentId);
+    const student = db.users?.find((user: User) => user.id.toString() === studentId);
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
@@ -41,7 +56,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(profileData);
-  } catch (error) {
+  } catch {
     console.error('Error fetching student profile:', error);
     return NextResponse.json(
       { error: 'Failed to fetch student profile' },
@@ -68,7 +83,7 @@ export async function PUT(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find student index
-    const studentIndex = db.users?.findIndex((user: any) => user.id === studentId);
+    const studentIndex = db.users?.findIndex((user: User) => user.id.toString() === studentId);
 
     if (studentIndex === -1) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
@@ -103,7 +118,7 @@ export async function PUT(request: NextRequest) {
     };
 
     return NextResponse.json(profileData);
-  } catch (error) {
+  } catch {
     console.error('Error updating student profile:', error);
     return NextResponse.json(
       { error: 'Failed to update student profile' },

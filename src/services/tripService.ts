@@ -12,25 +12,25 @@ import { CreateTripDTO, UpdateTripDTO, TripViewModel } from "@/types/trip";
 // GET    /Trip/by-driver/{driverId}
 // GET    /Trip/by-bus/{busId}
 
-const unwrap = (resp: any) => resp?.data ?? resp ?? null;
+const unwrap = (resp: unknown) => (resp as { data?: unknown })?.data ?? resp ?? null;
 
 export const tripService = {
   // List all trips
   async getAll(): Promise<TripViewModel[]> {
-    const resp = await api.get<any>("/Trip");
+    const resp = await api.get<{ data: TripViewModel[] }>("/Trip");
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },
 
   // Trip details
   async getById(id: number | string): Promise<TripViewModel | null> {
-    const resp = await api.get<any>(`/Trip/${id}`);
+    const resp = await api.get<{ data: TripViewModel }>(`/Trip/${id}`);
     const item = resp?.data ?? resp ?? null;
     return item ?? null;
   },
 
   // Create trip using the specified API format
-  async create(payload: CreateTripDTO): Promise<any> {
+  async create(payload: CreateTripDTO): Promise<unknown> {
     const baseUrl = "http://busmanagementsystem.runasp.net";
 
     // Get token from localStorage
@@ -82,19 +82,19 @@ export const tripService = {
       } catch {
         return result;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Trip creation error:", error);
       throw new Error(error?.message || "Trip creation failed");
     }
   },
 
   // Update trip
-  async update(id: number | string, payload: UpdateTripDTO): Promise<any> {
-    const body = { ...payload } as any;
+  async update(id: number | string, payload: UpdateTripDTO): Promise<unknown> {
+    const body = { ...payload } as UpdateTripDTO;
     if (Array.isArray(body.stopLocations) && body.stopLocations.length === 0) {
       body.stopLocations = undefined;
     }
-    const resp = await api.put<any>(`/Trip/${id}`, body);
+    const resp = await api.put<{ success: boolean; message?: string }>(`/Trip/${id}`, body);
     if (
       resp &&
       typeof resp === "object" &&
@@ -107,8 +107,8 @@ export const tripService = {
   },
 
   // Delete trip
-  async remove(id: number | string): Promise<any> {
-    const resp = await api.delete<any>(`/Trip/${id}`);
+  async remove(id: number | string): Promise<unknown> {
+    const resp = await api.delete<{ success: boolean; message?: string }>(`/Trip/${id}`);
     if (
       resp &&
       typeof resp === "object" &&
@@ -122,7 +122,7 @@ export const tripService = {
 
   // Filters
   async getByDate(date: string): Promise<TripViewModel[]> {
-    const resp = await api.get<any>(
+    const resp = await api.get<{ data: TripViewModel[] }>(
       `/Trip/by-date/${encodeURIComponent(date)}`
     );
     const list = resp?.data ?? resp ?? [];
@@ -130,13 +130,13 @@ export const tripService = {
   },
 
   async getByDriver(driverId: number | string): Promise<TripViewModel[]> {
-    const resp = await api.get<any>(`/Trip/by-driver/${driverId}`);
+    const resp = await api.get<{ data: TripViewModel[] }>(`/Trip/by-driver/${driverId}`);
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },
 
   async getByBus(busId: number | string): Promise<TripViewModel[]> {
-    const resp = await api.get<any>(`/Trip/by-bus/${busId}`);
+    const resp = await api.get<{ data: TripViewModel[] }>(`/Trip/by-bus/${busId}`);
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },

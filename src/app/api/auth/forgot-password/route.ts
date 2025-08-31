@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  email: string;
+}
+
+interface PasswordReset {
+  email: string;
+  token: string;
+  expiry: string;
+  createdAt: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
@@ -19,10 +31,10 @@ export async function POST(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Check if user exists
-    const user = db.users?.find((u: any) => u.email === email);
+    const user = db.users?.find((u: User) => u.email === email);
     
     if (!user) {
-      // For security reasons, don't reveal if email exists or not
+      // For security reasons, don&apos;t reveal if email exists or not
       return NextResponse.json(
         { message: 'If an account with that email exists, we have sent a password reset link.' },
         { status: 200 }
@@ -39,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Remove existing reset tokens for this user
-    db.passwordResets = db.passwordResets.filter((r: any) => r.email !== email);
+    db.passwordResets = db.passwordResets.filter((r: PasswordReset) => r.email !== email);
 
     // Add new reset token
     db.passwordResets.push({
@@ -63,7 +75,7 @@ export async function POST(request: NextRequest) {
       resetLink // Remove this in production, only for development
     });
 
-  } catch (error) {
+  } catch {
     console.error('Forgot password error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

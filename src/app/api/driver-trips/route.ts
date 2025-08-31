@@ -3,6 +3,63 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { autoCompleteTrips } from '@/lib/tripStatus';
 
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface Trip {
+  id: string;
+  driverId: string;
+  routeId: string;
+  busId: string;
+  supervisorId: string;
+  status: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  passengers: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+  distance: number;
+  estimatedDuration: number;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  model: string;
+  capacity: number;
+  status: string;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
+interface Payment {
+  id: string;
+  tripId: string;
+  status: string;
+  amount: number;
+}
+
+interface AttendanceRecord {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -25,8 +82,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify driver exists
-    const driver = db.users?.find((user: any) => 
-      user.id === driverId && user.role === 'driver'
+    const driver = db.users?.find((user: User) => 
+      user.id.toString() === driverId && user.role === 'driver'
     );
 
     if (!driver) {
@@ -34,38 +91,38 @@ export async function GET(request: NextRequest) {
     }
 
     // Get driver's trips
-    let driverTrips = db.trips?.filter((trip: any) => trip.driverId === driverId) || [];
+    let driverTrips = db.trips?.filter((trip: Trip) => trip.driverId === driverId) || [];
 
     // Filter by status if provided
     if (status) {
-      driverTrips = driverTrips.filter((trip: any) => trip.status === status);
+      driverTrips = driverTrips.filter((trip: Trip) => trip.status === status);
     }
 
     // Filter by date if provided
     if (date) {
-      driverTrips = driverTrips.filter((trip: any) => trip.date === date);
+      driverTrips = driverTrips.filter((trip: Trip) => trip.date === date);
     }
 
     // Enrich trips with additional information
-    const enrichedTrips = driverTrips.map((trip: any) => {
-      const route = db.routes?.find((r: any) => r.id === trip.routeId);
-      const bus = db.buses?.find((b: any) => b.id === trip.busId);
-      const supervisor = db.users?.find((u: any) => u.id === trip.supervisorId);
+    const enrichedTrips = driverTrips.map((trip: Trip) => {
+      const route = db.routes?.find((r: Route) => r.id === trip.routeId);
+      const bus = db.buses?.find((b: Bus) => b.id === trip.busId);
+      const supervisor = db.users?.find((u: User) => u.id === trip.supervisorId);
       
-      const tripBookings = db.bookings?.filter((b: any) => b.tripId === trip.id) || [];
-      const tripPayments = db.payments?.filter((p: any) => p.tripId === trip.id) || [];
-      const tripAttendance = db.attendance?.filter((a: any) => a.tripId === trip.id) || [];
+      const tripBookings = db.bookings?.filter((b: Booking) => b.tripId === trip.id) || [];
+      const tripPayments = db.payments?.filter((p: Payment) => p.tripId === trip.id) || [];
+      const tripAttendance = db.attendance?.filter((a: AttendanceRecord) => a.tripId === trip.id) || [];
 
       const totalRevenue = tripPayments
-        .filter((p: any) => p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'completed')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
 
-      const confirmedBookings = tripBookings.filter((b: any) => b.status === 'confirmed');
-      const pendingBookings = tripBookings.filter((b: any) => b.status === 'pending');
-      const cancelledBookings = tripBookings.filter((b: any) => b.status === 'cancelled');
+      const confirmedBookings = tripBookings.filter((b: Booking) => b.status === 'confirmed');
+      const pendingBookings = tripBookings.filter((b: Booking) => b.status === 'pending');
+      const cancelledBookings = tripBookings.filter((b: Booking) => b.status === 'cancelled');
 
-      const presentStudents = tripAttendance.filter((a: any) => a.status === 'present').length;
-      const absentStudents = tripAttendance.filter((a: any) => a.status === 'absent').length;
+      const presentStudents = tripAttendance.filter((a: AttendanceRecord) => a.status === 'present').length;
+      const absentStudents = tripAttendance.filter((a: AttendanceRecord) => a.status === 'absent').length;
       const attendanceRate = tripAttendance.length > 0 ? (presentStudents / tripAttendance.length) * 100 : 0;
 
       // Calculate trip duration
@@ -107,8 +164,8 @@ export async function GET(request: NextRequest) {
           confirmed: confirmedBookings.length,
           pending: pendingBookings.length,
           cancelled: cancelledBookings.length,
-          list: tripBookings.map((booking: any) => {
-            const student = db.users?.find((u: any) => u.id === booking.studentId);
+          list: tripBookings.map((booking: Booking) => {
+            const student = db.users?.find((u: User) => u.id === booking.studentId);
             return {
               id: booking.id,
               status: booking.status,
@@ -123,9 +180,9 @@ export async function GET(request: NextRequest) {
         },
         payments: {
           total: tripPayments.length,
-          completed: tripPayments.filter((p: any) => p.status === 'completed').length,
-          pending: tripPayments.filter((p: any) => p.status === 'pending').length,
-          failed: tripPayments.filter((p: any) => p.status === 'failed').length,
+          completed: tripPayments.filter((p: Payment) => p.status === 'completed').length,
+          pending: tripPayments.filter((p: Payment) => p.status === 'pending').length,
+          failed: tripPayments.filter((p: Payment) => p.status === 'failed').length,
           totalRevenue
         },
         attendance: {
@@ -143,24 +200,24 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort trips by date (newest first)
-    enrichedTrips.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    enrichedTrips.sort((a: Trip, b: Trip) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculate summary statistics
     const totalTrips = enrichedTrips.length;
-    const completedTrips = enrichedTrips.filter((trip: any) => trip.status === 'completed').length;
-    const activeTrips = enrichedTrips.filter((trip: any) => trip.status === 'active').length;
-    const scheduledTrips = enrichedTrips.filter((trip: any) => trip.status === 'scheduled').length;
-    const cancelledTrips = enrichedTrips.filter((trip: any) => trip.status === 'cancelled').length;
+    const completedTrips = enrichedTrips.filter((trip: Trip) => trip.status === 'completed').length;
+    const activeTrips = enrichedTrips.filter((trip: Trip) => trip.status === 'active').length;
+    const scheduledTrips = enrichedTrips.filter((trip: Trip) => trip.status === 'scheduled').length;
+    const cancelledTrips = enrichedTrips.filter((trip: Trip) => trip.status === 'cancelled').length;
 
-    const totalBookings = enrichedTrips.reduce((sum: number, trip: any) => sum + trip.bookings.total, 0);
-    const totalRevenue = enrichedTrips.reduce((sum: number, trip: any) => sum + trip.payments.totalRevenue, 0);
-    const totalPassengers = enrichedTrips.reduce((sum: number, trip: any) => sum + (trip.passengers || 0), 0);
+    const totalBookings = enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.bookings.total, 0);
+    const totalRevenue = enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.payments.totalRevenue, 0);
+    const totalPassengers = enrichedTrips.reduce((sum: number, trip: Trip) => sum + (trip.passengers || 0), 0);
 
     const averageUtilization = enrichedTrips.length > 0 ? 
-      enrichedTrips.reduce((sum: number, trip: any) => sum + trip.metrics.utilizationRate, 0) / enrichedTrips.length : 0;
+      enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.metrics.utilizationRate, 0) / enrichedTrips.length : 0;
 
     const averageAttendanceRate = enrichedTrips.length > 0 ? 
-      enrichedTrips.reduce((sum: number, trip: any) => sum + trip.attendance.rate, 0) / enrichedTrips.length : 0;
+      enrichedTrips.reduce((sum: number, trip: Trip) => sum + trip.attendance.rate, 0) / enrichedTrips.length : 0;
 
     const summary = {
       totalTrips,
@@ -185,7 +242,7 @@ export async function GET(request: NextRequest) {
       trips: enrichedTrips,
       summary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching driver trips:', error);
     return NextResponse.json(
       { error: 'Failed to fetch driver trips' },

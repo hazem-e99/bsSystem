@@ -85,6 +85,7 @@ export const API_CONSTANTS = {
     nationalId: 'string',
     email: 'string',
     phoneNumber: 'string',
+    studentAcademicNumber: 'string',
     department: 'string',
     yearOfStudy: 'string',
     password: 'string',
@@ -98,7 +99,7 @@ export const API_CONSTANTS = {
     nationalId: 'string',
     email: 'string',
     phoneNumber: 'string',
-    role: 'Admin' | 'Driver' | 'Staff'
+    role: 'string'
   }
 };
 

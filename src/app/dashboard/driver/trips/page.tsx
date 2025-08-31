@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -85,7 +85,7 @@ export default function TripHistory() {
       
       // Fetch all trips
       const allTrips = await tripAPI.getAll();
-      const driverTrips = allTrips.filter((t: Trip) => t.driverId === user.id);
+      const driverTrips = allTrips.filter((t: Trip) => t.driverId === user.id.toString());
       console.log('📊 Driver trips loaded:', driverTrips.length);
       setTrips(driverTrips);
       
@@ -98,7 +98,7 @@ export default function TripHistory() {
       setLastRefresh(new Date());
       console.log('✅ Trip history loaded successfully');
       
-    } catch (error) {
+    } catch {
       console.error('❌ Failed to fetch trip history:', error);
       showToast({
         type: 'error',

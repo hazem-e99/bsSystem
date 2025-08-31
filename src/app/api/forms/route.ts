@@ -12,12 +12,29 @@ function getDefaultFormsConfig() {
     ],
     roleSpecificFields: {
       student: [
+        { name: 'studentAcademicNumber', label: 'Student Academic Number', type: 'text', required: true },
         { name: 'department', label: 'Department', type: 'select', required: true, options: [
-          'Computer Science', 'Engineering', 'Business Administration', 'Medicine', 'Law', 
-          'Arts', 'Sciences', 'Education', 'Agriculture', 'Pharmacy'
+          'Medicine', 'Dentistry', 'Pharmacy', 'VeterinaryMedicine', 'Nursing',
+          'CivilEngineering', 'MechanicalEngineering', 'ElectricalEngineering', 'ComputerEngineering', 'ChemicalEngineering',
+          'Architecture', 'ComputerScience', 'InformationTechnology', 'SoftwareEngineering', 'DataScience',
+          'BusinessAdministration', 'Accounting', 'Finance', 'Marketing', 'Economics', 'Management',
+          'Law', 'ArabicLanguageAndLiterature', 'EnglishLanguageAndLiterature', 'History', 'Philosophy',
+          'Geography', 'PoliticalScience', 'Psychology', 'Sociology', 'SocialWork', 'InternationalRelations',
+          'Physics', 'Chemistry', 'Biology', 'Mathematics', 'Agriculture', 'AgriculturalEngineering',
+          'Education', 'FineArts', 'Music', 'GraphicDesign', 'MassCommunication', 'Journalism',
+          'PhysicalEducation', 'TourismAndHotels'
         ]},
         { name: 'academicYear', label: 'Academic Year', type: 'select', required: true, options: [
-          'First Year', 'Second Year', 'Third Year', 'Fourth Year', 'Fifth Year', 'Sixth Year', 'Seventh Year'
+          'PreparatoryYear', 'FirstYear', 'SecondYear', 'ThirdYear', 'FourthYear',
+          'FifthYear', 'SixthYear', 'SeventhYear',
+          'MastersFirstYear', 'MastersSecondYear', 'MastersThirdYear',
+          'PhDFirstYear', 'PhDSecondYear', 'PhDThirdYear', 'PhDFourthYear', 'PhDFifthYear', 'PhDSixthYear',
+          'ResidencyFirstYear', 'ResidencySecondYear', 'ResidencyThirdYear', 'ResidencyFourthYear', 'ResidencyFifthYear',
+          'FellowshipFirstYear', 'FellowshipSecondYear',
+          'ExchangeStudent', 'VisitingStudent', 'NonDegreeStudent', 'ContinuingEducation',
+          'DiplomaFirstYear', 'DiplomaSecondYear', 'DiplomaThirdYear',
+          'ProfessionalFirstYear', 'ProfessionalSecondYear', 'ProfessionalThirdYear', 'ProfessionalFourthYear',
+          'RepeatYear', 'ThesisWriting', 'DissertationWriting'
         ]}
       ],
       driver: [
@@ -44,7 +61,7 @@ export async function GET() {
 
     const forms = db.forms || getDefaultFormsConfig();
     return NextResponse.json(forms);
-  } catch (error) {
+  } catch {
     console.error('Error fetching forms config:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -60,7 +77,7 @@ export async function PATCH(request: NextRequest) {
     db.forms = { ...(db.forms || {}), ...body };
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.forms);
-  } catch (error) {
+  } catch {
     console.error('Error updating forms config:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

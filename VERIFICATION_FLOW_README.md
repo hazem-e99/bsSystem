@@ -35,6 +35,7 @@ POST /Authentication/registration-student
   "nationalId": "19370037866089",
   "email": "ahmed@example.com",
   "phoneNumber": "01012345678",
+  "studentAcademicNumber": "ST2024001",
   "department": "Medicine",
   "yearOfStudy": "PreparatoryYear",
   "password": "password123",
@@ -91,6 +92,7 @@ interface StudentRegistrationDTO {
   nationalId: string;          // pattern: ^\d{14}$
   email: string;               // format: email, minLength: 1
   phoneNumber: string;         // format: tel, minLength: 1, pattern: ^01[0-2,5]{1}[0-9]{8}$
+  studentAcademicNumber: string; // minLength: 1
   department: StudentDepartment; // enum values
   yearOfStudy: AcademicYear;   // enum values
   password: string;            // format: password, minLength: 1

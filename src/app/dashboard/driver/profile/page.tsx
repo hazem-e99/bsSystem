@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -94,7 +94,7 @@ export default function DriverProfile() {
       console.log('🔄 Fetching driver profile from db.json...');
       
       // Fetch driver data
-      const driverData = await userAPI.getById(user.id);
+      const driverData = await userAPI.getById(user.id.toString());
       console.log('📊 Driver data loaded:', driverData);
       setDriver(driverData);
       
@@ -113,7 +113,7 @@ export default function DriverProfile() {
           const busResponse = await busAPI.getById(parseInt(driverData.assignedBusId));
           setAssignedBus(busResponse.data);
           console.log('🚌 Assigned bus loaded:', busResponse.data);
-        } catch (error) {
+        } catch {
           console.log('🚌 No bus assigned or bus not found');
         }
       }
@@ -128,7 +128,7 @@ export default function DriverProfile() {
       setLastRefresh(new Date());
       console.log('✅ Driver profile loaded successfully');
       
-    } catch (error) {
+    } catch {
       console.error('❌ Failed to fetch driver profile:', error);
       showToast({
         type: 'error',
@@ -207,7 +207,7 @@ export default function DriverProfile() {
       
       reader.readAsDataURL(file);
       
-    } catch (error) {
+    } catch {
       console.error('❌ Failed to upload image:', error);
       showToast({
         type: 'error',
@@ -250,7 +250,7 @@ export default function DriverProfile() {
         message: 'Profile updated successfully!'
       });
       
-    } catch (error) {
+    } catch {
       console.error('❌ Failed to update profile:', error);
       showToast({
         type: 'error',

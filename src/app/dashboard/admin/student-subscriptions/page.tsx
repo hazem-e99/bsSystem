@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { userAPI, paymentAPI } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 export default function StudentSubscriptionsPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [users, setUsers] = useState<unknown[]>([]);
+  const [payments, setPayments] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { showToast } = useToast();
@@ -24,17 +24,17 @@ export default function StudentSubscriptionsPage() {
         userAPI.getAll().catch(() => []),
         paymentAPI.getAll().catch(() => []),
       ]);
-      setUsers((usersData || []) as any[]);
-      setPayments((paymentsData || []) as any[]);
+      setUsers(usersData || []);
+      setPayments(paymentsData || []);
     } finally {
       setLoading(false);
     }
   };
 
-  const students = useMemo(() => users.filter((u: any) => u.role === 'student'), [users]);
+  const students = useMemo(() => users.filter((u: User) => u.role === 'student'), [users]);
 
   const byStudent = useMemo(() => {
-    const map = new Map<string, any>();
+    const map = new Map<string, unknown>();
     for (const s of students) map.set(s.id, s);
     return map;
   }, [students]);
@@ -42,8 +42,8 @@ export default function StudentSubscriptionsPage() {
   const studentSubscriptions = useMemo(() => {
     return students.map(s => {
       const subPayments = payments
-        .filter((p: any) => p.studentId === s.id && (!p.tripId))
-        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .filter((p: Payment) => p.studentId === s.id && (!p.tripId))
+        .sort((a: Payment, b: Payment) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const last = subPayments[0];
       return {
         studentId: s.id,
@@ -58,11 +58,11 @@ export default function StudentSubscriptionsPage() {
 
   const confirmCash = async (paymentId: string, studentId: string) => {
     try {
-      await paymentAPI.update(paymentId as any, { status: 'completed' });
+      await paymentAPI.update(paymentId, { status: 'completed' });
       await userAPI.update(String(studentId), { subscriptionStatus: 'active' });
       await load();
       showToast({ type: 'success', title: 'Subscription confirmed' });
-    } catch (e) {
+    } catch {
       console.error(e);
       showToast({ type: 'error', title: 'Failed to confirm' });
     }

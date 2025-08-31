@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -12,11 +12,11 @@ import { useToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function PlansPage() {
-  const [plans, setPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
+  const [editing, setEditing] = useState<unknown | null>(null);
   const [form, setForm] = useState({ id: '', name: '', description: '', price: 0, maxNumberOfRides: 1, durationInDays: 1, isActive: true });
   const { showToast } = useToast();
   const [confirmState, setConfirmState] = useState<{ open: boolean; id?: string }>(() => ({ open: false }));
@@ -28,7 +28,7 @@ export default function PlansPage() {
       setLoading(true);
       const data = await subscriptionPlansAPI.getAll();
       setPlans(data || []);
-    } catch (e) {
+    } catch {
       setError('Failed to load plans');
     } finally {
       setLoading(false);
@@ -41,7 +41,7 @@ export default function PlansPage() {
     setShowModal(true);
   };
 
-  const openEdit = (plan: any) => {
+  const openEdit = (plan: Plan) => {
     setEditing(plan);
     setForm({ id: String(plan.id), name: plan.name ?? '', description: plan.description ?? '', price: Number(plan.price ?? 0), maxNumberOfRides: Number(plan.maxNumberOfRides ?? 1), durationInDays: Number(plan.durationInDays ?? 1), isActive: Boolean(plan.isActive) });
     setShowModal(true);
@@ -63,12 +63,12 @@ export default function PlansPage() {
         await load();
         showToast({ type: 'success', title: 'Plan updated', message: `${form.name}` });
       } else {
-        const created = await subscriptionPlansAPI.create(payload as any);
+        const created = await subscriptionPlansAPI.create(payload);
         await load();
         showToast({ type: 'success', title: 'Plan created', message: `${created?.data?.name || form.name}` });
       }
       setShowModal(false);
-    } catch (e) {
+    } catch {
       setError('Failed to save plan');
       showToast({ type: 'error', title: 'Save failed', message: 'Please try again.' });
     }
@@ -81,7 +81,7 @@ export default function PlansPage() {
       await subscriptionPlansAPI.delete(confirmState.id);
       setPlans(prev => prev.filter(p => p.id !== confirmState.id));
       showToast({ type: 'success', title: 'Deleted', message: 'Plan removed.' });
-    } catch (e) {
+    } catch {
       setError('Failed to delete plan');
       showToast({ type: 'error', title: 'Delete failed', message: 'Please try again.' });
     } finally {

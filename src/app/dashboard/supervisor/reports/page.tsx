@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
@@ -17,7 +17,6 @@ import {
   Filter,
   FileText,
   AlertTriangle,
-  CheckCircle,
   XCircle,
   Route,
   Activity,
@@ -113,7 +112,7 @@ export default function SupervisorReportsPage() {
       ]);
 
       // Transform Trip data to LocalTrip format for this component
-      const transformedTrips = tripsRes.map((trip: any) => ({
+      const transformedTrips = tripsRes.map((trip: Trip) => ({
         id: trip.id,
         busId: trip.busId,
         driverId: trip.driverId,
@@ -134,7 +133,7 @@ export default function SupervisorReportsPage() {
       setBuses(busesRes);
       setTrips(transformedTrips);
       setBookings(bookingsRes);
-    } catch (error) {
+    } catch {
       console.error('Error fetching data:', error);
     } finally {
       setIsLoading(false);

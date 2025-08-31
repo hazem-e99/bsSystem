@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
@@ -15,13 +15,13 @@ import { motion } from 'framer-motion';
 export default function StudentSubscriptionPage() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
-  const [profile, setProfile] = useState<any>(null);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
+  const [profile, setProfile] = useState<unknown>(null);
+  const [payments, setPayments] = useState<unknown[]>([]);
+  const [plans, setPlans] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [methodModalOpen, setMethodModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<unknown | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'bank' | 'cash'>('bank');
   const [submitting, setSubmitting] = useState(false);
   const [pendingModalOpen, setPendingModalOpen] = useState(false);
@@ -32,8 +32,8 @@ export default function StudentSubscriptionPage() {
       
       try {
         const [profileRes, paymentsRes] = await Promise.all([
-          studentProfileAPI.getProfile(user.id),
-          paymentAPI.getByStudent(user.id)
+          studentProfileAPI.getProfile(user.id.toString()),
+          paymentAPI.getByStudent(user.id.toString())
         ]);
 
         if (profileRes) {
@@ -42,7 +42,7 @@ export default function StudentSubscriptionPage() {
         if (paymentsRes) {
           setPayments(paymentsRes);
         }
-      } catch (error) {
+      } catch {
         console.error('Error fetching data:', error);
       }
     };
@@ -50,13 +50,13 @@ export default function StudentSubscriptionPage() {
     fetchData();
   }, [user]);
 
-  const lastSubscriptionPayment = useMemo(() => (payments || []).filter((x: any) => !x.tripId).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0], [payments]);
+  const lastSubscriptionPayment = useMemo(() => (payments || []).filter((x: Payment) => !x.tripId).sort((a: Payment, b: Payment) => new Date(b.date).getTime() - new Date(a.date).getTime())[0], [payments]);
 
   const currentPlan = profile?.subscriptionPlan || lastSubscriptionPayment?.description?.replace('Subscription ', '') || null;
   const currentMethod = lastSubscriptionPayment?.method || null;
   const status = profile?.subscriptionStatus || (lastSubscriptionPayment?.status === 'completed' ? 'active' : lastSubscriptionPayment?.status || 'inactive');
 
-  const handleChoosePlan = (plan: any) => {
+  const handleChoosePlan = (plan: Plan) => {
     setSelectedPlan(plan);
     setPaymentMethod('bank');
     setMethodModalOpen(true);
@@ -67,7 +67,7 @@ export default function StudentSubscriptionPage() {
     
     try {
       const res = await subscriptionPlansAPI.create({
-        studentId: user.id,
+        studentId: user.id.toString(),
         planId: selectedPlan.id,
         startDate: new Date().toISOString(),
         endDate: new Date(Date.now() + selectedPlan.duration * 24 * 60 * 60 * 1000).toISOString(),
@@ -83,8 +83,8 @@ export default function StudentSubscriptionPage() {
         
         // Refresh data
         const [profileRes, paymentsRes] = await Promise.all([
-          studentProfileAPI.getProfile(user.id),
-          paymentAPI.getByStudent(user.id)
+          studentProfileAPI.getProfile(user.id.toString()),
+          paymentAPI.getByStudent(user.id.toString())
         ]);
 
         if (profileRes) {
@@ -94,7 +94,7 @@ export default function StudentSubscriptionPage() {
           setPayments(paymentsRes);
         }
       }
-    } catch (error) {
+    } catch {
       console.error('Subscription error:', error);
       showToast({
         type: 'error',
@@ -181,11 +181,11 @@ export default function StudentSubscriptionPage() {
           <span className="text-sm text-text-muted">Select a plan and proceed to payment</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {(((currentPlan && status) ? (plans || []).filter((p: any) => {
+          {(((currentPlan && status) ? (plans || []).filter((p: Plan) => {
               const t = String(p.type || p.name || '').toLowerCase();
               const c = String(currentPlan).toLowerCase();
               return t === c;
-            }) : (plans || [])) as any[]).map((plan) => (
+            }) : (plans || [])) as Plan[]).map((plan) => (
             <motion.div key={plan.id} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.25 }}>
               <Card className={`relative group rounded-2xl border-2 ${ (currentPlan && (plan.name === currentPlan || plan.type === currentPlan)) ? 'border-secondary/50' : 'border-border'} hover:border-primary/40 shadow-sm hover:shadow-md transition` }>
                 {(plan.recommended || plan.type === 'Two Terms' || plan.name?.toLowerCase().includes('two')) && (

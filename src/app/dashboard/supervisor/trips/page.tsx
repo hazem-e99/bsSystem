@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Fragment } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,7 +19,6 @@ import {
   Calendar,
   Navigation,
   AlertTriangle,
-  CheckCircle,
   XCircle,
   ChevronDown,
   ChevronRight
@@ -73,7 +72,7 @@ export default function SupervisorTripsPage() {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -100,7 +99,7 @@ export default function SupervisorTripsPage() {
         setBuses(busesRes);
         setDrivers(driversRes);
         setBookings(bookingsRes);
-      } catch (error) {
+      } catch {
         console.error('Error fetching data:', error);
       }
     };

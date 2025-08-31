@@ -5,15 +5,14 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
 import { Select } from '@/components/ui/Select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 
 import { 
   Calendar, 
   Clock, 
   MapPin, 
   Bus, 
-  Users, 
-  CheckCircle,
+  Users,
   X,
   AlertCircle
 } from 'lucide-react';
@@ -25,7 +24,7 @@ import { formatDate } from '@/utils/formatDate';
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (booking: any) => void;
+  onSuccess: (booking: unknown) => void;
 }
 
 interface BookingFormData { date: string; }
@@ -39,8 +38,8 @@ interface TripWithStops {
   busId: string;
   routeId: string;
   capacity?: number;
-  startLocation?: any;
-  endLocation?: any;
+  startLocation?: string;
+  endLocation?: string;
   stops?: { id: string; stopName: string; stopTime: string }[];
 }
 
@@ -69,7 +68,7 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
       try {
         const data = await tripAPI.getByDate(formData.date);
         setTripsByDate(Array.isArray(data) ? data : []);
-      } catch (e) {
+      } catch {
         setTripsByDate([]);
       }
     };
@@ -100,12 +99,12 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
     setError('');
 
     try {
-      const payload = { studentId: user.id, tripId: selectedTrip.id, stopId: selectedStopId } as any;
+      const payload = { studentId: user.id.toString(), tripId: selectedTrip.id, stopId: selectedStopId };
       const data = await bookingAPI.create(payload);
       showToast({ type: 'success', title: 'Booking confirmed' });
       onSuccess(data);
       handleClose();
-    } catch (err) {
+    } catch {
       console.error('Booking creation failed:', err);
       setError('Failed to create booking. Please try again.');
     } finally {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import Link from 'next/link';
@@ -8,8 +8,7 @@ import {
   Bus, 
   Users, 
   Route, 
-  Clock, 
-  CheckCircle,
+  Clock,
   Calendar,
   TrendingUp,
   AlertTriangle,
@@ -122,7 +121,7 @@ export default function MovementManagerDashboard() {
       setDrivers(driversData);
       setTrips(tripsData);
 
-    } catch (error) {
+    } catch {
       console.error('Error fetching data:', error);
       showToast({
         type: 'error',

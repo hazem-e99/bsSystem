@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+// Notification interface
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  type?: string;
+  priority?: string;
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -13,14 +24,14 @@ export async function GET(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
 
-    const notification = (db.notifications || []).find((n: any) => n.id === id);
+    const notification = (db.notifications || []).find((n: Notification) => n.id === id);
 
     if (!notification) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
 
     return NextResponse.json(notification);
-  } catch (error) {
+  } catch {
     console.error('Error fetching notification:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -38,7 +49,7 @@ export async function PATCH(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
 
-    const index = (db.notifications || []).findIndex((n: any) => n.id === id);
+    const index = (db.notifications || []).findIndex((n: Notification) => n.id === id);
     if (index === -1) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
@@ -51,7 +62,7 @@ export async function PATCH(
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.notifications[index]);
-  } catch (error) {
+  } catch {
     console.error('Error updating notification:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -68,7 +79,7 @@ export async function DELETE(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
 
-    const index = (db.notifications || []).findIndex((n: any) => n.id === id);
+    const index = (db.notifications || []).findIndex((n: Notification) => n.id === id);
     if (index === -1) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
@@ -77,7 +88,7 @@ export async function DELETE(
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json({ message: 'Notification deleted', notification: deleted });
-  } catch (error) {
+  } catch {
     console.error('Error deleting notification:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

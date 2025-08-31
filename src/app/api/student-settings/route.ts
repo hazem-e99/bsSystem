@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  preferences?: Record<string, unknown>;
+  notifications?: {
+    email: boolean;
+    sms: boolean;
+    push: boolean;
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,8 +32,8 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Get student user data
-    const student = db.users?.find((user: any) => 
-      user.id === studentId && user.role === 'student'
+    const student = db.users?.find((user: User) => 
+      user.id.toString() === studentId && user.role === 'student'
     );
 
     if (!student) {
@@ -41,7 +56,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(studentSettings);
-  } catch (error) {
+  } catch {
     console.error('Error fetching student settings:', error);
     return NextResponse.json(
       { error: 'Failed to fetch student settings' },
@@ -67,8 +82,8 @@ export async function PUT(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find and update student
-    const studentIndex = db.users?.findIndex((user: any) => 
-      user.id === studentId && user.role === 'student'
+    const studentIndex = db.users?.findIndex((user: User) => 
+      user.id.toString() === studentId && user.role === 'student'
     );
 
     if (studentIndex === -1 || studentIndex === undefined) {
@@ -90,7 +105,7 @@ export async function PUT(request: NextRequest) {
       message: 'Student settings updated successfully',
       student: db.users[studentIndex]
     });
-  } catch (error) {
+  } catch {
     console.error('Error updating student settings:', error);
     return NextResponse.json(
       { error: 'Failed to update student settings' },

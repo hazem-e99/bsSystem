@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Payment {
+  id: string;
+  studentId: string;
+  tripId: string;
+  amount: number;
+  method: string;
+  status: string;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface User {
+  id: string;
+  role: string;
+}
+
+interface Trip {
+  id: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -20,31 +41,31 @@ export async function GET(request: NextRequest) {
     
     // Apply filters
     if (studentId) {
-      payments = payments.filter((payment: any) => payment.studentId === studentId);
+      payments = payments.filter((payment: Payment) => payment.studentId === studentId);
     }
     
     if (status) {
-      payments = payments.filter((payment: any) => payment.status === status);
+      payments = payments.filter((payment: Payment) => payment.status === status);
     }
     
     if (method) {
-      payments = payments.filter((payment: any) => payment.method === method);
+      payments = payments.filter((payment: Payment) => payment.method === method);
     }
     
     if (tripId) {
-      payments = payments.filter((payment: any) => payment.tripId === tripId);
+      payments = payments.filter((payment: Payment) => payment.tripId === tripId);
     }
     
     if (dateGte) {
-      payments = payments.filter((payment: any) => payment.date >= dateGte);
+      payments = payments.filter((payment: Payment) => payment.date >= dateGte);
     }
     
     if (dateLte) {
-      payments = payments.filter((payment: any) => payment.date <= dateLte);
+      payments = payments.filter((payment: Payment) => payment.date <= dateLte);
     }
     
     return NextResponse.json(payments);
-  } catch (error) {
+  } catch {
     console.error('Error reading payments data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -67,12 +88,12 @@ export async function POST(request: NextRequest) {
     const db = JSON.parse(dbContent);
     
     // Validate student and trip
-    const student = (db.users || []).find((u: any) => u.id === studentId && u.role === 'student');
+    const student = (db.users || []).find((u: User) => u.id === studentId && u.role === 'student');
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    const trip = (db.trips || []).find((t: any) => t.id === tripId);
+    const trip = (db.trips || []).find((t: Trip) => t.id === tripId);
     if (!trip) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
@@ -101,7 +122,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newPayment, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating payment:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Trip {
+  id: string;
+  supervisorId: string;
+  date: string;
+  status: string;
+  passengers: number;
+}
+
+interface AttendanceRecord {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
+interface Payment {
+  id: string;
+  tripId: string;
+  status: string;
+  amount: number;
+}
+
+interface MonthlyStats {
+  trips: number;
+  passengers: number;
+  revenue: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -19,53 +46,53 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Get supervisor trips
-    let supervisorTrips = db.trips?.filter((trip: any) => 
+    let supervisorTrips = db.trips?.filter((trip: Trip) => 
       trip.supervisorId === supervisorId
     ) || [];
 
     // Filter by date range if provided
     if (startDate && endDate) {
-      supervisorTrips = supervisorTrips.filter((trip: any) => 
+      supervisorTrips = supervisorTrips.filter((trip: Trip) => 
         trip.date >= startDate && trip.date <= endDate
       );
     }
 
     // Get attendance records for these trips
-    const tripIds = supervisorTrips.map((trip: any) => trip.id);
-    const attendanceRecords = db.attendance?.filter((record: any) => 
+    const tripIds = supervisorTrips.map((trip: Trip) => trip.id);
+    const attendanceRecords = db.attendance?.filter((record: AttendanceRecord) => 
       tripIds.includes(record.tripId)
     ) || [];
 
     // Get payments for these trips
-    const payments = db.payments?.filter((payment: any) => 
+    const payments = db.payments?.filter((payment: Payment) => 
       tripIds.includes(payment.tripId)
     ) || [];
 
     // Calculate report statistics
     const totalTrips = supervisorTrips.length;
-    const completedTrips = supervisorTrips.filter((trip: any) => trip.status === 'completed').length;
-    const activeTrips = supervisorTrips.filter((trip: any) => trip.status === 'active').length;
-    const cancelledTrips = supervisorTrips.filter((trip: any) => trip.status === 'cancelled').length;
+    const completedTrips = supervisorTrips.filter((trip: Trip) => trip.status === 'completed').length;
+    const activeTrips = supervisorTrips.filter((trip: Trip) => trip.status === 'active').length;
+    const cancelledTrips = supervisorTrips.filter((trip: Trip) => trip.status === 'cancelled').length;
 
-    const totalPassengers = supervisorTrips.reduce((sum: number, trip: any) => 
+    const totalPassengers = supervisorTrips.reduce((sum: number, trip: Trip) => 
       sum + (trip.passengers || 0), 0
     );
 
     const totalRevenue = payments
-      .filter((p: any) => p.status === 'completed')
-      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      .filter((p: Payment) => p.status === 'completed')
+      .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
 
     const totalAttendance = attendanceRecords.length;
-    const presentStudents = attendanceRecords.filter((record: any) => 
+    const presentStudents = attendanceRecords.filter((record: AttendanceRecord) => 
       record.status === 'present'
     ).length;
-    const absentStudents = attendanceRecords.filter((record: any) => 
+    const absentStudents = attendanceRecords.filter((record: AttendanceRecord) => 
       record.status === 'absent'
     ).length;
 
     // Get monthly statistics
-    const monthlyStats = {};
-    supervisorTrips.forEach((trip: any) => {
+    const monthlyStats: Record<string, MonthlyStats> = {};
+    supervisorTrips.forEach((trip: Trip) => {
       const month = new Date(trip.date).toISOString().slice(0, 7); // YYYY-MM
       if (!monthlyStats[month]) {
         monthlyStats[month] = {
@@ -79,9 +106,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Add revenue to monthly stats
-    payments.forEach((payment: any) => {
+    payments.forEach((payment: Payment) => {
       if (payment.status === 'completed') {
-        const trip = supervisorTrips.find((t: any) => t.id === payment.tripId);
+        const trip = supervisorTrips.find((t: Trip) => t.id === payment.tripId);
         if (trip) {
           const month = new Date(trip.date).toISOString().slice(0, 7);
           if (monthlyStats[month]) {
@@ -92,7 +119,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Convert monthly stats to array format
-    const monthlyStatsArray = Object.entries(monthlyStats).map(([month, stats]: [string, any]) => ({
+    const monthlyStatsArray = Object.entries(monthlyStats).map(([month, stats]: [string, MonthlyStats]) => ({
       month,
       ...stats
     }));
@@ -116,11 +143,11 @@ export async function GET(request: NextRequest) {
         attendanceRate: totalAttendance > 0 ? (presentStudents / totalAttendance) * 100 : 0
       },
       monthlyStats: monthlyStatsArray,
-      trips: supervisorTrips.map((trip: any) => {
-        const route = db.routes?.find((r: any) => r.id === trip.routeId);
-        const bus = db.buses?.find((b: any) => b.id === trip.busId);
-        const tripPayments = payments.filter((p: any) => p.tripId === trip.id);
-        const tripAttendance = attendanceRecords.filter((a: any) => a.tripId === trip.id);
+      trips: supervisorTrips.map((trip: Trip) => {
+        const route = db.routes?.find((r: Route) => r.id === trip.routeId);
+        const bus = db.buses?.find((b: Bus) => b.id === trip.busId);
+        const tripPayments = payments.filter((p: Payment) => p.tripId === trip.id);
+        const tripAttendance = attendanceRecords.filter((a: AttendanceRecord) => a.tripId === trip.id);
         
         return {
           ...trip,
@@ -136,19 +163,19 @@ export async function GET(request: NextRequest) {
             capacity: bus.capacity
           } : null,
           revenue: tripPayments
-            .filter((p: any) => p.status === 'completed')
-            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0),
+            .filter((p: Payment) => p.status === 'completed')
+            .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0),
           attendance: {
             total: tripAttendance.length,
-            present: tripAttendance.filter((a: any) => a.status === 'present').length,
-            absent: tripAttendance.filter((a: any) => a.status === 'absent').length
+            present: tripAttendance.filter((a: AttendanceRecord) => a.status === 'present').length,
+            absent: tripAttendance.filter((a: AttendanceRecord) => a.status === 'absent').length
           }
         };
       })
     };
 
     return NextResponse.json(report);
-  } catch (error) {
+  } catch {
     console.error('Error generating supervisor report:', error);
     return NextResponse.json(
       { error: 'Failed to generate supervisor report' },

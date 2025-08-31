@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -12,26 +12,77 @@ import {
 	Route, 
 	CreditCard, 
 	Calendar,
-	CheckCircle,
 	Clock,
 	Bell
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { studentProfileAPI, paymentAPI, bookingAPI, notificationAPI, tripAPI, subscriptionPlansAPI } from '@/lib/api';
 
+// Payment interface
+interface Payment {
+  id: number;
+  status: string;
+  tripId?: number;
+  date: string;
+  method?: string;
+  description?: string;
+}
+
+// Booking interface
+interface Booking {
+  id: number;
+  status: string;
+  date: string;
+  tripId?: number;
+}
+
+// Plan interface
+interface Plan {
+  id: number;
+  type?: string;
+  name: string;
+}
+
+// Latest booking and trip interfaces
+interface LatestBooking {
+  id: number;
+  status: string;
+  date: string;
+  tripId?: number;
+}
+
+interface LatestTrip {
+  id: number;
+  startLocation: string;
+  endLocation: string;
+  startTime: string;
+  endTime: string;
+}
+
+// Notification interface
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  type?: string;
+  priority?: string;
+}
+
 export default function StudentDashboard() {
 	const { user } = useAuth();
 	const [isLoading, setIsLoading] = useState(true);
-	const [stats, setStats] = useState<any>(null);
+	const [stats, setStats] = useState<unknown>(null);
 	const { showToast } = useToast();
 	const [requireSubscriptionSetup, setRequireSubscriptionSetup] = useState(false);
-	const [plans, setPlans] = useState<any[]>([]);
+	const [plans, setPlans] = useState<unknown[]>([]);
 	const [selectedPlan, setSelectedPlan] = useState<string>('');
 	const [paymentMethod, setPaymentMethod] = useState<'bank' | 'cash'>('bank');
 	const [submitting, setSubmitting] = useState(false);
 	const [waitForConfirmation, setWaitForConfirmation] = useState(false);
-	const [latestBooking, setLatestBooking] = useState<any | null>(null);
-	const [latestTrip, setLatestTrip] = useState<any | null>(null);
+	const [latestBooking, setLatestBooking] = useState<LatestBooking | null>(null);
+	const [latestTrip, setLatestTrip] = useState<LatestTrip | null>(null);
 	const [currentPlanName, setCurrentPlanName] = useState<string | null>(null);
 	const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
 	const [activeBookingsCount, setActiveBookingsCount] = useState<number>(0);
@@ -46,11 +97,11 @@ export default function StudentDashboard() {
 				// determine if subscription setup is required
 				try {
 					const [profileRes, paymentsRes, plansData, bookingsRes, notifRes] = await Promise.all([
-						studentProfileAPI.getProfile(user.id),
-						paymentAPI.getByStudent(user.id),
+						studentProfileAPI.getProfile(user.id.toString()),
+						paymentAPI.getByStudent(user.id.toString()),
 						subscriptionPlansAPI.getAll().catch(() => []),
-						bookingAPI.getByStudent(user.id),
-						notificationAPI.getByUser(user.id)
+						bookingAPI.getByStudent(user.id.toString()),
+						notificationAPI.getByUser(user.id.toString())
 					]);
 					const profile = profileRes;
 					const payments = paymentsRes;
@@ -58,15 +109,15 @@ export default function StudentDashboard() {
 					const bookings = bookingsRes;
 					const notifications = notifRes;
 
-					const hasActive = Array.isArray(payments) && payments.some((p: any) => p.status === 'completed' && !p.tripId);
+					const hasActive = Array.isArray(payments) && payments.some((p: Payment) => p.status === 'completed' && !p.tripId);
 					const profileActive = profile?.subscriptionStatus === 'active';
-					const hasAnySubscriptionRecord = Array.isArray(payments) && payments.some((p: any) => !p.tripId);
+					const hasAnySubscriptionRecord = Array.isArray(payments) && payments.some((p: Payment) => !p.tripId);
 					const hasChosenPlan = Boolean(profile?.subscriptionPlan);
 					setRequireSubscriptionSetup(!(hasActive || profileActive || hasAnySubscriptionRecord || hasChosenPlan));
 
 					// Show Wait for Confirmation modal when method is cash and not active
-					const lastSubPayment = (Array.isArray(payments) ? payments : []).filter((x: any) => !x.tripId)
-						.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+					const lastSubPayment = (Array.isArray(payments) ? payments : []).filter((x: Payment) => !x.tripId)
+						.sort((a: Payment, b: Payment) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 					const method = String(lastSubPayment?.method || profile?.paymentMethod || '').toLowerCase();
 					const status = String(profile?.subscriptionStatus || lastSubPayment?.status || '').toLowerCase();
 					setWaitForConfirmation(method === 'cash' && status !== 'active');
@@ -79,8 +130,8 @@ export default function StudentDashboard() {
 
 					// latest booking + trip
 					const latest = (Array.isArray(bookings) ? bookings : [])
-						.filter((b: any) => b && b.date)
-						.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+						.filter((b: Booking) => b && b.date)
+						.sort((a: Booking, b: Booking) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 					setLatestBooking(latest || null);
 					if (latest?.tripId) {
 						try {
@@ -93,10 +144,10 @@ export default function StudentDashboard() {
 					}
 
 					// quick stats
-					setActiveBookingsCount((Array.isArray(bookings) ? bookings : []).filter((b: any) => b.status === 'confirmed').length);
-					setUnreadNotifications((Array.isArray(notifications) ? notifications : []).filter((n: any) => n.read !== true && n.status !== 'read').length);
+					setActiveBookingsCount((Array.isArray(bookings) ? bookings : []).filter((b: Booking) => b.status === 'confirmed').length);
+					setUnreadNotifications((Array.isArray(notifications) ? notifications : []).filter((n: Notification) => n.read !== true && n.status !== 'read').length);
 				} catch {}
-			} catch (error) {
+			} catch {
 				console.error('Failed to fetch student data:', error);
 				showToast({ type: 'error', title: 'Error!', message: 'Failed to load dashboard data. Please try again.' });
 			} finally {
@@ -111,7 +162,7 @@ export default function StudentDashboard() {
 		try {
 			setSubmitting(true);
 			const res = await subscriptionPlansAPI.create({
-				studentId: user.id,
+				studentId: user.id.toString(),
 				planId: selectedPlan,
 				startDate: new Date().toISOString(),
 				endDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // Placeholder duration
@@ -125,7 +176,7 @@ export default function StudentDashboard() {
 			setRequireSubscriptionSetup(false);
 			showToast({ type: 'success', title: 'Success!', message: 'Subscription saved' });
 			window.location.reload();
-		} catch (e) {
+		} catch {
 			showToast({ type: 'error', title: 'Error!', message: 'Failed to set subscription' });
 		} finally {
 			setSubmitting(false);
@@ -168,7 +219,7 @@ export default function StudentDashboard() {
 					<p className="text-sm text-text-secondary">Your payment method is Cash. Please wait for admin to confirm your subscription before accessing features.</p>
 					<div className="flex justify-end gap-2">
 						<Button variant="outline" onClick={() => window.location.reload()}>Refresh</Button>
-						<Button variant="destructive" onClick={() => { window.location.href = '/auth/login'; }}>Logout</Button>
+						<Button variant="destructive" onClick={() => { window.location.href = '/logout'; }}>Logout</Button>
 					</div>
 				</div>
 			</Modal>
@@ -181,7 +232,7 @@ export default function StudentDashboard() {
 						<div>
 							<label className="block text-sm font-medium text-text-primary mb-1">Plan</label>
 							<Select value={selectedPlan} onChange={(e) => setSelectedPlan(e.target.value)}
-								options={[{ value: '', label: 'Select Plan' }, ...(plans || []).map((p: any) => ({ value: p.type || p.name, label: p.name }))]} />
+								options={[{ value: '', label: 'Select Plan' }, ...(plans || []).map((p: Plan) => ({ value: p.type || p.name, label: p.name }))]} />
 						</div>
 						<div>
 							<label className="block text-sm font-medium text-text-primary mb-1">Payment Method</label>

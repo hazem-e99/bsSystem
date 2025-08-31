@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { authAPI } from '@/lib/api';
@@ -41,13 +41,13 @@ export default function NewPasswordPage() {
     setIsLoading(true);
     try {
       const resp = await authAPI.resetPassword({ email, resetToken, newPassword: password, confirmPassword });
-      if (resp && (resp as any).success) {
+      if (resp && (resp as { success?: boolean }).success) {
         showToast({ type: 'success', title: 'Password updated', message: 'You can now login with your new password.' });
         router.push('/auth/login');
       } else {
-        setError((resp as any)?.message || 'Failed to reset password.');
+        setError((resp as { message?: string })?.message || 'Failed to reset password.');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e?.message || 'Failed to reset password.');
     } finally {
       setIsLoading(false);

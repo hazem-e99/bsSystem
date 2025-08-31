@@ -53,6 +53,7 @@ export interface StudentRegistrationDTO {
   nationalId: string;      // pattern: ^\d{14}$
   email: string;           // minLength: 1
   phoneNumber: string;     // pattern: ^01[0-2,5]{1}[0-9]{8}$
+  studentAcademicNumber: string; // minLength: 1
   department: string;      // enum values
   yearOfStudy: string;     // enum values
   password: string;        // minLength: 1

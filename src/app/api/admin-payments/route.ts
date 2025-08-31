@@ -2,6 +2,70 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Payment {
+  id: string;
+  status: string;
+  method: string;
+  date: string;
+  amount: number;
+  studentId: string;
+  tripId: string;
+}
+
+interface EnrichedPayment extends Payment {
+  student: {
+    id: string;
+    name: string;
+    email: string;
+    studentId: string;
+    department: string;
+    year: string;
+  } | null;
+  trip: {
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+    passengers: number;
+  } | null;
+  route: {
+    id: string;
+    name: string;
+    startPoint: string;
+    endPoint: string;
+  } | null;
+  bus: {
+    id: string;
+    number: string;
+    model: string;
+  } | null;
+}
+
+interface Trip {
+  id: string;
+  routeId: string;
+  busId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  passengers: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  model: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,24 +91,24 @@ export async function GET(request: NextRequest) {
     let filteredPayments = payments;
     
     if (status) {
-      filteredPayments = filteredPayments.filter((payment: any) => payment.status === status);
+      filteredPayments = filteredPayments.filter((payment: Payment) => payment.status === status);
     }
     
     if (method) {
-      filteredPayments = filteredPayments.filter((payment: any) => payment.method === method);
+      filteredPayments = filteredPayments.filter((payment: Payment) => payment.method === method);
     }
     
     if (startDate && endDate) {
-      filteredPayments = filteredPayments.filter((payment: any) => 
+      filteredPayments = filteredPayments.filter((payment: Payment) => 
         payment.date >= startDate && payment.date <= endDate
       );
     }
     
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredPayments = filteredPayments.filter((payment: any) => {
-        const student = users.find((u: any) => u.id === payment.studentId);
-        const trip = trips.find((t: any) => t.id === payment.tripId);
+      filteredPayments = filteredPayments.filter((payment: Payment) => {
+        const student = users.find((u: User) => u.id === payment.studentId);
+        const trip = trips.find((t: Trip) => t.id === payment.tripId);
         return (
           payment.id?.toLowerCase().includes(searchLower) ||
           student?.name?.toLowerCase().includes(searchLower) ||
@@ -55,11 +119,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Enrich payment data with additional information
-    const enrichedPayments = filteredPayments.map((payment: any) => {
-      const student = users.find((u: any) => u.id === payment.studentId);
-      const trip = trips.find((t: any) => t.id === payment.tripId);
-      const route = trip ? routes.find((r: any) => r.id === trip.routeId) : null;
-      const bus = trip ? buses.find((b: any) => b.id === trip.busId) : null;
+    const enrichedPayments = filteredPayments.map((payment: Payment) => {
+      const student = users.find((u: User) => u.id === payment.studentId);
+      const trip = trips.find((t: Trip) => t.id === payment.tripId);
+      const route = trip ? routes.find((r: Route) => r.id === trip.routeId) : null;
+      const bus = trip ? buses.find((b: Bus) => b.id === trip.busId) : null;
       
       return {
         ...payment,
@@ -94,29 +158,29 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort payments by date (newest first)
-    enrichedPayments.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    enrichedPayments.sort((a: EnrichedPayment, b: EnrichedPayment) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculate summary statistics
     const totalPayments = enrichedPayments.length;
-    const completedPayments = enrichedPayments.filter((p: any) => p.status === 'completed');
-    const pendingPayments = enrichedPayments.filter((p: any) => p.status === 'pending');
-    const failedPayments = enrichedPayments.filter((p: any) => p.status === 'failed');
-    const cancelledPayments = enrichedPayments.filter((p: any) => p.status === 'cancelled');
+    const completedPayments = enrichedPayments.filter((p: EnrichedPayment) => p.status === 'completed');
+    const pendingPayments = enrichedPayments.filter((p: EnrichedPayment) => p.status === 'pending');
+    const failedPayments = enrichedPayments.filter((p: EnrichedPayment) => p.status === 'failed');
+    const cancelledPayments = enrichedPayments.filter((p: EnrichedPayment) => p.status === 'cancelled');
 
-    const totalRevenue = completedPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-    const pendingRevenue = pendingPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-    const failedRevenue = failedPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    const totalRevenue = completedPayments.reduce((sum: number, p: EnrichedPayment) => sum + (p.amount || 0), 0);
+    const pendingRevenue = pendingPayments.reduce((sum: number, p: EnrichedPayment) => sum + (p.amount || 0), 0);
+    const failedRevenue = failedPayments.reduce((sum: number, p: EnrichedPayment) => sum + (p.amount || 0), 0);
 
     // Calculate payment methods distribution
-    const paymentMethods = {};
-    enrichedPayments.forEach((payment: any) => {
+    const paymentMethods: Record<string, number> = {};
+    enrichedPayments.forEach((payment: EnrichedPayment) => {
       const method = payment.method || 'unknown';
       paymentMethods[method] = (paymentMethods[method] || 0) + 1;
     });
 
     // Calculate monthly trends
-    const monthlyTrends = {};
-    enrichedPayments.forEach((payment: any) => {
+    const monthlyTrends: Record<string, number> = {};
+    enrichedPayments.forEach((payment: EnrichedPayment) => {
       const month = new Date(payment.date).toISOString().slice(0, 7); // YYYY-MM
       if (!monthlyTrends[month]) {
         monthlyTrends[month] = {
@@ -181,7 +245,7 @@ export async function GET(request: NextRequest) {
         monthly: monthlyTrendsArray
       }
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching payments data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -219,7 +283,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newPayment, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating payment:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

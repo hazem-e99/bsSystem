@@ -2,6 +2,37 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Backup {
+  id: string;
+  type: string;
+  status: string;
+  createdAt?: string;
+  date?: string;
+  estimatedSize?: number;
+  actualSize?: number;
+}
+
+interface EnrichedBackup extends Backup {
+  metadata: {
+    ageInMinutes: number;
+    ageInHours: number;
+    ageInDays: number;
+    ageText: string;
+    isSuccessful: boolean;
+    isFailed: boolean;
+    isInProgress: boolean;
+    isPending: boolean;
+    estimatedSize: number;
+    actualSize: number;
+    compressionRatio: number;
+    isFullBackup: boolean;
+    isIncrementalBackup: boolean;
+    isDifferentialBackup: boolean;
+    isScheduledBackup: boolean;
+    isManualBackup: boolean;
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -21,21 +52,21 @@ export async function GET(request: NextRequest) {
     let filteredBackups = backups;
     
     if (type) {
-      filteredBackups = filteredBackups.filter((backup: any) => backup.type === type);
+      filteredBackups = filteredBackups.filter((backup: Backup) => backup.type === type);
     }
     
     if (dateFrom || dateTo) {
       const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
       const toDate = dateTo ? new Date(dateTo) : new Date();
       
-      filteredBackups = filteredBackups.filter((backup: any) => {
+      filteredBackups = filteredBackups.filter((backup: Backup) => {
         const backupDate = new Date(backup.createdAt || backup.date);
         return backupDate >= fromDate && backupDate <= toDate;
       });
     }
 
     // Enrich backup data with additional information
-    const enrichedBackups = filteredBackups.map((backup: any) => {
+    const enrichedBackups = filteredBackups.map((backup: Backup) => {
       // Calculate backup age
       const backupDate = new Date(backup.createdAt || backup.date);
       const today = new Date();
@@ -97,31 +128,31 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort backups by date (newest first)
-    enrichedBackups.sort((a: any, b: any) => 
+    enrichedBackups.sort((a: EnrichedBackup, b: EnrichedBackup) => 
       new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
     );
 
     // Calculate backup summary
     const totalBackups = enrichedBackups.length;
-    const successfulBackups = enrichedBackups.filter((b: any) => b.status === 'successful').length;
-    const failedBackups = enrichedBackups.filter((b: any) => b.status === 'failed').length;
-    const inProgressBackups = enrichedBackups.filter((b: any) => b.status === 'in_progress').length;
-    const pendingBackups = enrichedBackups.filter((b: any) => b.status === 'pending').length;
+    const successfulBackups = enrichedBackups.filter((b: EnrichedBackup) => b.status === 'successful').length;
+    const failedBackups = enrichedBackups.filter((b: EnrichedBackup) => b.status === 'failed').length;
+    const inProgressBackups = enrichedBackups.filter((b: EnrichedBackup) => b.status === 'in_progress').length;
+    const pendingBackups = enrichedBackups.filter((b: EnrichedBackup) => b.status === 'pending').length;
     
-    const fullBackups = enrichedBackups.filter((b: any) => b.type === 'full').length;
-    const incrementalBackups = enrichedBackups.filter((b: any) => b.type === 'incremental').length;
-    const differentialBackups = enrichedBackups.filter((b: any) => b.type === 'differential').length;
-    const scheduledBackups = enrichedBackups.filter((b: any) => b.type === 'scheduled').length;
-    const manualBackups = enrichedBackups.filter((b: any) => b.type === 'manual').length;
+    const fullBackups = enrichedBackups.filter((b: EnrichedBackup) => b.type === 'full').length;
+    const incrementalBackups = enrichedBackups.filter((b: EnrichedBackup) => b.type === 'incremental').length;
+    const differentialBackups = enrichedBackups.filter((b: EnrichedBackup) => b.type === 'differential').length;
+    const scheduledBackups = enrichedBackups.filter((b: EnrichedBackup) => b.type === 'scheduled').length;
+    const manualBackups = enrichedBackups.filter((b: EnrichedBackup) => b.type === 'manual').length;
     
-    const totalEstimatedSize = enrichedBackups.reduce((sum: number, b: any) => sum + (b.metadata.estimatedSize || 0), 0);
-    const totalActualSize = enrichedBackups.reduce((sum: number, b: any) => sum + (b.metadata.actualSize || 0), 0);
+    const totalEstimatedSize = enrichedBackups.reduce((sum: number, b: EnrichedBackup) => sum + (b.metadata.estimatedSize || 0), 0);
+    const totalActualSize = enrichedBackups.reduce((sum: number, b: EnrichedBackup) => sum + (b.metadata.actualSize || 0), 0);
     const totalCompressionRatio = totalEstimatedSize > 0 ? 
       ((totalEstimatedSize - totalActualSize) / totalEstimatedSize) * 100 : 0;
     
     const successRate = totalBackups > 0 ? (successfulBackups / totalBackups) * 100 : 0;
     const averageCompressionRatio = enrichedBackups.length > 0 ? 
-      enrichedBackups.reduce((sum: number, b: any) => sum + b.metadata.compressionRatio, 0) / enrichedBackups.length : 0;
+      enrichedBackups.reduce((sum: number, b: EnrichedBackup) => sum + b.metadata.compressionRatio, 0) / enrichedBackups.length : 0;
 
     const summary = {
       totalBackups,
@@ -145,7 +176,7 @@ export async function GET(request: NextRequest) {
       backups: enrichedBackups,
       summary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching backup data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -184,7 +215,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBackup, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating backup:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -218,7 +249,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const backupIndex = db.backups.findIndex((b: any) => b.id === id);
+    const backupIndex = db.backups.findIndex((b: Backup) => b.id === id);
     
     if (backupIndex === -1) {
       return NextResponse.json(
@@ -240,7 +271,7 @@ export async function PUT(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(updatedBackup);
-  } catch (error) {
+  } catch {
     console.error('Error updating backup:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -273,7 +304,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const backupIndex = db.backups.findIndex((b: any) => b.id === id);
+    const backupIndex = db.backups.findIndex((b: Backup) => b.id === id);
     
     if (backupIndex === -1) {
       return NextResponse.json(
@@ -289,7 +320,7 @@ export async function DELETE(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Backup deleted successfully', deletedBackup });
-  } catch (error) {
+  } catch {
     console.error('Error deleting backup:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

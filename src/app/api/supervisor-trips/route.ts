@@ -3,6 +3,56 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { autoCompleteTrips } from '@/lib/tripStatus';
 
+interface Trip {
+  id: string;
+  supervisorId: string;
+  routeId: string;
+  busId: string;
+  driverId: string;
+  status: string;
+  date: string;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+  distance: number;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  capacity: number;
+  model: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
+interface Payment {
+  id: string;
+  tripId: string;
+  status: string;
+  amount: number;
+}
+
+interface AttendanceRecord {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -25,28 +75,28 @@ export async function GET(request: NextRequest) {
     }
 
     // Get supervisor trips
-    let supervisorTrips = db.trips?.filter((trip: any) => 
+    let supervisorTrips = db.trips?.filter((trip: Trip) => 
       trip.supervisorId === supervisorId
     ) || [];
 
     // Filter by status if provided
     if (status) {
-      supervisorTrips = supervisorTrips.filter((trip: any) => trip.status === status);
+      supervisorTrips = supervisorTrips.filter((trip: Trip) => trip.status === status);
     }
 
     // Filter by date if provided
     if (date) {
-      supervisorTrips = supervisorTrips.filter((trip: any) => trip.date === date);
+      supervisorTrips = supervisorTrips.filter((trip: Trip) => trip.date === date);
     }
 
     // Enrich trips with additional information
-    const enrichedTrips = supervisorTrips.map((trip: any) => {
-      const route = db.routes?.find((r: any) => r.id === trip.routeId);
-      const bus = db.buses?.find((b: any) => b.id === trip.busId);
-      const driver = db.users?.find((u: any) => u.id === trip.driverId);
-      const tripBookings = db.bookings?.filter((b: any) => b.tripId === trip.id) || [];
-      const tripPayments = db.payments?.filter((p: any) => p.tripId === trip.id) || [];
-      const tripAttendance = db.attendance?.filter((a: any) => a.tripId === trip.id) || [];
+    const enrichedTrips = supervisorTrips.map((trip: Trip) => {
+      const route = db.routes?.find((r: Route) => r.id === trip.routeId);
+      const bus = db.buses?.find((b: Bus) => b.id === trip.busId);
+      const driver = db.users?.find((u: User) => u.id === trip.driverId);
+      const tripBookings = db.bookings?.filter((b: Booking) => b.tripId === trip.id) || [];
+      const tripPayments = db.payments?.filter((p: Payment) => p.tripId === trip.id) || [];
+      const tripAttendance = db.attendance?.filter((a: AttendanceRecord) => a.tripId === trip.id) || [];
 
       return {
         ...trip,
@@ -70,33 +120,33 @@ export async function GET(request: NextRequest) {
         } : null,
         bookings: {
           total: tripBookings.length,
-          confirmed: tripBookings.filter((b: any) => b.status === 'confirmed').length,
-          pending: tripBookings.filter((b: any) => b.status === 'pending').length,
-          cancelled: tripBookings.filter((b: any) => b.status === 'cancelled').length
+          confirmed: tripBookings.filter((b: Booking) => b.status === 'confirmed').length,
+          pending: tripBookings.filter((b: Booking) => b.status === 'pending').length,
+          cancelled: tripBookings.filter((b: Booking) => b.status === 'cancelled').length
         },
         payments: {
           total: tripPayments.length,
-          completed: tripPayments.filter((p: any) => p.status === 'completed').length,
-          pending: tripPayments.filter((p: any) => p.status === 'pending').length,
+          completed: tripPayments.filter((p: Payment) => p.status === 'completed').length,
+          pending: tripPayments.filter((p: Payment) => p.status === 'pending').length,
           revenue: tripPayments
-            .filter((p: any) => p.status === 'completed')
-            .reduce((sum: number, p: any) => sum + (p.amount || 0), 0)
+            .filter((p: Payment) => p.status === 'completed')
+            .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0)
         },
         attendance: {
           total: tripAttendance.length,
-          present: tripAttendance.filter((a: any) => a.status === 'present').length,
-          absent: tripAttendance.filter((a: any) => a.status === 'absent').length,
+          present: tripAttendance.filter((a: AttendanceRecord) => a.status === 'present').length,
+          absent: tripAttendance.filter((a: AttendanceRecord) => a.status === 'absent').length,
           rate: tripAttendance.length > 0 ? 
-            (tripAttendance.filter((a: any) => a.status === 'present').length / tripAttendance.length) * 100 : 0
+            (tripAttendance.filter((a: AttendanceRecord) => a.status === 'present').length / tripAttendance.length) * 100 : 0
         }
       };
     });
 
     // Sort trips by date (newest first)
-    enrichedTrips.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    enrichedTrips.sort((a: Trip, b: Trip) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return NextResponse.json(enrichedTrips);
-  } catch (error) {
+  } catch {
     console.error('Error fetching supervisor trips:', error);
     return NextResponse.json(
       { error: 'Failed to fetch supervisor trips' },

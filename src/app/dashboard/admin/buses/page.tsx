@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -40,8 +40,8 @@ export default function BusesPage() {
     speed: 0
   });
   const [buses, setBuses] = useState<BusType[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [routes, setRoutes] = useState<any[]>([]);
+  const [users, setUsers] = useState<unknown[]>([]);
+  const [routes, setRoutes] = useState<unknown[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingBus, setIsAddingBus] = useState(false);
   const [addMessage, setAddMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -59,7 +59,7 @@ export default function BusesPage() {
       page: 0,
       pageSize: 1000, // Get all buses initially
       busNumber: searchTerm,
-      status: statusFilter === 'all' ? '' : (statusFilter as any),
+      status: statusFilter === 'all' ? '' : statusFilter,
       minSpeed: 0,
       maxSpeed: 0,
       minCapacity,
@@ -78,7 +78,7 @@ export default function BusesPage() {
       throw new Error('Capacity must be an integer between 10 and 100');
     }
     const validStatuses = ['Active','Inactive','UnderMaintenance','OutOfService'];
-    if (!validStatuses.includes(data.status as any)) {
+    if (!validStatuses.includes(data.status)) {
       throw new Error('Status must be Active, Inactive, UnderMaintenance, or OutOfService');
     }
   };
@@ -102,10 +102,10 @@ export default function BusesPage() {
       });
       
       const busesList = Array.isArray(response) ? response : (response?.data || []);
-      return busesList.some((bus: any) => bus.busNumber === busNumber);
-    } catch (error) {
+      return busesList.some((bus: BusType) => bus.busNumber === busNumber);
+    } catch {
       console.error('Error checking bus number existence:', error);
-      // If we can't check server, fall back to local check
+      // If we can&apos;t check server, fall back to local check
       return buses.find(bus => bus.busNumber === busNumber) !== undefined;
     }
   };
@@ -151,9 +151,9 @@ export default function BusesPage() {
         console.log('📋 Extracted buses list:', busesList);
         
         const cleanBusesData = busesList
-          .filter((bus: any) => bus && bus.id)
-          .filter((bus: any) => !hiddenDeletedIds.has(String(bus.id)))
-          .map((bus: any) => ({
+          .filter((bus: BusType) => bus && bus.id)
+          .filter((bus: BusType) => !hiddenDeletedIds.has(String(bus.id)))
+          .map((bus: BusType) => ({
             ...bus,
             id: bus.id || 0,
             busNumber: bus.busNumber || 'Unknown',
@@ -176,7 +176,7 @@ export default function BusesPage() {
         } else {
           console.log(`✅ Successfully loaded ${cleanBusesData.length} buses`);
         }
-      } catch (error) {
+      } catch {
         console.error('Failed to fetch data:', error);
         // Set empty arrays on error to prevent crashes
         setBuses([]);
@@ -220,9 +220,9 @@ export default function BusesPage() {
       const updatedBusesResponse = await busAPI.getAll(buildParams());
       const busesList = Array.isArray(updatedBusesResponse) ? updatedBusesResponse : (updatedBusesResponse?.data || []);
       const cleanBusesData = busesList
-        .filter((bus: any) => bus && bus.id)
-        .filter((bus: any) => !hiddenDeletedIds.has(String(bus.id)))
-        .map((bus: any) => ({
+        .filter((bus: BusType) => bus && bus.id)
+        .filter((bus: BusType) => !hiddenDeletedIds.has(String(bus.id)))
+        .map((bus: BusType) => ({
           ...bus,
           id: bus.id || 0,
           busNumber: bus.busNumber || 'Unknown',
@@ -235,7 +235,7 @@ export default function BusesPage() {
             : { lat: 0, lng: 0 }
         }));
       setBuses(cleanBusesData);
-    } catch (e) {
+    } catch {
       console.error('Failed to apply filters:', e);
       setBuses([]);
     } finally {
@@ -269,13 +269,13 @@ export default function BusesPage() {
       // Create bus via API
       const response = await busAPI.create(busData);
       
-      if (response && (response as any).success) {
+      if (response && (response as { success: boolean }).success) {
         // Refresh the buses list
         const updatedBusesResponse = await busAPI.getAll(buildParams());
         const busesList = Array.isArray(updatedBusesResponse) ? updatedBusesResponse : (updatedBusesResponse?.data || []);
         const cleanBusesData = busesList
-          .filter((bus: any) => bus && bus.id)
-          .map((bus: any) => ({
+          .filter((bus: BusType) => bus && bus.id)
+          .map((bus: BusType) => ({
             ...bus,
             id: bus.id || 0,
             busNumber: bus.busNumber || 'Unknown',
@@ -290,7 +290,7 @@ export default function BusesPage() {
         setBuses(cleanBusesData);
         
         showToast({ type: 'success', title: 'Bus added', message: `Bus ${newBus.busNumber} added successfully.` });
-        if ((response as any).message) setAddMessage({ type: 'success', text: String((response as any).message) });
+        if ((response as { message?: string }).message) setAddMessage({ type: 'success', text: String((response as { message?: string }).message) });
         
         setShowAddModal(false);
         setNewBus({ 
@@ -300,10 +300,10 @@ export default function BusesPage() {
           speed: 0
         });
       } else {
-        const msg = (response as any)?.message || 'Server rejected create request.';
+        const msg = (response as { message?: string })?.message || 'Server rejected create request.';
         setAddMessage({ type: 'error', text: msg });
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to add bus:', error);
       const message = error instanceof Error ? error.message : 'Failed to add bus. Please try again.';
       showToast({ type: 'error', title: 'Add failed', message });
@@ -342,13 +342,13 @@ export default function BusesPage() {
       // Update bus via API
       const response = await busAPI.update(selectedBus.id, busData);
       
-      if (response && (response as any).success) {
+      if (response && (response as { success: boolean }).success) {
         // Refresh the buses list
         const updatedBusesResponse = await busAPI.getAll(buildParams());
         const busesList = Array.isArray(updatedBusesResponse) ? updatedBusesResponse : (updatedBusesResponse?.data || []);
         const cleanBusesData = busesList
-          .filter((bus: any) => bus && bus.id)
-          .map((bus: any) => ({
+          .filter((bus: BusType) => bus && bus.id)
+          .map((bus: BusType) => ({
             ...bus,
             id: bus.id || 0,
             busNumber: bus.busNumber || 'Unknown',
@@ -359,14 +359,14 @@ export default function BusesPage() {
         setBuses(cleanBusesData);
         
         showToast({ type: 'success', title: 'Bus updated', message: `Bus ${selectedBus.busNumber} updated successfully.` });
-        if ((response as any).message) setEditMessage({ type: 'success', text: String((response as any).message) });
+        if ((response as { message?: string }).message) setEditMessage({ type: 'success', text: String((response as { message?: string }).message) });
         setShowEditModal(false);
         setSelectedBus(null);
       } else {
-        const msg = (response as any)?.message || 'Server rejected update request.';
+        const msg = (response as { message?: string })?.message || 'Server rejected update request.';
         setEditMessage({ type: 'error', text: msg });
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to update bus:', error);
       const message = error instanceof Error ? error.message : 'Failed to update bus. Please try again.';
       showToast({ type: 'error', title: 'Update failed', message });
@@ -383,8 +383,8 @@ export default function BusesPage() {
         const updatedBusesResponse = await busAPI.getAll(buildParams());
         const busesList = Array.isArray(updatedBusesResponse) ? updatedBusesResponse : (updatedBusesResponse?.data || []);
         let cleanBusesData = busesList
-          .filter((bus: any) => bus && bus.id)
-          .map((bus: any) => ({
+          .filter((bus: BusType) => bus && bus.id)
+          .map((bus: BusType) => ({
             ...bus,
             id: bus.id || 0,
             busNumber: bus.busNumber || 'Unknown',
@@ -398,7 +398,7 @@ export default function BusesPage() {
           }));
 
         // Always hide the deleted id locally immediately
-        cleanBusesData = cleanBusesData.filter((b: any) => String(b.id) !== String(confirmState.busId));
+        cleanBusesData = cleanBusesData.filter((b: BusType) => String(b.id) !== String(confirmState.busId));
         const newHidden = new Set(hiddenDeletedIds);
         newHidden.add(String(confirmState.busId));
         setHiddenDeletedIds(newHidden);
@@ -412,8 +412,8 @@ export default function BusesPage() {
           for (let i = 0; i < 5; i++) {
             try {
               await new Promise(r => setTimeout(r, 1500));
-              const verify = await busAPI.getById(idStr as any);
-              const stillExists = verify && (verify as any).data;
+              const verify = await busAPI.getById(Number(idStr));
+              const stillExists = verify && (verify as { data?: unknown }).data;
               if (!stillExists) {
                 const updated = new Set(newHidden);
                 updated.delete(idStr);
@@ -435,7 +435,7 @@ export default function BusesPage() {
         setBuses(cleanBusesData);
         showToast({ type: 'success', title: 'Bus deleted' });
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to delete bus:', error);
       showToast({ type: 'error', title: 'Delete failed', message: 'Failed to delete bus. Please try again.' });
     } finally {
@@ -479,14 +479,14 @@ export default function BusesPage() {
 
   const getDriverName = (driverId?: number) => {
     if (!driverId) return 'Not assigned';
-    const driver = users.find(u => u.id === driverId);
-    return driver ? driver.name : 'Unknown';
+    const driver = users.find((u: { id: number; name?: string }) => u.id === driverId);
+    return driver ? (driver.name || 'Unknown') : 'Unknown';
   };
 
   const getRouteName = (routeId?: number) => {
     if (!routeId) return 'Not assigned';
-    const route = routes.find(r => r.id === routeId);
-    return route ? route.name : 'Unknown';
+    const route = routes.find((r: { id: number; name?: string }) => r.id === routeId);
+    return route ? (route.name || 'Unknown') : 'Unknown';
   };
 
   if (isLoading) {
@@ -645,7 +645,7 @@ export default function BusesPage() {
                     const value = getValue<string>();
                     const pretty = value === 'UnderMaintenance' ? 'Under Maintenance' : value === 'OutOfService' ? 'Out of Service' : value;
                     const variant = value === 'Active' ? 'default' : value === 'UnderMaintenance' ? 'secondary' : value === 'Inactive' ? 'secondary' : 'destructive';
-                    return <Badge variant={variant as any}>{pretty}</Badge>;
+                    return <Badge variant={variant}>{pretty}</Badge>;
                   })()
                 ),
               },
@@ -762,7 +762,7 @@ export default function BusesPage() {
                   { value: 'OutOfService', label: 'Out of Service' }
                 ]}
                 value={newBus.status}
-                onChange={(e) => setNewBus({ ...newBus, status: e.target.value as any })}
+                onChange={(e) => setNewBus({ ...newBus, status: e.target.value })}
                 required
               />
             </div>
@@ -859,7 +859,7 @@ export default function BusesPage() {
                     { value: 'OutOfService', label: 'Out of Service' }
                   ]}
                   value={selectedBus.status}
-                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value as any })}
+                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value })}
                   required
                 />
               </div>

@@ -120,7 +120,7 @@ export function useLanguage(): LanguageContextType {
       try {
         const settings = await settingsAPI.get();
         setLanguageState(settings.language || 'en');
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Silently ignore 404 errors and use default language
         if (!error?.message?.includes('404')) {
           console.error('Failed to load language setting:', error);
@@ -143,7 +143,7 @@ export function useLanguage(): LanguageContextType {
           ...currentSettings,
           language: lang
         });
-      } catch (settingsError: any) {
+      } catch (settingsError: unknown) {
         // Ignore 404 errors for settings API
         if (!settingsError?.message?.includes('404')) {
           console.error('Failed to update language in settings:', settingsError);
@@ -154,7 +154,7 @@ export function useLanguage(): LanguageContextType {
       document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
       document.documentElement.lang = lang;
       
-    } catch (error) {
+    } catch {
       console.error('Failed to update language:', error);
     }
   };

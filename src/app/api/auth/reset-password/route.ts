@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
+import { promises as fs } from 'next/server';
 import path from 'path';
+
+interface User {
+  id: string;
+  email: string;
+  password: string;
+  updatedAt?: string;
+}
+
+interface PasswordReset {
+  email: string;
+  token: string;
+  expiry: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +32,7 @@ export async function POST(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find the reset token
-    const resetRecord = db.passwordResets?.find((r: any) => 
+    const resetRecord = db.passwordResets?.find((r: PasswordReset) => 
       r.token === token && r.email === email
     );
 
@@ -33,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Check if token has expired
     if (new Date(resetRecord.expiry) < new Date()) {
       // Remove expired token
-      db.passwordResets = db.passwordResets.filter((r: any) => r.token !== token);
+      db.passwordResets = db.passwordResets.filter((r: PasswordReset) => r.token !== token);
       await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
       
       return NextResponse.json(
@@ -43,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find and update the user
-    const userIndex = db.users?.findIndex((u: any) => u.email === email);
+    const userIndex = db.users?.findIndex((u: User) => u.email === email);
     
     if (userIndex === -1) {
       return NextResponse.json(
@@ -57,7 +70,7 @@ export async function POST(request: NextRequest) {
     db.users[userIndex].updatedAt = new Date().toISOString();
 
     // Remove the used reset token
-    db.passwordResets = db.passwordResets.filter((r: any) => r.token !== token);
+    db.passwordResets = db.passwordResets.filter((r: PasswordReset) => r.token !== token);
 
     // Save to database
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
@@ -66,7 +79,7 @@ export async function POST(request: NextRequest) {
       message: 'Password has been reset successfully'
     });
 
-  } catch (error) {
+  } catch {
     console.error('Reset password error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

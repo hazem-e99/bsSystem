@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import Image from 'next/image';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -11,13 +12,11 @@ import {
   Settings, 
   Save,
   RefreshCw,
-  CheckCircle,
   AlertTriangle,
   Building2,
   Palette,
   Globe,
-  Wrench,
-  Image
+  Wrench
 } from 'lucide-react';
 import { settingsAPI } from '@/lib/api';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -84,7 +83,7 @@ export default function SettingsPage() {
       setSettings(normalized);
       // apply theme immediately after loading
       applyThemeColors(normalized.primaryColor, normalized.secondaryColor);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle 404 errors gracefully by using defaults
       if (error?.message?.includes('404')) {
         const defaults: SystemSettings = {
@@ -140,7 +139,7 @@ export default function SettingsPage() {
       
       setTimeout(() => setSaved(false), 3000);
       
-    } catch (error) {
+    } catch {
       console.error('Error saving settings:', error);
       showToast({
         type: 'error',
@@ -182,7 +181,7 @@ export default function SettingsPage() {
         message: 'Settings reset to default values.'
       });
       
-    } catch (error) {
+    } catch {
       console.error('Error resetting settings:', error);
       showToast({
         type: 'error',
@@ -337,11 +336,7 @@ export default function SettingsPage() {
                     <div className="flex items-center space-x-4">
                       <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden">
                         {settings.logo ? (
-                          <img 
-                            src={settings.logo} 
-                            alt="System Logo" 
-                            className="w-full h-full object-contain"
-                          />
+                          <Image src={settings.logo} alt="System Logo" width={40} height={40} className="w-full h-full object-contain" />
                         ) : (
                           <Image className="w-8 h-8 text-gray-400" />
                         )}
@@ -479,11 +474,7 @@ export default function SettingsPage() {
             <div className="text-center p-6 bg-white rounded-lg border-2 border-dashed border-gray-300">
               <div className="w-16 h-16 mx-auto mb-4">
                 {settings.logo ? (
-                  <img 
-                    src={settings.logo} 
-                    alt="Logo Preview" 
-                    className="w-full h-full object-contain"
-                  />
+                  <Image src={settings.logo} alt="Logo Preview" width={40} height={40} className="w-full h-full object-contain" />
                 ) : (
                   <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
                     <Image className="w-8 h-8 text-gray-400" />

@@ -2,6 +2,57 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  status: string;
+}
+
+interface Trip {
+  id: string;
+  status: string;
+  createdAt?: string;
+  date?: string;
+}
+
+interface Payment {
+  id: string;
+  status: string;
+  amount: number;
+  createdAt?: string;
+  date?: string;
+}
+
+interface Bus {
+  id: string;
+  status: string;
+}
+
+interface MaintenanceRecord {
+  id: string;
+  status: string;
+  priority: string;
+}
+
+interface AuditLog {
+  id: string;
+  severity: string;
+  action: string;
+  details?: string;
+}
+
+interface Backup {
+  id: string;
+  status: string;
+  createdAt?: string;
+  date?: string;
+}
+
+interface Alert {
+  level: string;
+  message: string;
+  category: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Read db.json file
@@ -49,9 +100,9 @@ export async function GET(request: NextRequest) {
     };
     
     // 2. User Activity Health
-    const activeUsers = users.filter((u: any) => u.status === 'active').length;
-    const inactiveUsers = users.filter((u: any) => u.status === 'inactive').length;
-    const suspendedUsers = users.filter((u: any) => u.status === 'suspended').length;
+    const activeUsers = users.filter((u: User) => u.status === 'active').length;
+    const inactiveUsers = users.filter((u: User) => u.status === 'inactive').length;
+    const suspendedUsers = users.filter((u: User) => u.status === 'suspended').length;
     
     const userHealth = {
       totalUsers: users.length,
@@ -63,9 +114,9 @@ export async function GET(request: NextRequest) {
     };
     
     // 3. Trip Performance Health
-    const completedTrips = trips.filter((t: any) => t.status === 'completed').length;
-    const activeTrips = trips.filter((t: any) => t.status === 'active').length;
-    const cancelledTrips = trips.filter((t: any) => t.status === 'cancelled').length;
+    const completedTrips = trips.filter((t: Trip) => t.status === 'completed').length;
+    const activeTrips = trips.filter((t: Trip) => t.status === 'active').length;
+    const cancelledTrips = trips.filter((t: Trip) => t.status === 'cancelled').length;
     
     const tripHealth = {
       totalTrips: trips.length,
@@ -78,13 +129,13 @@ export async function GET(request: NextRequest) {
     };
     
     // 4. Financial Health
-    const completedPayments = payments.filter((p: any) => p.status === 'completed').length;
-    const pendingPayments = payments.filter((p: any) => p.status === 'pending').length;
-    const failedPayments = payments.filter((p: any) => p.status === 'failed').length;
+    const completedPayments = payments.filter((p: Payment) => p.status === 'completed').length;
+    const pendingPayments = payments.filter((p: Payment) => p.status === 'pending').length;
+    const failedPayments = payments.filter((p: Payment) => p.status === 'failed').length;
     
     const totalRevenue = payments
-      .filter((p: any) => p.status === 'completed')
-      .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      .filter((p: Payment) => p.status === 'completed')
+      .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
     
     const financialHealth = {
       totalPayments: payments.length,
@@ -98,9 +149,9 @@ export async function GET(request: NextRequest) {
     };
     
     // 5. Fleet Health
-    const activeBuses = buses.filter((b: any) => b.status === 'active').length;
-    const maintenanceBuses = buses.filter((b: any) => b.status === 'maintenance').length;
-    const inactiveBuses = buses.filter((b: any) => b.status === 'inactive').length;
+    const activeBuses = buses.filter((b: Bus) => b.status === 'active').length;
+    const maintenanceBuses = buses.filter((b: Bus) => b.status === 'maintenance').length;
+    const inactiveBuses = buses.filter((b: Bus) => b.status === 'inactive').length;
     
     const fleetHealth = {
       totalBuses: buses.length,
@@ -113,12 +164,12 @@ export async function GET(request: NextRequest) {
     };
     
     // 6. Maintenance Health
-    const openMaintenance = maintenance.filter((m: any) => m.status === 'open').length;
-    const inProgressMaintenance = maintenance.filter((m: any) => m.status === 'in_progress').length;
-    const completedMaintenance = maintenance.filter((m: any) => m.status === 'completed').length;
+    const openMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'open').length;
+    const inProgressMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'in_progress').length;
+    const completedMaintenance = maintenance.filter((m: MaintenanceRecord) => m.status === 'completed').length;
     
-    const criticalMaintenance = maintenance.filter((m: any) => m.priority === 'critical').length;
-    const highMaintenance = maintenance.filter((m: any) => m.priority === 'high').length;
+    const criticalMaintenance = maintenance.filter((m: MaintenanceRecord) => m.priority === 'critical').length;
+    const highMaintenance = maintenance.filter((m: MaintenanceRecord) => m.priority === 'high').length;
     
     const maintenanceHealth = {
       totalMaintenance: maintenance.length,
@@ -136,15 +187,15 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     const last24Hours = new Date(today.getTime() - (24 * 60 * 60 * 1000));
     
-    const recentBookings = bookings.filter((b: any) => 
+    const recentBookings = bookings.filter((b: Booking) => 
       new Date(b.createdAt || b.date) >= last24Hours
     ).length;
     
-    const recentPayments = payments.filter((p: any) => 
+    const recentPayments = payments.filter((p: Payment) => 
       new Date(p.createdAt || p.date) >= last24Hours
     ).length;
     
-    const recentTrips = trips.filter((t: any) => 
+    const recentTrips = trips.filter((t: Trip) => 
       new Date(t.createdAt || t.date) >= last24Hours
     ).length;
     
@@ -157,9 +208,9 @@ export async function GET(request: NextRequest) {
     };
     
     // 8. Security Health
-    const criticalAuditLogs = auditLogs.filter((log: any) => log.severity === 'critical').length;
-    const highAuditLogs = auditLogs.filter((log: any) => log.severity === 'high').length;
-    const failedLogins = auditLogs.filter((log: any) => 
+    const criticalAuditLogs = auditLogs.filter((log: AuditLog) => log.severity === 'critical').length;
+    const highAuditLogs = auditLogs.filter((log: AuditLog) => log.severity === 'high').length;
+    const failedLogins = auditLogs.filter((log: AuditLog) => 
       log.action === 'login' && log.details?.toLowerCase().includes('failed')
     ).length;
     
@@ -174,12 +225,12 @@ export async function GET(request: NextRequest) {
     };
     
     // 9. Backup Health
-    const recentBackups = backups.filter((b: any) => 
+    const recentBackups = backups.filter((b: Backup) => 
       new Date(b.createdAt || b.date) >= last24Hours
     ).length;
     
-    const successfulBackups = backups.filter((b: any) => b.status === 'successful').length;
-    const failedBackups = backups.filter((b: any) => b.status === 'failed').length;
+    const successfulBackups = backups.filter((b: Backup) => b.status === 'successful').length;
+    const failedBackups = backups.filter((b: Backup) => b.status === 'failed').length;
     
     const backupHealth = {
       totalBackups: backups.length,
@@ -188,7 +239,7 @@ export async function GET(request: NextRequest) {
       failedBackups,
       successRate: backups.length > 0 ? (successfulBackups / backups.length) * 100 : 0,
       lastBackup: backups.length > 0 ? 
-        new Date(Math.max(...backups.map((b: any) => new Date(b.createdAt || b.date).getTime()))).toISOString() : null,
+        new Date(Math.max(...backups.map((b: Backup) => new Date(b.createdAt || b.date).getTime()))).toISOString() : null,
       status: successfulBackups > 0 ? 'healthy' : 'warning'
     };
     
@@ -245,7 +296,7 @@ export async function GET(request: NextRequest) {
     }
     
     // 12. System Alerts
-    const alerts = [];
+    const alerts: Alert[] = [];
     
     if (criticalMaintenance > 0) {
       alerts.push({
@@ -296,9 +347,9 @@ export async function GET(request: NextRequest) {
       alerts,
       summary: {
         totalAlerts: alerts.length,
-        criticalAlerts: alerts.filter((a: any) => a.level === 'critical').length,
-        highAlerts: alerts.filter((a: any) => a.level === 'high').length,
-        mediumAlerts: alerts.filter((a: any) => a.level === 'medium').length,
+        criticalAlerts: alerts.filter((a: Alert) => a.level === 'critical').length,
+        highAlerts: alerts.filter((a: Alert) => a.level === 'high').length,
+        mediumAlerts: alerts.filter((a: Alert) => a.level === 'medium').length,
         totalRecommendations: recommendations.length
       }
     };

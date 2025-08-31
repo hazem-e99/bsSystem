@@ -24,12 +24,12 @@ export default function StudentSettingsPage() {
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<unknown>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [plans, setPlans] = useState<any[]>([]);
-  const [buses, setBuses] = useState<any[]>([]);
+  const [plans, setPlans] = useState<unknown[]>([]);
+  const [buses, setBuses] = useState<unknown[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank'>('bank');
   const [assignBusId, setAssignBusId] = useState<string>('');
@@ -54,10 +54,10 @@ export default function StudentSettingsPage() {
           ]);
           setPlans(p || []);
           setBuses(bResponse?.data || []);
-        } catch (e) {
+        } catch {
           console.warn('Failed to load plans/buses', e);
         }
-      } catch (error) {
+      } catch {
         console.error('Failed to load profile:', error);
         showToast({
           type: 'error',
@@ -121,7 +121,7 @@ export default function StudentSettingsPage() {
           message: 'Profile photo updated successfully!'
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to upload avatar:', error);
       showToast({
         type: 'error',
@@ -153,7 +153,7 @@ export default function StudentSettingsPage() {
           message: 'Profile photo removed successfully!'
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to remove avatar:', error);
       showToast({
         type: 'error',
@@ -194,7 +194,7 @@ export default function StudentSettingsPage() {
       } else {
         throw new Error('Failed to update profile');
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to update profile:', error);
       showToast({
         type: 'error',
@@ -218,10 +218,10 @@ export default function StudentSettingsPage() {
         status: 'active'
       });
       if (response) {
-        setProfile((prev: any) => ({ ...prev, subscriptionStatus: 'active', subscriptionPlan: selectedPlan }));
+        setProfile((prev: User) => ({ ...prev, subscriptionStatus: 'active', subscriptionPlan: selectedPlan }));
         showToast({ type: 'success', title: 'Success!', message: 'Subscription updated' });
       }
-    } catch (e) {
+    } catch {
       console.error(e);
       showToast({ type: 'error', title: 'Error!', message: 'Failed to update subscription' });
     } finally {
@@ -239,7 +239,7 @@ export default function StudentSettingsPage() {
       if (response) {
         showToast({ type: 'success', title: 'Success!', message: 'Bus assigned successfully' });
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       showToast({ type: 'error', title: 'Error!', message: e.message || 'Failed to assign bus' });
     } finally {
       setSubscriptionLoading(false);

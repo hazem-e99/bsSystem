@@ -45,7 +45,7 @@ export function useTripMapping() {
   const [selectedConductorId, setSelectedConductorId] = useState<number | null>(null);
   
   // دالة لإنشاء Trip مع الـ mapping
-  const createTripWithMapping = async (tripData: any) => {
+  const createTripWithMapping = async (tripData: Record<string, unknown>) => {
     // معلومات للمطورين
     const originalDriver = MAPPING_CONFIG.displayUsers.drivers.find(d => d.id === selectedDriverId);
     const originalConductor = MAPPING_CONFIG.displayUsers.conductors.find(c => c.id === selectedConductorId);

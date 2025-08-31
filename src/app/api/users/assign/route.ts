@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface Bus {
+  id: string;
+  driverId?: string;
+  assignedSupervisorId?: string;
+  updatedAt?: string;
+}
+
+interface Trip {
+  id: string;
+  driverId?: string;
+  supervisorId?: string;
+  updatedAt?: string;
+}
+
 // Admin/Movement Manager can assign drivers and supervisors to buses or trips
 export async function POST(request: NextRequest) {
   try {
@@ -15,18 +35,18 @@ export async function POST(request: NextRequest) {
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
 
-    const user = (db.users || []).find((u: any) => u.id === userId);
+    const user = (db.users || []).find((u: User) => u.id === userId);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     if (entity === 'bus') {
-      const index = (db.buses || []).findIndex((b: any) => b.id === entityId);
+      const index = (db.buses || []).findIndex((b: Bus) => b.id === entityId);
       if (index === -1) return NextResponse.json({ error: 'Bus not found' }, { status: 404 });
       const bus = db.buses[index];
       if (role === 'driver') db.buses[index] = { ...bus, driverId: userId, updatedAt: new Date().toISOString() };
       else if (role === 'supervisor') db.buses[index] = { ...bus, assignedSupervisorId: userId, updatedAt: new Date().toISOString() };
       else return NextResponse.json({ error: 'Unsupported role for bus assignment' }, { status: 400 });
     } else if (entity === 'trip') {
-      const index = (db.trips || []).findIndex((t: any) => t.id === entityId);
+      const index = (db.trips || []).findIndex((t: Trip) => t.id === entityId);
       if (index === -1) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
       const trip = db.trips[index];
       if (role === 'driver') db.trips[index] = { ...trip, driverId: userId, updatedAt: new Date().toISOString() };
@@ -38,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     console.error('Error assigning user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

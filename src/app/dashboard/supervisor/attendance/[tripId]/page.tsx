@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
 import { attendanceAPI, bookingAPI, notificationAPI, tripAPI, userAPI } from '@/lib/api';
-import { MapPin, Clock, Users, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Clock, Users, XCircle } from 'lucide-react';
 
 interface TripWithStops {
 	id: string;
@@ -32,9 +32,9 @@ export default function TripAttendancePage() {
 	const { user } = useAuth();
 	const { showToast } = useToast();
 	const [trip, setTrip] = useState<TripWithStops | null>(null);
-	const [students, setStudents] = useState<any[]>([]);
-	const [bookings, setBookings] = useState<any[]>([]);
-	const [attendances, setAttendances] = useState<any[]>([]);
+	const [students, setStudents] = useState<unknown[]>([]);
+	const [bookings, setBookings] = useState<unknown[]>([]);
+	const [attendances, setAttendances] = useState<unknown[]>([]);
 	const [stopFilter, setStopFilter] = useState<string>('all');
 	const [search, setSearch] = useState<string>('');
 	const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export default function TripAttendancePage() {
 				setBookings(Array.isArray(bks) ? bks : []);
 				setStudents(Array.isArray(allStudents) ? allStudents : []);
 				setAttendances(Array.isArray(atts) ? atts : []);
-			} catch (e) {
+			} catch {
 				setTrip(null);
 				setBookings([]);
 				setStudents([]);
@@ -71,7 +71,7 @@ export default function TripAttendancePage() {
 	useEffect(() => {
 		if (!Array.isArray(attendances) || attendances.length === 0 || bookings.length === 0) return;
 		// Choose latest record per student for this trip by timestamp
-		const latestByStudent = new Map<string, any>();
+		    const latestByStudent = new Map<string, unknown>();
 		for (const rec of attendances) {
 			if (rec.tripId !== tripId) continue;
 			const prev = latestByStudent.get(rec.studentId);
@@ -79,7 +79,7 @@ export default function TripAttendancePage() {
 				latestByStudent.set(rec.studentId, rec);
 			}
 		}
-		const map: Record<string, 'present' | 'absent' | 'late'> = {} as any;
+		const map: Record<string, 'present' | 'absent' | 'late'> = {};
 		for (const bk of bookings) {
 			const rec = latestByStudent.get(bk.studentId);
 			if (rec && (rec.status === 'present' || rec.status === 'absent' || rec.status === 'late')) {
@@ -120,7 +120,7 @@ export default function TripAttendancePage() {
 		try { const atts = await attendanceAPI.getByTrip(tripId); setAttendances(Array.isArray(atts) ? atts : []); } catch {}
 	};
 
-	const markPresent = async (row: any) => {
+	const markPresent = async (row: { studentId: string; id: string; studentName: string }) => {
 		try {
 			await attendanceAPI.create({ studentId: row.studentId, tripId, status: 'present', timestamp: new Date().toISOString() });
 			setAttendanceByBooking(prev => ({ ...prev, [row.id]: 'present' }));
@@ -131,7 +131,7 @@ export default function TripAttendancePage() {
 		}
 	};
 
-	const markAbsent = async (row: any) => {
+	const markAbsent = async (row: { studentId: string; id: string; studentName: string }) => {
 		try {
 			await attendanceAPI.create({ studentId: row.studentId, tripId, status: 'absent', timestamp: new Date().toISOString() });
 			await bookingAPI.update(row.id, { status: 'cancelled' });

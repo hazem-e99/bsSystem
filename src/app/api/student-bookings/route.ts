@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Booking {
+  id: string;
+  studentId: string;
+  tripId: string;
+  status: string;
+  date: string;
+}
+
+interface Trip {
+  id: string;
+  routeId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,14 +41,14 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Get student bookings
-    const studentBookings = db.bookings?.filter((booking: any) => 
+    const studentBookings = db.bookings?.filter((booking: Booking) => 
       booking.studentId === studentId
     ) || [];
 
     // Enrich bookings with trip and route information
-    const enrichedBookings = studentBookings.map((booking: any) => {
-      const trip = db.trips?.find((t: any) => t.id === booking.tripId);
-      const route = trip ? db.routes?.find((r: any) => r.id === trip.routeId) : null;
+    const enrichedBookings = studentBookings.map((booking: Booking) => {
+      const trip = db.trips?.find((t: Trip) => t.id === booking.tripId);
+      const route = trip ? db.routes?.find((r: Route) => r.id === trip.routeId) : null;
       
       return {
         ...booking,
@@ -45,7 +69,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(enrichedBookings);
-  } catch (error) {
+  } catch {
     console.error('Error fetching student bookings:', error);
     return NextResponse.json(
       { error: 'Failed to fetch student bookings' },

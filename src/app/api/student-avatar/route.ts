@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  avatar?: string;
+  updatedAt?: string;
+}
+
 // POST: رفع صورة جديدة للطالب
 export async function POST(request: NextRequest) {
   try {
@@ -60,7 +66,7 @@ export async function POST(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find student index
-    const studentIndex = db.users?.findIndex((user: any) => user.id === studentId);
+    const studentIndex = db.users?.findIndex((user: User) => user.id.toString() === studentId);
 
     if (studentIndex === -1) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
@@ -80,7 +86,7 @@ export async function POST(request: NextRequest) {
       message: 'Avatar updated successfully'
     });
 
-  } catch (error) {
+  } catch {
     console.error('Error uploading avatar:', error);
     return NextResponse.json(
       { error: 'Failed to upload avatar' },
@@ -105,7 +111,7 @@ export async function DELETE(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find student
-    const studentIndex = db.users?.findIndex((user: any) => user.id === studentId);
+    const studentIndex = db.users?.findIndex((user: User) => user.id.toString() === studentId);
 
     if (studentIndex === -1) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
@@ -118,7 +124,7 @@ export async function DELETE(request: NextRequest) {
       try {
         const avatarPath = path.join(process.cwd(), 'public', currentAvatar);
         await fs.unlink(avatarPath);
-      } catch (error) {
+      } catch {
         console.log('Avatar file not found, skipping deletion');
       }
     }
@@ -135,7 +141,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Avatar removed successfully'
     });
 
-  } catch (error) {
+  } catch {
     console.error('Error removing avatar:', error);
     return NextResponse.json(
       { error: 'Failed to remove avatar' },

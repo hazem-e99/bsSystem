@@ -2,6 +2,48 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  role: string;
+  status?: string;
+  licenseType?: string;
+  licenseExpiry?: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface Trip {
+  id: string;
+  driverId: string;
+  routeId: string;
+  status: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  passengers: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
+interface Payment {
+  id: string;
+  tripId: string;
+  status: string;
+  amount: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -22,38 +64,38 @@ export async function GET(request: NextRequest) {
     const attendance = db.attendance || [];
     
     // Get all drivers (users with driver role)
-    let drivers = users.filter((user: any) => user.role === 'driver');
+    let drivers = users.filter((user: User) => user.role === 'driver');
     
     // Filter by status if provided
     if (status) {
-      drivers = drivers.filter((driver: any) => driver.status === status);
+      drivers = drivers.filter((driver: User) => driver.status === status);
     }
     
     // Filter by license type if provided
     if (licenseType) {
-      drivers = drivers.filter((driver: any) => driver.licenseType === licenseType);
+      drivers = drivers.filter((driver: User) => driver.licenseType === licenseType);
     }
 
     // Enrich driver data with performance metrics
-    const enrichedDrivers = drivers.map((driver: any) => {
-      const driverTrips = trips.filter((trip: any) => trip.driverId === driver.id);
-      const completedTrips = driverTrips.filter((trip: any) => trip.status === 'completed');
-      const activeTrips = driverTrips.filter((trip: any) => trip.status === 'active');
-      const cancelledTrips = driverTrips.filter((trip: any) => trip.status === 'cancelled');
+    const enrichedDrivers = drivers.map((driver: User) => {
+      const driverTrips = trips.filter((trip: Trip) => trip.driverId === driver.id);
+      const completedTrips = driverTrips.filter((trip: Trip) => trip.status === 'completed');
+      const activeTrips = driverTrips.filter((trip: Trip) => trip.status === 'active');
+      const cancelledTrips = driverTrips.filter((trip: Trip) => trip.status === 'cancelled');
       
-      const driverBookings = bookings.filter((booking: any) => 
-        driverTrips.some((trip: any) => trip.id === booking.tripId)
+      const driverBookings = bookings.filter((booking: Booking) => 
+        driverTrips.some((trip: Trip) => trip.id === booking.tripId)
       );
       
-      const driverPayments = payments.filter((payment: any) => 
-        driverTrips.some((trip: any) => trip.id === payment.tripId)
+      const driverPayments = payments.filter((payment: Payment) => 
+        driverTrips.some((trip: Trip) => trip.id === payment.tripId)
       );
       
       const totalRevenue = driverPayments
-        .filter((p: any) => p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'completed')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
       
-      const totalPassengers = driverTrips.reduce((sum: number, trip: any) => 
+      const totalPassengers = driverTrips.reduce((sum: number, trip: Trip) => 
         sum + (trip.passengers || 0), 0
       );
       
@@ -61,7 +103,7 @@ export async function GET(request: NextRequest) {
         (completedTrips.length / driverTrips.length) * 100 : 0;
       
       // Calculate average trip duration
-      const completedTripDurations = completedTrips.map((trip: any) => {
+      const completedTripDurations = completedTrips.map((trip: Trip) => {
         if (trip.startTime && trip.endTime) {
           const start = new Date(`2000-01-01T${trip.startTime}`);
           const end = new Date(`2000-01-01T${trip.endTime}`);
@@ -75,10 +117,10 @@ export async function GET(request: NextRequest) {
       
       // Get recent trips
       const recentTrips = driverTrips
-        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .sort((a: Trip, b: Trip) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5)
-        .map((trip: any) => {
-          const route = routes.find((r: any) => r.id === trip.routeId);
+        .map((trip: Trip) => {
+          const route = routes.find((r: Route) => r.id === trip.routeId);
           return {
             id: trip.id,
             date: trip.date,
@@ -141,21 +183,21 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort by performance (total revenue)
-    enrichedDrivers.sort((a: any, b: any) => b.performance.totalRevenue - a.performance.totalRevenue);
+    enrichedDrivers.sort((a: User, b: User) => b.performance.totalRevenue - a.performance.totalRevenue);
 
     // Calculate drivers summary
     const driversSummary = {
       totalDrivers: enrichedDrivers.length,
-      activeDrivers: enrichedDrivers.filter((driver: any) => driver.status === 'active').length,
-      inactiveDrivers: enrichedDrivers.filter((driver: any) => driver.status === 'inactive').length,
-      suspendedDrivers: enrichedDrivers.filter((driver: any) => driver.status === 'suspended').length,
-      totalRevenue: enrichedDrivers.reduce((sum: number, driver: any) => sum + driver.performance.totalRevenue, 0),
+      activeDrivers: enrichedDrivers.filter((driver: User) => driver.status === 'active').length,
+      inactiveDrivers: enrichedDrivers.filter((driver: User) => driver.status === 'inactive').length,
+      suspendedDrivers: enrichedDrivers.filter((driver: User) => driver.status === 'suspended').length,
+      totalRevenue: enrichedDrivers.reduce((sum: number, driver: User) => sum + driver.performance.totalRevenue, 0),
       averageCompletionRate: enrichedDrivers.length > 0 ? 
-        enrichedDrivers.reduce((sum: number, driver: any) => sum + driver.performance.completionRate, 0) / enrichedDrivers.length : 0,
-      licenseExpiringSoon: enrichedDrivers.filter((driver: any) => 
+        enrichedDrivers.reduce((sum: number, driver: User) => sum + driver.performance.completionRate, 0) / enrichedDrivers.length : 0,
+      licenseExpiringSoon: enrichedDrivers.filter((driver: User) => 
         driver.license.status === 'expiring_soon'
       ).length,
-      licenseExpired: enrichedDrivers.filter((driver: any) => 
+      licenseExpired: enrichedDrivers.filter((driver: User) => 
         driver.license.status === 'expired'
       ).length
     };
@@ -164,7 +206,7 @@ export async function GET(request: NextRequest) {
       drivers: enrichedDrivers,
       summary: driversSummary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching drivers data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -201,7 +243,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newDriver, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating driver:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -211,7 +253,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to calculate safety score
-function calculateSafetyScore(driver: any, trips: any[]): number {
+function calculateSafetyScore(driver: User, trips: Trip[]): number {
   let score = 100; // Start with perfect score
   
   // Deduct points for incidents
@@ -220,7 +262,7 @@ function calculateSafetyScore(driver: any, trips: any[]): number {
   }
   
   // Deduct points for cancelled trips
-  const cancelledTrips = trips.filter((trip: any) => trip.status === 'cancelled').length;
+  const cancelledTrips = trips.filter((trip: Trip) => trip.status === 'cancelled').length;
   score -= cancelledTrips * 2; // 2 points per cancelled trip
   
   // Deduct points for license expiry

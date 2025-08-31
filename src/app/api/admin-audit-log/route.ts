@@ -2,6 +2,50 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface AuditLog {
+  id: string;
+  action: string;
+  entity: string;
+  userId: string;
+  severity: string;
+  timestamp?: string;
+  createdAt?: string;
+  description?: string;
+  details?: string;
+  entityId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  location?: string;
+}
+
+interface EnrichedAuditLog extends AuditLog {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+  metadata: {
+    ageInMinutes: number;
+    ageInHours: number;
+    ageInDays: number;
+    ageText: string;
+    severityLevel: number;
+    isCreate: boolean;
+    isUpdate: boolean;
+    isDelete: boolean;
+    isRead: boolean;
+    isLogin: boolean;
+    isLogout: boolean;
+    isAccess: boolean;
+    entityType: string;
+    entityId: string | null;
+    ipAddress: string | null;
+    userAgent: string | null;
+    location: string | null;
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -28,26 +72,26 @@ export async function GET(request: NextRequest) {
     let filteredLogs = auditLogs;
     
     if (action) {
-      filteredLogs = filteredLogs.filter((log: any) => log.action === action);
+      filteredLogs = filteredLogs.filter((log: AuditLog) => log.action === action);
     }
     
     if (entity) {
-      filteredLogs = filteredLogs.filter((log: any) => log.entity === entity);
+      filteredLogs = filteredLogs.filter((log: AuditLog) => log.entity === entity);
     }
     
     if (userId) {
-      filteredLogs = filteredLogs.filter((log: any) => log.userId === userId);
+      filteredLogs = filteredLogs.filter((log: AuditLog) => log.userId === userId);
     }
     
     if (severity) {
-      filteredLogs = filteredLogs.filter((log: any) => log.severity === severity);
+      filteredLogs = filteredLogs.filter((log: AuditLog) => log.severity === severity);
     }
     
     if (dateFrom || dateTo) {
       const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
       const toDate = dateTo ? new Date(dateTo) : new Date();
       
-      filteredLogs = filteredLogs.filter((log: any) => {
+      filteredLogs = filteredLogs.filter((log: AuditLog) => {
         const logDate = new Date(log.timestamp || log.createdAt);
         return logDate >= fromDate && logDate <= toDate;
       });
@@ -55,7 +99,7 @@ export async function GET(request: NextRequest) {
     
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredLogs = filteredLogs.filter((log: any) => 
+      filteredLogs = filteredLogs.filter((log: AuditLog) => 
         log.description?.toLowerCase().includes(searchLower) ||
         log.details?.toLowerCase().includes(searchLower) ||
         log.entity?.toLowerCase().includes(searchLower) ||
@@ -64,8 +108,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Enrich audit log data with additional information
-    const enrichedLogs = filteredLogs.map((log: any) => {
-      const user = users.find((u: any) => u.id === log.userId);
+    const enrichedLogs = filteredLogs.map((log: AuditLog) => {
+      const user = users.find((u: User) => u.id === log.userId);
       
       // Calculate log age
       const logDate = new Date(log.timestamp || log.createdAt);
@@ -111,7 +155,7 @@ export async function GET(request: NextRequest) {
       return {
         ...log,
         user: user ? {
-          id: user.id,
+          id: user.id.toString(),
           name: user.name,
           email: user.email,
           role: user.role
@@ -139,7 +183,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort logs by timestamp (newest first)
-    enrichedLogs.sort((a: any, b: any) => 
+    enrichedLogs.sort((a: EnrichedAuditLog, b: EnrichedAuditLog) => 
       new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime()
     );
 
@@ -148,33 +192,33 @@ export async function GET(request: NextRequest) {
 
     // Calculate audit log summary
     const totalLogs = enrichedLogs.length;
-    const criticalLogs = enrichedLogs.filter((log: any) => log.severity === 'critical').length;
-    const highLogs = enrichedLogs.filter((log: any) => log.severity === 'high').length;
-    const mediumLogs = enrichedLogs.filter((log: any) => log.severity === 'medium').length;
-    const lowLogs = enrichedLogs.filter((log: any) => log.severity === 'low').length;
+    const criticalLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.severity === 'critical').length;
+    const highLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.severity === 'high').length;
+    const mediumLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.severity === 'medium').length;
+    const lowLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.severity === 'low').length;
     
-    const createActions = enrichedLogs.filter((log: any) => log.action === 'create').length;
-    const updateActions = enrichedLogs.filter((log: any) => log.action === 'update').length;
-    const deleteActions = enrichedLogs.filter((log: any) => log.action === 'delete').length;
-    const readActions = enrichedLogs.filter((log: any) => log.action === 'read').length;
-    const loginActions = enrichedLogs.filter((log: any) => log.action === 'login').length;
-    const logoutActions = enrichedLogs.filter((log: any) => log.action === 'logout').length;
-    const accessActions = enrichedLogs.filter((log: any) => log.action === 'access').length;
+    const createActions = enrichedLogs.filter((log: EnrichedAuditLog) => log.action === 'create').length;
+    const updateActions = enrichedLogs.filter((log: EnrichedAuditLog) => log.action === 'update').length;
+    const deleteActions = enrichedLogs.filter((log: EnrichedAuditLog) => log.action === 'delete').length;
+    const readActions = enrichedLogs.filter((log: EnrichedAuditLog) => log.action === 'read').length;
+    const loginActions = enrichedLogs.filter((log: EnrichedAuditLog) => log.action === 'login').length;
+    const logoutActions = enrichedLogs.filter((log: EnrichedAuditLog) => log.action === 'logout').length;
+    const accessActions = enrichedLogs.filter((log: EnrichedAuditLog) => log.action === 'access').length;
     
-    const userLogs = enrichedLogs.filter((log: any) => log.entity === 'user').length;
-    const tripLogs = enrichedLogs.filter((log: any) => log.entity === 'trip').length;
-    const bookingLogs = enrichedLogs.filter((log: any) => log.entity === 'booking').length;
-    const paymentLogs = enrichedLogs.filter((log: any) => log.entity === 'payment').length;
-    const busLogs = enrichedLogs.filter((log: any) => log.entity === 'bus').length;
-    const routeLogs = enrichedLogs.filter((log: any) => log.entity === 'route').length;
-    const maintenanceLogs = enrichedLogs.filter((log: any) => log.entity === 'maintenance').length;
-    const settingLogs = enrichedLogs.filter((log: any) => log.entity === 'setting').length;
+    const userLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'user').length;
+    const tripLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'trip').length;
+    const bookingLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'booking').length;
+    const paymentLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'payment').length;
+    const busLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'bus').length;
+    const routeLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'route').length;
+    const maintenanceLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'maintenance').length;
+    const settingLogs = enrichedLogs.filter((log: EnrichedAuditLog) => log.entity === 'setting').length;
     
-    const uniqueUsers = new Set(enrichedLogs.map((log: any) => log.userId)).size;
-    const uniqueIPs = new Set(enrichedLogs.filter((log: any) => log.ipAddress).map((log: any) => log.ipAddress)).size;
+    const uniqueUsers = new Set(enrichedLogs.map((log: EnrichedAuditLog) => log.userId)).size;
+    const uniqueIPs = new Set(enrichedLogs.filter((log: EnrichedAuditLog) => log.ipAddress).map((log: EnrichedAuditLog) => log.ipAddress)).size;
     
     // Calculate security metrics
-    const suspiciousActivities = enrichedLogs.filter((log: any) => 
+    const suspiciousActivities = enrichedLogs.filter((log: EnrichedAuditLog) => 
       log.severity === 'critical' || 
       log.action === 'delete' || 
       log.action === 'access' ||
@@ -222,7 +266,7 @@ export async function GET(request: NextRequest) {
       logs: paginatedLogs,
       summary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching audit logs:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -262,7 +306,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newLog, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating audit log:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -296,29 +340,29 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const logIndex = db.auditLogs.findIndex((log: any) => log.id === id);
-    
+        const logIndex = db.auditLogs.findIndex((log: AuditLog) => log.id === id);
+
     if (logIndex === -1) {
       return NextResponse.json(
         { error: 'Audit log not found' },
         { status: 404 }
       );
     }
-    
+
     // Update audit log
     const updatedLog = {
       ...db.auditLogs[logIndex],
       ...body,
       updatedAt: new Date().toISOString()
     };
-    
+
     db.auditLogs[logIndex] = updatedLog;
-    
+
     // Write back to db.json
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
-    
+
     return NextResponse.json(updatedLog);
-  } catch (error) {
+  } catch {
     console.error('Error updating audit log:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -331,27 +375,27 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
       return NextResponse.json(
         { error: 'Audit log ID is required' },
         { status: 400 }
       );
     }
-    
+
     // Read db.json file
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
-    
+
     if (!db.auditLogs) {
       return NextResponse.json(
         { error: 'No audit logs found' },
         { status: 404 }
       );
     }
-    
-    const logIndex = db.auditLogs.findIndex((log: any) => log.id === id);
+
+    const logIndex = db.auditLogs.findIndex((log: AuditLog) => log.id === id);
     
     if (logIndex === -1) {
       return NextResponse.json(
@@ -367,7 +411,7 @@ export async function DELETE(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Audit log deleted successfully', deletedLog });
-  } catch (error) {
+  } catch {
     console.error('Error deleting audit log:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

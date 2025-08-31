@@ -2,6 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface Trip {
+  id: string;
+  driverId: string;
+  routeId: string;
+  busId: string;
+  status: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  passengers: number;
+  revenue: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  model: string;
+}
+
+interface MonthlyPerformance {
+  trips: number;
+  passengers: number;
+  revenue: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,8 +57,8 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find driver by ID
-    const driver = db.users?.find((user: any) => 
-      user.id === driverId && user.role === 'driver'
+    const driver = db.users?.find((user: User) => 
+      user.id.toString() === driverId && user.role === 'driver'
     );
 
     if (!driver) {
@@ -26,18 +66,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Get driver's trips
-    const driverTrips = db.trips?.filter((trip: any) => trip.driverId === driverId) || [];
-    const completedTrips = driverTrips.filter((trip: any) => trip.status === 'completed');
-    const activeTrips = driverTrips.filter((trip: any) => trip.status === 'active');
-    const scheduledTrips = driverTrips.filter((trip: any) => trip.status === 'scheduled');
+    const driverTrips = db.trips?.filter((trip: Trip) => trip.driverId === driverId) || [];
+    const completedTrips = driverTrips.filter((trip: Trip) => trip.status === 'completed');
+    const activeTrips = driverTrips.filter((trip: Trip) => trip.status === 'active');
+    const scheduledTrips = driverTrips.filter((trip: Trip) => trip.status === 'scheduled');
 
     // Get driver's recent trips
     const recentTrips = driverTrips
-      .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a: Trip, b: Trip) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10)
-      .map((trip: any) => {
-        const route = db.routes?.find((r: any) => r.id === trip.routeId);
-        const bus = db.buses?.find((b: any) => b.id === trip.busId);
+      .map((trip: Trip) => {
+        const route = db.routes?.find((r: Route) => r.id === trip.routeId);
+        const bus = db.buses?.find((b: Bus) => b.id === trip.busId);
         return {
           id: trip.id,
           date: trip.date,
@@ -63,15 +103,15 @@ export async function GET(request: NextRequest) {
     // Calculate performance metrics
     const totalTrips = driverTrips.length;
     const completionRate = totalTrips > 0 ? (completedTrips.length / totalTrips) * 100 : 0;
-    const totalPassengers = driverTrips.reduce((sum: number, trip: any) => 
+    const totalPassengers = driverTrips.reduce((sum: number, trip: Trip) => 
       sum + (trip.passengers || 0), 0
     );
-    const totalRevenue = driverTrips.reduce((sum: number, trip: any) => 
+    const totalRevenue = driverTrips.reduce((sum: number, trip: Trip) => 
       sum + (trip.revenue || 0), 0
     );
 
     // Calculate average trip duration
-    const completedTripDurations = completedTrips.map((trip: any) => {
+    const completedTripDurations = completedTrips.map((trip: Trip) => {
       if (trip.startTime && trip.endTime) {
         const start = new Date(`2000-01-01T${trip.startTime}`);
         const end = new Date(`2000-01-01T${trip.endTime}`);
@@ -84,8 +124,8 @@ export async function GET(request: NextRequest) {
       completedTripDurations.reduce((sum: number, duration: number) => sum + duration, 0) / completedTripDurations.length : 0;
 
     // Calculate monthly performance
-    const monthlyPerformance = {};
-    driverTrips.forEach((trip: any) => {
+    const monthlyPerformance: Record<string, MonthlyPerformance> = {};
+    driverTrips.forEach((trip: Trip) => {
       const month = new Date(trip.date).toISOString().slice(0, 7); // YYYY-MM
       if (!monthlyPerformance[month]) {
         monthlyPerformance[month] = {
@@ -100,7 +140,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Convert monthly performance to array format
-    const monthlyPerformanceArray = Object.entries(monthlyPerformance).map(([month, stats]: [string, any]) => ({
+    const monthlyPerformanceArray = Object.entries(monthlyPerformance).map(([month, stats]: [string, { trips: number; passengers: number; revenue: number }]) => ({
       month,
       ...stats
     }));
@@ -153,7 +193,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(profileData);
-  } catch (error) {
+  } catch {
     console.error('Error fetching driver profile:', error);
     return NextResponse.json(
       { error: 'Failed to fetch driver profile' },
@@ -179,8 +219,8 @@ export async function PUT(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find driver index
-    const driverIndex = db.users?.findIndex((user: any) => 
-      user.id === driverId && user.role === 'driver'
+    const driverIndex = db.users?.findIndex((user: User) => 
+      user.id.toString() === driverId && user.role === 'driver'
     );
 
     if (driverIndex === -1 || driverIndex === undefined) {
@@ -203,7 +243,7 @@ export async function PUT(request: NextRequest) {
       message: 'Driver profile updated successfully',
       driver: db.users[driverIndex]
     });
-  } catch (error) {
+  } catch {
     console.error('Error updating driver profile:', error);
     return NextResponse.json(
       { error: 'Failed to update driver profile' },
@@ -213,7 +253,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // Helper function to calculate safety score
-function calculateSafetyScore(driver: any, trips: any[]): number {
+function calculateSafetyScore(driver: User, trips: Trip[]): number {
   let score = 100; // Start with perfect score
   
   // Deduct points for incidents
@@ -222,7 +262,7 @@ function calculateSafetyScore(driver: any, trips: any[]): number {
   }
   
   // Deduct points for cancelled trips
-  const cancelledTrips = trips.filter((trip: any) => trip.status === 'cancelled').length;
+  const cancelledTrips = trips.filter((trip: Trip) => trip.status === 'cancelled').length;
   score -= cancelledTrips * 2; // 2 points per cancelled trip
   
   // Deduct points for license expiry

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -39,9 +39,9 @@ export default function StudentNotificationsPage() {
       if (!user) return;
       
       try {
-        const res = await notificationAPI.getByUser(user.id);
+        const res = await notificationAPI.getByUser(user.id.toString());
         setNotifications(res || []);
-      } catch (error) {
+      } catch {
         console.error('Failed to fetch notifications:', error);
         setNotifications([]);
       }
@@ -92,7 +92,7 @@ export default function StudentNotificationsPage() {
     try {
       await notificationAPI.update(id, { status: read ? 'read' : 'unread', read });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: read ? 'read' : 'unread', read } : n));
-    } catch (error) {
+    } catch {
       console.error('Failed to mark notification:', error);
     }
   };
@@ -101,7 +101,7 @@ export default function StudentNotificationsPage() {
     try {
       await notificationAPI.delete(id);
       setNotifications(prev => prev.filter(n => n.id !== id));
-    } catch (error) {
+    } catch {
       console.error('Failed to delete notification:', error);
     }
   };
@@ -111,7 +111,7 @@ export default function StudentNotificationsPage() {
       await Promise.all(toMark.map(n => notificationAPI.update(n.id, { status: 'read', read: true })));
       setNotifications(prev => prev.map(n => ({ ...n, status: 'read', read: true })));
       setToMark([]);
-    } catch (error) {
+    } catch {
       console.error('Failed to mark all as read:', error);
     }
   };
@@ -144,10 +144,10 @@ export default function StudentNotificationsPage() {
               <Filter className="absolute left-3 top-3 h-4 w-4 text-[#757575]" />
               <Input placeholder="Search title, message..." value={search} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} />
+            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} />
             <Select
               value={dateFilter}
-              onChange={e => setDateFilter(e.target.value as any)}
+              onChange={e => setDateFilter(e.target.value)}
               options={[
                 { value: 'all', label: 'All Dates' },
                 { value: 'today', label: 'Today' },
@@ -156,7 +156,7 @@ export default function StudentNotificationsPage() {
               ]}
             />
             <div>
-              <Input type="date" value={specificDate} onChange={(e: any) => setSpecificDate(e.target.value)} />
+              <Input type="date" value={specificDate} onChange={(e: unknown) => setSpecificDate(e.target.value)} />
             </div>
             <div className="flex items-center text-sm text-[#757575]"><Clock className="w-4 h-4 mr-2" /> {filtered.length} notification(s)</div>
           </div>

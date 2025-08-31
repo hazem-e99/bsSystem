@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
+// Notification interface
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+  type?: string;
+  priority?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,17 +26,17 @@ export async function GET(request: NextRequest) {
     // If userId is provided, filter notifications for that user
     if (userId) {
       let userNotifications = (db.notifications || []).filter(
-        (notification: any) => notification.userId === userId
+        (notification: Notification) => notification.userId === userId
       );
       if (unread === 'true') {
-        userNotifications = userNotifications.filter((n: any) => n.status === 'unread' || n.read === false);
+        userNotifications = userNotifications.filter((n: Notification) => n.status === 'unread' || n.read === false);
       }
       return NextResponse.json(userNotifications);
     }
 
     // Otherwise return all notifications
     return NextResponse.json(db.notifications || []);
-  } catch (error) {
+  } catch {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -51,7 +62,7 @@ export async function POST(request: NextRequest) {
     db.notifications.push(notification);
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(notification, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating notification:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

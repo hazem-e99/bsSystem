@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -132,7 +132,7 @@ export default function MovementManagerRoutesPage() {
       setRoutes(ui);
       // Enrich stops for items that have counts but no names
       // Note: call enrich after it's defined to satisfy linter; handled in effect below
-    } catch (err) {
+    } catch {
       console.error('Error fetching routes:', err);
       showToast({ type: 'error', title: 'Fetch failed', message: 'Failed to fetch routes' });
     } finally {
@@ -158,7 +158,7 @@ export default function MovementManagerRoutesPage() {
       const ui = (response || []).map(mapFromLegacy);
       setRoutes(ui);
       await enrichRoutesWithStops(ui);
-    } catch (err) {
+    } catch {
       console.error('Error fetching routes:', err);
       showToast({ type: 'error', title: 'Fetch failed', message: 'Failed to apply filters' });
       setRoutes([]);
@@ -247,7 +247,7 @@ export default function MovementManagerRoutesPage() {
         estimatedDuration: 0,
         stops: [] });
       showToast({ type: 'success', title: 'Route created', message: `${createdRoute.name} added.` });
-    } catch (err) {
+    } catch {
       console.error('Error adding route:', err);
       showToast({ type: 'error', title: 'Create failed', message: 'Failed to add route' });
     } finally {

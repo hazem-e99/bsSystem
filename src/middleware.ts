@@ -23,7 +23,7 @@ export function middleware(request: NextRequest) {
         
         console.log('🔄 Middleware redirecting to:', redirectUrl);
         return NextResponse.redirect(new URL(redirectUrl, request.url));
-      } catch (error) {
+      } catch {
         console.error('Error parsing user cookie:', error);
         return NextResponse.redirect(new URL('/auth/login', request.url));
       }

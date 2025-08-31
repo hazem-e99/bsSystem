@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -17,8 +17,8 @@ import { formatDate } from '@/utils/formatDate';
 
 export default function AdminSubscriptionsPage() {
   const { showToast } = useToast();
-  const [users, setUsers] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [users, setUsers] = useState<unknown[]>([]);
+  const [payments, setPayments] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState<'all' | 'cash' | 'bank'>('all');
@@ -37,21 +37,21 @@ export default function AdminSubscriptionsPage() {
         userAPI.getAll().catch(() => []),
         paymentAPI.getAll().catch(() => [])
       ]);
-      setUsers((usersData || []) as any[]);
-      setPayments((paymentsData || []) as any[]);
+      setUsers(usersData || []);
+      setPayments(paymentsData || []);
     } finally {
       setLoading(false);
     }
   };
 
-  const students = useMemo(() => (users || []).filter((u: any) => u.role === 'student'), [users]);
+  const students = useMemo(() => (users || []).filter((u: User) => u.role === 'student'), [users]);
 
   const rows = useMemo(() => {
     const base = students
-      .map((s: any) => {
+      .map((s: User) => {
         const subs = (payments || [])
-          .filter((p: any) => p.studentId === s.id && !p.tripId)
-          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          .filter((p: Payment) => p.studentId === s.id && !p.tripId)
+          .sort((a: Payment, b: Payment) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const last = subs[0];
         const methodRaw = (last?.method || s.paymentMethod || '').toLowerCase();
         // method: cash | bank | '' (not yet)
@@ -80,10 +80,10 @@ export default function AdminSubscriptionsPage() {
 
   const planOptions = useMemo(() => {
     const set = new Set<string>();
-    (students || []).forEach((s: any) => {
+    (students || []).forEach((s: User) => {
       const subs = (payments || [])
-        .filter((p: any) => p.studentId === s.id && !p.tripId)
-        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .filter((p: Payment) => p.studentId === s.id && !p.tripId)
+        .sort((a: Payment, b: Payment) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const last = subs[0];
       const p = s.subscriptionPlan || last?.description?.replace('Subscription ', '') || '';
       if (p) set.add(p);
@@ -124,11 +124,11 @@ export default function AdminSubscriptionsPage() {
 
   const confirmCash = async (paymentId: string, studentId: string) => {
     try {
-      await paymentAPI.update(paymentId as any, { status: 'completed' });
+      await paymentAPI.update(paymentId, { status: 'completed' });
       await userAPI.update(String(studentId), { subscriptionStatus: 'active' });
       await load();
       showToast({ type: 'success', title: 'Success', message: 'Subscription confirmed.' });
-    } catch (e: any) {
+    } catch (e: unknown) {
       showToast({ type: 'error', title: 'Error', message: e.message || 'Failed to confirm' });
     }
   };
@@ -137,7 +137,7 @@ export default function AdminSubscriptionsPage() {
     await userAPI.update(String(studentId), { subscriptionStatus: status });
   };
 
-  const handleToggleStatus = async (row: any, nextChecked: boolean) => {
+  const handleToggleStatus = async (row: { student: User; plan: string; method: string; status: string; paymentId: string | null; lastPayment: Payment | null }, nextChecked: boolean) => {
     try {
       // Block activation if no plan selected regardless of method
       if (nextChecked && (!row.plan || String(row.plan).trim() === '')) {
@@ -166,7 +166,7 @@ export default function AdminSubscriptionsPage() {
           showToast({ type: 'success', title: 'Deactivated', message: `${row.student.name} is now inactive.` });
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       showToast({ type: 'error', title: 'Update failed', message: e.message || 'Could not change status.' });
     }
   };
@@ -219,7 +219,7 @@ export default function AdminSubscriptionsPage() {
             <Input placeholder="Search name or email" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            <Select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value as any)} className="min-w-[160px]">
+            <Select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)} className="min-w-[160px]">
               <option value="all">All Methods</option>
               <option value="cash">Cash</option>
               <option value="bank">Bank</option>
@@ -308,7 +308,7 @@ export default function AdminSubscriptionsPage() {
         </CardHeader>
         <CardContent>
           {(() => {
-            const columns: ColumnDef<any>[] = [
+            const columns: ColumnDef<unknown>[] = [
               {
                 header: 'Student',
                 accessorKey: 'student.name',

@@ -1,0 +1,462 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
+import { 
+  User, 
+  Save, 
+  ArrowLeft,
+  GraduationCap,
+  Shield
+} from 'lucide-react';
+import { studentAPI } from '@/lib/api';
+import { StudentViewModel } from '@/types/user';
+import { validateStudentEdit } from '@/utils/validateStudentRegistration';
+
+interface StudentEditData {
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  email: string;
+  phoneNumber: string;
+  studentAcademicNumber: string;
+  department: string;
+  yearOfStudy: string;
+  emergencyContact: string;
+  emergencyPhone: string;
+}
+
+export default function EditStudentPage() {
+  const params = useParams();
+  const router = useRouter();
+  const studentId = params.id as string;
+  const [student, setStudent] = useState<StudentViewModel | null>(null);
+  const [formData, setFormData] = useState<StudentEditData>({
+    firstName: '',
+    lastName: '',
+    nationalId: '',
+    email: '',
+    phoneNumber: '',
+    studentAcademicNumber: '',
+    department: '',
+    yearOfStudy: '',
+    emergencyContact: '',
+    emergencyPhone: ''
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
+  const { showToast } = useToast();
+
+  // Department options from Swagger schema
+  const departments = [
+    'Medicine', 'Dentistry', 'Pharmacy', 'VeterinaryMedicine', 'Nursing',
+    'CivilEngineering', 'MechanicalEngineering', 'ElectricalEngineering', 'ComputerEngineering', 'ChemicalEngineering',
+    'Architecture', 'ComputerScience', 'InformationTechnology', 'SoftwareEngineering', 'DataScience',
+    'BusinessAdministration', 'Accounting', 'Finance', 'Marketing', 'Economics', 'Management',
+    'Law', 'ArabicLanguageAndLiterature', 'EnglishLanguageAndLiterature', 'History', 'Philosophy',
+    'Geography', 'PoliticalScience', 'Psychology', 'Sociology', 'SocialWork', 'InternationalRelations',
+    'Physics', 'Chemistry', 'Biology', 'Mathematics', 'Agriculture', 'AgriculturalEngineering',
+    'Education', 'FineArts', 'Music', 'GraphicDesign', 'MassCommunication', 'Journalism',
+    'PhysicalEducation', 'TourismAndHotels'
+  ];
+
+  // Academic year options from Swagger schema
+  const yearsOfStudy = [
+    'PreparatoryYear', 'FirstYear', 'SecondYear', 'ThirdYear', 'FourthYear',
+    'FifthYear', 'SixthYear', 'SeventhYear',
+    'MastersFirstYear', 'MastersSecondYear', 'MastersThirdYear',
+    'PhDFirstYear', 'PhDSecondYear', 'PhDThirdYear', 'PhDFourthYear', 'PhDFifthYear', 'PhDSixthYear',
+    'ResidencyFirstYear', 'ResidencySecondYear', 'ResidencyThirdYear', 'ResidencyFourthYear', 'ResidencyFifthYear',
+    'FellowshipFirstYear', 'FellowshipSecondYear',
+    'ExchangeStudent', 'VisitingStudent', 'NonDegreeStudent', 'ContinuingEducation',
+    'DiplomaFirstYear', 'DiplomaSecondYear', 'DiplomaThirdYear',
+    'ProfessionalFirstYear', 'ProfessionalSecondYear', 'ProfessionalThirdYear', 'ProfessionalFourthYear',
+    'RepeatYear', 'ThesisWriting', 'DissertationWriting'
+  ];
+
+  // Fetch student data
+  useEffect(() => {
+    const fetchStudent = async () => {
+      try {
+        setIsLoading(true);
+        const studentData = await studentAPI.getById(studentId);
+        
+        if (!studentData) {
+          showToast({
+            type: 'error',
+            title: 'Student Not Found',
+            message: 'The requested student could not be found.'
+          });
+          router.push('/dashboard/admin/users');
+          return;
+        }
+        
+        setStudent(studentData);
+        
+        // Populate form with student data
+        setFormData({
+          firstName: studentData.firstName || '',
+          lastName: studentData.lastName || '',
+          nationalId: studentData.nationalId || '',
+          email: studentData.email || '',
+          phoneNumber: studentData.phoneNumber || '',
+          studentAcademicNumber: studentData.studentAcademicNumber || '',
+          department: studentData.department || '',
+          yearOfStudy: studentData.yearOfStudy || '',
+          emergencyContact: studentData.emergencyContact || '',
+          emergencyPhone: studentData.emergencyPhone || ''
+        });
+      } catch {
+        console.error('Failed to fetch student:', err);
+        showToast({
+          type: 'error',
+          title: 'Error',
+          message: 'Failed to load student data. Please try again.'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (studentId) {
+      fetchStudent();
+    }
+  }, [studentId, router, showToast]);
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors([]);
+    
+    // Validate form data (excluding password for edit)
+    const validation = validateStudentEdit(formData);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      showToast({
+        type: 'error',
+        title: 'Validation Error',
+        message: validation.errors.join(', ')
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Note: The backend doesn't have a specific student update endpoint
+      // We'll need to use the registration endpoint or handle this differently
+      showToast({
+        type: 'info',
+        title: 'Update Not Available',
+        message: 'Student update functionality is not available in the current API. Please contact the administrator.'
+      });
+      
+      // For now, just show success message and redirect
+      // In a real implementation, you would call the appropriate update API
+      
+    } catch {
+      console.error('Failed to update student:', err);
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Failed to update student information. Please try again.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (field: keyof StudentEditData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear errors when user starts typing
+    if (errors.length > 0) {
+      setErrors([]);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent mx-auto shadow-lg"></div>
+          <p className="mt-6 text-text-secondary text-lg font-medium">Loading student data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!student) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-semibold text-text-primary mb-4">Student Not Found</h2>
+        <p className="text-text-secondary mb-6">The requested student could not be found.</p>
+        <Button onClick={() => router.push('/dashboard/admin/users')}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Users
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push(`/dashboard/admin/students/${studentId}`)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Student
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-text-primary">Edit Student</h1>
+            <p className="text-text-secondary mt-1">Update student information</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Student Info Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+              {student.profilePictureUrl ? (
+                <img 
+                  src={student.profilePictureUrl} 
+                  alt={`${student.firstName} ${student.lastName}`}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <User className="w-6 h-6 text-gray-500" />
+              )}
+            </div>
+            <div>
+              <CardTitle className="text-xl">
+                {student.firstName} {student.lastName}
+              </CardTitle>
+              <p className="text-text-secondary">{student.email}</p>
+              <p className="text-sm text-text-muted">Student ID: #{student.id}</p>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Edit Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Student Information</CardTitle>
+          <CardDescription>Update the student's details below</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-text-primary border-b pb-2 flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Personal Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">First Name *</label>
+                  <Input 
+                    type="text" 
+                    value={formData.firstName} 
+                    onChange={(e) => handleInputChange('firstName', e.target.value)} 
+                    placeholder="Enter first name"
+                    required 
+                    minLength={2}
+                    maxLength={20}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Last Name *</label>
+                  <Input 
+                    type="text" 
+                    value={formData.lastName} 
+                    onChange={(e) => handleInputChange('lastName', e.target.value)} 
+                    placeholder="Enter last name"
+                    required 
+                    minLength={2}
+                    maxLength={20}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Phone Number *</label>
+                  <Input 
+                    type="tel" 
+                    value={formData.phoneNumber} 
+                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)} 
+                    placeholder="Enter phone number"
+                    required 
+                    pattern="^01[0-2,5]{1}[0-9]{8}$"
+                    inputMode="tel"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">National ID *</label>
+                  <Input 
+                    type="text" 
+                    value={formData.nationalId} 
+                    onChange={(e) => handleInputChange('nationalId', e.target.value.replace(/[^0-9]/g, '').slice(0, 14))} 
+                    placeholder="Enter national ID"
+                    required 
+                    pattern="^[0-9]{14}$"
+                    maxLength={14}
+                    inputMode="numeric"
+                    title="National ID must be exactly 14 digits"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Academic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-text-primary border-b pb-2 flex items-center gap-2">
+                <GraduationCap className="w-5 h-5" />
+                Academic Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Email *</label>
+                  <Input 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={(e) => handleInputChange('email', e.target.value)} 
+                    placeholder="Enter university email"
+                    required 
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Student Academic Number *</label>
+                  <Input 
+                    type="text" 
+                    value={formData.studentAcademicNumber} 
+                    onChange={(e) => handleInputChange('studentAcademicNumber', e.target.value)} 
+                    placeholder="Enter student academic number"
+                    required 
+                    maxLength={20}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Department *</label>
+                  <Select 
+                    value={formData.department} 
+                    onChange={(e) => handleInputChange('department', e.target.value)}
+                    required
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Year of Study *</label>
+                  <Select 
+                    value={formData.yearOfStudy} 
+                    onChange={(e) => handleInputChange('yearOfStudy', e.target.value)}
+                    required
+                  >
+                    <option value="">Select Year of Study</option>
+                    {yearsOfStudy.map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-text-primary border-b pb-2 flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Emergency Contact
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Emergency Contact Name</label>
+                  <Input 
+                    type="text" 
+                    value={formData.emergencyContact} 
+                    onChange={(e) => handleInputChange('emergencyContact', e.target.value)} 
+                    placeholder="Enter emergency contact name"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1">Emergency Contact Phone</label>
+                  <Input 
+                    type="tel" 
+                    value={formData.emergencyPhone} 
+                    onChange={(e) => handleInputChange('emergencyPhone', e.target.value)} 
+                    placeholder="Enter emergency contact phone"
+                    pattern="^01[0-2,5]{1}[0-9]{8}$"
+                    inputMode="tel"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Validation Errors */}
+            {errors.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <h4 className="text-red-800 font-medium mb-2">Please fix the following errors:</h4>
+                <ul className="list-disc list-inside text-red-700 text-sm space-y-1">
+                  {errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Submit Buttons */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push(`/dashboard/admin/students/${studentId}`)}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSaving}
+                className="flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

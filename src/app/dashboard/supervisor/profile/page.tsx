@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -85,7 +85,7 @@ export default function SupervisorProfilePage() {
         } else {
           throw new Error('Failed to fetch profile');
         }
-      } catch (error) {
+      } catch {
         console.error('❌ Failed to fetch supervisor profile:', error);
       } finally {
         setIsLoading(false);
@@ -142,7 +142,7 @@ export default function SupervisorProfilePage() {
       
       reader.readAsDataURL(file);
       
-    } catch (error) {
+    } catch {
       console.error('❌ Failed to upload image:', error);
       alert('Failed to upload image. Please try again.');
     } finally {
@@ -163,7 +163,7 @@ export default function SupervisorProfilePage() {
       const updated = await userAPI.update(profile.id, { name: formData.name, email: formData.email, phoneNumber: formData.phone });
       if (updated) {
         console.log('✅ Profile updated successfully:', updated);
-        setProfile({ ...profile, ...updated } as any);
+        setProfile({ ...profile, ...updated });
         setIsEditing(false);
         setLastRefresh(new Date());
         
@@ -178,7 +178,7 @@ export default function SupervisorProfilePage() {
       } else {
         throw new Error('Failed to update profile');
       }
-    } catch (error) {
+    } catch {
       console.error('❌ Failed to update profile:', error);
       alert('Failed to update profile. Please try again.');
     } finally {

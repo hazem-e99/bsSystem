@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,8 +21,8 @@ export async function GET(
     const db = JSON.parse(dbContent);
 
     // Find supervisor by ID
-    const supervisor = db.users?.find((user: any) => 
-      user.id === params.id && user.role === 'supervisor'
+    const supervisor = db.users?.find((user: User) => 
+      user.id.toString() === params.id && user.role === 'supervisor'
     );
 
     if (!supervisor) {

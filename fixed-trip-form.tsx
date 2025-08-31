@@ -17,7 +17,7 @@ interface TripData {
 
 interface TripFormProps {
   authToken?: string;
-  onSuccess?: (result: any) => void;
+  onSuccess?: (result: Record<string, unknown>) => void;
   onError?: (error: string) => void;
 }
 

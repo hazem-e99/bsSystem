@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Booking {
+  id: string;
+  studentId: string;
+  tripId: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,7 +22,7 @@ export async function GET(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
     
-    const booking = (db.bookings || []).find((booking: any) => booking.id === id);
+    const booking = (db.bookings || []).find((booking: Booking) => booking.id === id);
     
     if (!booking) {
       return NextResponse.json(
@@ -23,7 +32,7 @@ export async function GET(
     }
     
     return NextResponse.json(booking);
-  } catch (error) {
+  } catch {
     console.error('Error reading booking data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -44,7 +53,7 @@ export async function PATCH(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
     
-    const bookingIndex = (db.bookings || []).findIndex((booking: any) => booking.id === id);
+    const bookingIndex = (db.bookings || []).findIndex((booking: Booking) => booking.id === id);
     if (bookingIndex === -1) {
       return NextResponse.json(
         { error: 'Booking not found' },
@@ -62,7 +71,7 @@ export async function PATCH(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(db.bookings[bookingIndex]);
-  } catch (error) {
+  } catch {
     console.error('Error updating booking:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -82,7 +91,7 @@ export async function DELETE(
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
     
-    const bookingIndex = (db.bookings || []).findIndex((booking: any) => booking.id === id);
+    const bookingIndex = (db.bookings || []).findIndex((booking: Booking) => booking.id === id);
     if (bookingIndex === -1) {
       return NextResponse.json(
         { error: 'Booking not found' },
@@ -95,7 +104,7 @@ export async function DELETE(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Booking deleted successfully' });
-  } catch (error) {
+  } catch {
     console.error('Error deleting booking:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

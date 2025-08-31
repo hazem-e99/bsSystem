@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -14,8 +22,8 @@ export async function GET(
     const db = JSON.parse(dbContent);
 
     // Find driver by ID
-    const driver = db.users?.find((user: any) => 
-      user.id === id && user.role === 'driver'
+    const driver = db.users?.find((user: User) => 
+      user.id.toString() === id && user.role === 'driver'
     );
 
     if (!driver) {
@@ -26,7 +34,7 @@ export async function GET(
     }
 
     return NextResponse.json(driver);
-  } catch (error) {
+  } catch {
     console.error('Error reading driver data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -9,7 +9,7 @@ export async function GET() {
       maintenanceMode,
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Maintenance check API error:', error);
     
     // Return false as default if there's an error (especially 404)

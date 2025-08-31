@@ -80,6 +80,7 @@ const userData = {
   nationalId: '19370037866089',
   email: 'ahmed@example.com',
   phoneNumber: '01012345678', // Valid format: 01[0-2,5]XXXXXXXX
+  studentAcademicNumber: 'ST2024001',
   department: 'Medicine',
   yearOfStudy: 'PreparatoryYear',
   password: 'password123',

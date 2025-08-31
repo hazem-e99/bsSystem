@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  email: string;
+  phone: string;
+  licenseNumber?: string;
+}
+
+interface Trip {
+  id: string;
+  driverId: string;
+  status: string;
+  date: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const dbPath = path.join(process.cwd(), 'db.json');
@@ -9,12 +25,12 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
     
     // Get all drivers (users with driver role)
-    const drivers = db.users?.filter((user: any) => user.role === 'driver') || [];
+    const drivers = db.users?.filter((user: User) => user.role === 'driver') || [];
     
     // Enrich driver data with additional information
-    const enrichedDrivers = drivers.map((driver: any) => {
-      const driverTrips = db.trips?.filter((trip: any) => trip.driverId === driver.id) || [];
-      const activeTrips = driverTrips.filter((trip: any) => trip.status === 'active');
+    const enrichedDrivers = drivers.map((driver: User) => {
+      const driverTrips = db.trips?.filter((trip: Trip) => trip.driverId === driver.id) || [];
+      const activeTrips = driverTrips.filter((trip: Trip) => trip.status === 'active');
       
       return {
         ...driver,
@@ -25,7 +41,7 @@ export async function GET(request: NextRequest) {
     });
     
     return NextResponse.json(enrichedDrivers);
-  } catch (error) {
+  } catch {
     console.error('Error reading drivers data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -60,7 +76,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newDriver, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating driver:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

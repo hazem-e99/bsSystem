@@ -2,6 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Payment {
+  id: string;
+  studentId: string;
+  bookingId: string;
+  amount: number;
+  status: string;
+  method: string;
+  date: string;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  date: string;
+  status: string;
+}
+
+interface Trip {
+  id: string;
+  routeId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,15 +49,15 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Get student payments
-    const studentPayments = db.payments?.filter((payment: any) => 
+    const studentPayments = db.payments?.filter((payment: Payment) => 
       payment.studentId === studentId
     ) || [];
 
     // Enrich payments with booking information
-    const enrichedPayments = studentPayments.map((payment: any) => {
-      const booking = db.bookings?.find((b: any) => b.id === payment.bookingId);
-      const trip = booking ? db.trips?.find((t: any) => t.id === booking.tripId) : null;
-      const route = trip ? db.routes?.find((r: any) => r.id === trip.routeId) : null;
+    const enrichedPayments = studentPayments.map((payment: Payment) => {
+      const booking = db.bookings?.find((b: Booking) => b.id === payment.bookingId);
+      const trip = booking ? db.trips?.find((t: Trip) => t.id === booking.tripId) : null;
+      const route = trip ? db.routes?.find((r: Route) => r.id === trip.routeId) : null;
       
       return {
         ...payment,
@@ -50,7 +82,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(enrichedPayments);
-  } catch (error) {
+  } catch {
     console.error('Error fetching student payments:', error);
     return NextResponse.json(
       { error: 'Failed to fetch student payments' },

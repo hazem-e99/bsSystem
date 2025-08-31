@@ -2,6 +2,36 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Payment {
+  id: string;
+  date: string;
+  status: string;
+  amount: number;
+}
+
+interface Trip {
+  id: string;
+  routeId: string;
+  busId: string;
+  status: string;
+}
+
+interface Route {
+  id: string;
+  name: string;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  capacity: number;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const dbPath = path.join(process.cwd(), 'db.json');
@@ -23,11 +53,11 @@ export async function GET(request: NextRequest) {
       const month = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
       const monthKey = month.toISOString().slice(0, 7); // YYYY-MM format
       
-      const monthPayments = payments.filter((payment: any) => 
+      const monthPayments = payments.filter((payment: Payment) => 
         payment.date && payment.date.startsWith(monthKey) && payment.status === 'completed'
       );
       
-      const monthRevenue = monthPayments.reduce((sum: number, payment: any) => sum + (payment.amount || 0), 0);
+      const monthRevenue = monthPayments.reduce((sum: number, payment: Payment) => sum + (payment.amount || 0), 0);
       
       monthlyRevenue.push({
         month: month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
@@ -37,20 +67,20 @@ export async function GET(request: NextRequest) {
     
     // Calculate payment status distribution
     const paymentStatus = {
-      completed: payments.filter((p: any) => p.status === 'completed').length,
-      pending: payments.filter((p: any) => p.status === 'pending').length,
-      failed: payments.filter((p: any) => p.status === 'failed').length
+      completed: payments.filter((p: Payment) => p.status === 'completed').length,
+      pending: payments.filter((p: Payment) => p.status === 'pending').length,
+      failed: payments.filter((p: Payment) => p.status === 'failed').length
     };
     
     // Calculate route utilization
-    const routeUtilization = routes.map((route: any) => {
-      const routeTrips = trips.filter((trip: any) => trip.routeId === route.id);
-      const routeBookings = routeTrips.flatMap((trip: any) => 
-        bookings.filter((booking: any) => booking.tripId === trip.id)
+    const routeUtilization = routes.map((route: Route) => {
+      const routeTrips = trips.filter((trip: Trip) => trip.routeId === route.id);
+      const routeBookings = routeTrips.flatMap((trip: Trip) => 
+        bookings.filter((booking: Booking) => booking.tripId === trip.id)
       );
       
-      const totalCapacity = routeTrips.reduce((sum: number, trip: any) => {
-        const bus = buses.find((b: any) => b.id === trip.busId);
+      const totalCapacity = routeTrips.reduce((sum: number, trip: Trip) => {
+        const bus = buses.find((b: Bus) => b.id === trip.busId);
         return sum + (bus?.capacity || 0);
       }, 0);
       
@@ -66,9 +96,9 @@ export async function GET(request: NextRequest) {
     });
     
     // Calculate bus performance
-    const busPerformance = buses.map((bus: any) => {
-      const busTrips = trips.filter((trip: any) => trip.busId === bus.id);
-      const completedTrips = busTrips.filter((trip: any) => trip.status === 'completed');
+    const busPerformance = buses.map((bus: Bus) => {
+      const busTrips = trips.filter((trip: Trip) => trip.busId === bus.id);
+      const completedTrips = busTrips.filter((trip: Trip) => trip.status === 'completed');
       
       return {
         busNumber: bus.number,
@@ -94,7 +124,7 @@ export async function GET(request: NextRequest) {
     };
     
     return NextResponse.json(analyticsData);
-  } catch (error) {
+  } catch {
     console.error('Error calculating analytics data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

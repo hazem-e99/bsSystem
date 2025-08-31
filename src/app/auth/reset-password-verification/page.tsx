@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
-import { Shield, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Shield, ArrowLeft } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 
 export default function ResetPasswordVerificationPage() {
@@ -69,7 +69,7 @@ export default function ResetPasswordVerificationPage() {
         setIsVerified(true);
       }
       
-    } catch (err) {
+    } catch {
       console.error('Verification failed:', err);
       setError('Verification failed. Please try again.');
       showToast({ 

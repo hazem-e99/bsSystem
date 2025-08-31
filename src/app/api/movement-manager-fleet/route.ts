@@ -2,6 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Bus {
+  id: string;
+  status: string;
+  type: string;
+  capacity: number;
+  lastMaintenance?: string;
+  nextMaintenance?: string;
+}
+
+interface Trip {
+  id: string;
+  busId: string;
+  routeId: string;
+  status: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  passengers: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  status: string;
+}
+
+interface Payment {
+  id: string;
+  tripId: string;
+  status: string;
+  amount: number;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -24,34 +64,34 @@ export async function GET(request: NextRequest) {
     // Filter buses by status if provided
     let filteredBuses = buses;
     if (status) {
-      filteredBuses = buses.filter((bus: any) => bus.status === status);
+      filteredBuses = buses.filter((bus: Bus) => bus.status === status);
     }
     
     // Filter buses by type if provided
     if (busType) {
-      filteredBuses = filteredBuses.filter((bus: any) => bus.type === busType);
+      filteredBuses = filteredBuses.filter((bus: Bus) => bus.type === busType);
     }
 
     // Enrich bus data with performance metrics
-    const enrichedFleet = filteredBuses.map((bus: any) => {
-      const busTrips = trips.filter((trip: any) => trip.busId === bus.id);
-      const completedTrips = busTrips.filter((trip: any) => trip.status === 'completed');
-      const activeTrips = busTrips.filter((trip: any) => trip.status === 'active');
-      const cancelledTrips = busTrips.filter((trip: any) => trip.status === 'cancelled');
+    const enrichedFleet = filteredBuses.map((bus: Bus) => {
+      const busTrips = trips.filter((trip: Trip) => trip.busId === bus.id);
+      const completedTrips = busTrips.filter((trip: Trip) => trip.status === 'completed');
+      const activeTrips = busTrips.filter((trip: Trip) => trip.status === 'active');
+      const cancelledTrips = busTrips.filter((trip: Trip) => trip.status === 'cancelled');
       
-      const busBookings = bookings.filter((booking: any) => 
-        busTrips.some((trip: any) => trip.id === booking.tripId)
+      const busBookings = bookings.filter((booking: Booking) => 
+        busTrips.some((trip: Trip) => trip.id === booking.tripId)
       );
       
-      const busPayments = payments.filter((payment: any) => 
-        busTrips.some((trip: any) => trip.id === payment.tripId)
+      const busPayments = payments.filter((payment: Payment) => 
+        busTrips.some((trip: Trip) => trip.id === payment.tripId)
       );
       
       const totalRevenue = busPayments
-        .filter((p: any) => p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        .filter((p: Payment) => p.status === 'completed')
+        .reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
       
-      const totalPassengers = busTrips.reduce((sum: number, trip: any) => 
+      const totalPassengers = busTrips.reduce((sum: number, trip: Trip) => 
         sum + (trip.passengers || 0), 0
       );
       
@@ -62,7 +102,7 @@ export async function GET(request: NextRequest) {
         (completedTrips.length / busTrips.length) * 100 : 0;
       
       // Calculate average trip duration
-      const completedTripDurations = completedTrips.map((trip: any) => {
+      const completedTripDurations = completedTrips.map((trip: Trip) => {
         if (trip.startTime && trip.endTime) {
           const start = new Date(`2000-01-01T${trip.startTime}`);
           const end = new Date(`2000-01-01T${trip.endTime}`);
@@ -76,10 +116,10 @@ export async function GET(request: NextRequest) {
       
       // Get recent trips
       const recentTrips = busTrips
-        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .sort((a: Trip, b: Trip) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5)
-        .map((trip: any) => {
-          const route = routes.find((r: any) => r.id === trip.routeId);
+        .map((trip: Trip) => {
+          const route = routes.find((r: Route) => r.id === trip.routeId);
           return {
             id: trip.id,
             date: trip.date,
@@ -138,20 +178,20 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort by performance (total revenue)
-    enrichedFleet.sort((a: any, b: any) => b.performance.totalRevenue - a.performance.totalRevenue);
+    enrichedFleet.sort((a: Bus, b: Bus) => b.performance.totalRevenue - a.performance.totalRevenue);
 
     // Calculate fleet summary
     const fleetSummary = {
       totalBuses: enrichedFleet.length,
-      activeBuses: enrichedFleet.filter((bus: any) => bus.status === 'active').length,
-      maintenanceBuses: enrichedFleet.filter((bus: any) => bus.status === 'maintenance').length,
-      retiredBuses: enrichedFleet.filter((bus: any) => bus.status === 'retired').length,
-      totalCapacity: enrichedFleet.reduce((sum: number, bus: any) => sum + (bus.capacity || 0), 0),
-      totalRevenue: enrichedFleet.reduce((sum: number, bus: any) => sum + bus.performance.totalRevenue, 0),
+      activeBuses: enrichedFleet.filter((bus: Bus) => bus.status === 'active').length,
+      maintenanceBuses: enrichedFleet.filter((bus: Bus) => bus.status === 'maintenance').length,
+      retiredBuses: enrichedFleet.filter((bus: Bus) => bus.status === 'retired').length,
+      totalCapacity: enrichedFleet.reduce((sum: number, bus: Bus) => sum + (bus.capacity || 0), 0),
+      totalRevenue: enrichedFleet.reduce((sum: number, bus: Bus) => sum + bus.performance.totalRevenue, 0),
       averageUtilization: enrichedFleet.length > 0 ? 
-        enrichedFleet.reduce((sum: number, bus: any) => sum + bus.performance.utilizationRate, 0) / enrichedFleet.length : 0,
-      maintenanceDue: enrichedFleet.filter((bus: any) => bus.maintenance.isMaintenanceDue).length,
-      maintenanceDueSoon: enrichedFleet.filter((bus: any) => 
+        enrichedFleet.reduce((sum: number, bus: Bus) => sum + bus.performance.utilizationRate, 0) / enrichedFleet.length : 0,
+      maintenanceDue: enrichedFleet.filter((bus: Bus) => bus.maintenance.isMaintenanceDue).length,
+      maintenanceDueSoon: enrichedFleet.filter((bus: Bus) => 
         bus.maintenance.status === 'due_soon'
       ).length
     };
@@ -160,7 +200,7 @@ export async function GET(request: NextRequest) {
       fleet: enrichedFleet,
       summary: fleetSummary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching fleet data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -196,7 +236,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBus, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating bus:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

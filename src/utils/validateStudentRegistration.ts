@@ -6,6 +6,7 @@ export interface StudentRegistrationData {
   nationalId: string;
   email: string;
   phoneNumber: string;
+  studentAcademicNumber: string;
   department: string;
   yearOfStudy: string;
   password: string;
@@ -55,6 +56,12 @@ export const validateStudentRegistration = (data: StudentRegistrationData): Vali
     errors.push('Please enter a valid phone number (format: 01XXXXXXXXX)');
   }
   
+  if (!data.studentAcademicNumber?.trim()) {
+    errors.push('Student academic number is required');
+  } else if (data.studentAcademicNumber.length > 20) {
+    errors.push('Student academic number must not exceed 20 characters');
+  }
+  
   if (!data.department?.trim()) {
     errors.push('Department is required');
   }
@@ -65,6 +72,8 @@ export const validateStudentRegistration = (data: StudentRegistrationData): Vali
   
   if (!data.password?.trim()) {
     errors.push('Password is required');
+  } else if (data.password.length < 6) {
+    errors.push('Password must be at least 6 characters long');
   }
   
   if (!data.confirmPassword?.trim()) {
@@ -108,7 +117,7 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validatePassword = (password: string): boolean => {
-  return password.length >= 1; // According to schema: minLength: 1
+  return password.length >= 6; // Minimum 6 characters for security
 };
 
 export const validateFirstName = (firstName: string): boolean => {
@@ -117,4 +126,66 @@ export const validateFirstName = (firstName: string): boolean => {
 
 export const validateLastName = (lastName: string): boolean => {
   return lastName.length >= 2 && lastName.length <= 20;
+};
+
+export const validateStudentAcademicNumber = (studentAcademicNumber: string): boolean => {
+  return studentAcademicNumber.trim().length >= 1 && studentAcademicNumber.trim().length <= 20;
+};
+
+export const validateStudentEdit = (data: Omit<StudentRegistrationData, 'password' | 'confirmPassword'>): ValidationResult => {
+  const errors: string[] = [];
+
+  // Required fields validation (excluding password)
+  if (!data.firstName?.trim()) {
+    errors.push('First name is required');
+  } else if (data.firstName.length < 2) {
+    errors.push('First name must be at least 2 characters long');
+  } else if (data.firstName.length > 20) {
+    errors.push('First name must not exceed 20 characters');
+  }
+  
+  if (!data.lastName?.trim()) {
+    errors.push('Last name is required');
+  } else if (data.lastName.length < 2) {
+    errors.push('Last name must be at least 2 characters long');
+  } else if (data.lastName.length > 20) {
+    errors.push('Last name must not exceed 20 characters');
+  }
+  
+  if (!data.nationalId?.trim()) {
+    errors.push('National ID is required');
+  } else if (!/^\d{14}$/.test(data.nationalId)) {
+    errors.push('National ID must be exactly 14 digits');
+  }
+  
+  if (!data.email?.trim()) {
+    errors.push('Email is required');
+  } else if (!isValidEmail(data.email)) {
+    errors.push('Please enter a valid email address');
+  }
+  
+  if (!data.phoneNumber?.trim()) {
+    errors.push('Phone number is required');
+  } else if (!isValidPhoneNumber(data.phoneNumber)) {
+    errors.push('Please enter a valid phone number (format: 01XXXXXXXXX)');
+  }
+  
+  if (!data.studentAcademicNumber?.trim()) {
+    errors.push('Student academic number is required');
+  } else if (data.studentAcademicNumber.length > 20) {
+    errors.push('Student academic number must not exceed 20 characters');
+  }
+  
+  if (!data.department?.trim()) {
+    errors.push('Department is required');
+  }
+  
+  if (!data.yearOfStudy?.trim()) {
+    errors.push('Year of study is required');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
 };

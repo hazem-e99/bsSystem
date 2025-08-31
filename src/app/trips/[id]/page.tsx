@@ -26,7 +26,7 @@ export default function TripDetailsPage() {
         setLoading(true);
         const data = await tripService.getById(id);
         setTrip(data);
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast({ 
           title: 'Failed to load trip', 
           description: String(e?.message || e), 

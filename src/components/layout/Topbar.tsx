@@ -8,15 +8,21 @@ import { notificationAPI, settingsAPI, studentProfileAPI, userAPI } from '@/lib/
 import { formatDate, getRelativeTime } from '@/utils/formatDate';
 import { Badge } from '@/components/ui/Badge';
 
+interface Notification {
+  id: string;
+  read: boolean;
+  actionUrl?: string;
+}
+
 export const Topbar = () => {
   const { user, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
   const [systemLogo, setSystemLogo] = useState('/logo.png');
   const [systemName, setSystemName] = useState('University Bus Management System');
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<unknown>(null);
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
 
   // Fetch system settings (logo and name)
@@ -26,9 +32,9 @@ export const Topbar = () => {
         const settings = await settingsAPI.get();
         setSystemLogo(settings?.logo || '/logo.png');
         setSystemName(settings?.systemName || 'University Bus Management System');
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Ignore 404s silently
-        if (error?.message?.includes('404')) {
+        if ((error as Error)?.message?.includes('404')) {
           setSystemLogo('/logo.png');
           setSystemName('University Bus Management System');
           return;
@@ -94,9 +100,9 @@ export const Topbar = () => {
         setIsLoadingNotifications(true);
         const userNotifications = await notificationAPI.getByUser(user.id);
         setNotifications(userNotifications);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Ignore 404s silently
-        if (error?.message?.includes('404')) {
+        if ((error as Error)?.message?.includes('404')) {
           setNotifications([]);
         } else {
           console.error('Failed to fetch notifications:', error);
@@ -126,16 +132,18 @@ export const Topbar = () => {
       
       refreshNotifications();
     }
-  }, [notifications.filter((n: any) => !n.read).length, user]);
+  }, [notifications.filter((n: Notification) => !n.read).length, user]);
 
   const userNotifications = notifications || [];
-  const unreadCount = userNotifications.filter((n: any) => !n.read).length;
+  const unreadCount = userNotifications.filter((n: Notification) => !n.read).length;
 
   const handleLogout = () => {
     logout();
+    // Redirect to logout page or login page
+    window.location.href = '/logout';
   };
 
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (notification: Notification) => {
     if (!user) return;
     
     try {
@@ -144,7 +152,7 @@ export const Topbar = () => {
       
       // Update local state to mark notification as read
       setNotifications(prev => 
-        prev.map((n: any) => 
+        prev.map((n: Notification) => 
           n.id === notification.id ? { ...n, read: true } : n
         )
       );
@@ -164,7 +172,7 @@ export const Topbar = () => {
       console.error('Failed to mark notification as read:', error);
       // Still mark as read locally and navigate
       setNotifications(prev => 
-        prev.map((n: any) => 
+        prev.map((n: Notification) => 
           n.id === notification.id ? { ...n, read: true } : n
         )
       );
@@ -190,7 +198,7 @@ export const Topbar = () => {
       
       if (result && result.success) {
         // Update local state to remove read notifications
-        setNotifications(prev => prev.filter((n: any) => !n.read));
+        setNotifications(prev => prev.filter((n: Notification) => !n.read));
         
         // Close notifications dropdown
         setShowNotifications(false);
@@ -198,14 +206,14 @@ export const Topbar = () => {
         console.log(`Cleared ${result.deletedCount} read notifications`);
       } else {
         // Fallback: manually clear read notifications from local state
-        setNotifications(prev => prev.filter((n: any) => !n.read));
+        setNotifications(prev => prev.filter((n: Notification) => !n.read));
         setShowNotifications(false);
         console.log('Used fallback method to clear read notifications');
       }
     } catch (error) {
       console.error('Failed to clear read notifications:', error);
-      // Fallback: manually clear read notifications from local state
-      setNotifications(prev => prev.filter((n: any) => !n.read));
+              // Fallback: manually clear read notifications from local state
+        setNotifications(prev => prev.filter((n: Notification) => !n.read));
       setShowNotifications(false);
     }
   };
@@ -219,7 +227,7 @@ export const Topbar = () => {
       
       if (result && result.success) {
         // Update local state to mark all notifications as read
-        setNotifications(prev => prev.map((n: any) => ({ ...n, read: true })));
+        setNotifications(prev => prev.map((n: Notification) => ({ ...n, read: true })));
         
         // Close notifications dropdown
         setShowNotifications(false);
@@ -227,14 +235,14 @@ export const Topbar = () => {
         console.log(`Marked ${result.updatedCount} notifications as read`);
       } else {
         // Fallback: manually mark all notifications as read in local state
-        setNotifications(prev => prev.map((n: any) => ({ ...n, read: true })));
+        setNotifications(prev => prev.map((n: Notification) => ({ ...n, read: true })));
         setShowNotifications(false);
         console.log('Used fallback method to mark all notifications as read');
       }
     } catch (error) {
       console.error('Failed to mark all as read:', error);
       // Fallback: manually mark all notifications as read in local state
-      setNotifications(prev => prev.map((n: any) => ({ ...n, read: true })));
+      setNotifications(prev => prev.map((n: Notification) => ({ ...n, read: true })));
       setShowNotifications(false);
     }
   };
@@ -260,7 +268,7 @@ export const Topbar = () => {
     return user?.name || 'User';
   };
 
-  const displayNotifications = (notifFilter === 'all' ? userNotifications : userNotifications.filter((n: any) => !n.read));
+  const displayNotifications = (notifFilter === 'all' ? userNotifications : userNotifications.filter((n: Notification) => !n.read));
   const fallbackUrl = user?.role === 'supervisor' ? '/dashboard/supervisor/notifications' : user?.role === 'student' ? '/dashboard/student/notifications' : '/';
 
   return (
@@ -341,7 +349,7 @@ export const Topbar = () => {
                 {/* List */}
                 <div className="max-h-96 overflow-y-auto">
                   {displayNotifications.length > 0 ? (
-                    displayNotifications.map((notification: any) => (
+                    displayNotifications.map((notification: Notification) => (
                       <div
                         key={notification.id}
                         className={`p-4 border-b border-border-light hover:bg-card-hover cursor-pointer transition-colors duration-200 ${

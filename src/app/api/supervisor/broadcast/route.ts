@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Bus {
+  id: string;
+  assignedSupervisorId: string;
+}
+
+interface Trip {
+  id: string;
+  busId: string;
+}
+
+interface Booking {
+  id: string;
+  tripId: string;
+  studentId: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -17,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Determine bus by busId or by supervisor assignment
     let targetBusId = busId;
     if (!targetBusId) {
-      const bus = (db.buses || []).find((b: any) => b.assignedSupervisorId === supervisorId);
+      const bus = (db.buses || []).find((b: Bus) => b.assignedSupervisorId === supervisorId);
       targetBusId = bus?.id;
     }
     if (!targetBusId) {
@@ -25,10 +41,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Find students booked on this bus's trips (today and upcoming)
-    const trips = (db.trips || []).filter((t: any) => t.busId === targetBusId);
-    const tripIds = new Set(trips.map((t: any) => t.id));
-    const bookings = (db.bookings || []).filter((b: any) => tripIds.has(b.tripId));
-    const studentIds = Array.from(new Set(bookings.map((b: any) => b.studentId)));
+    const trips = (db.trips || []).filter((t: Trip) => t.busId === targetBusId);
+    const tripIds = new Set(trips.map((t: Trip) => t.id));
+    const bookings = (db.bookings || []).filter((b: Booking) => tripIds.has(b.tripId));
+    const studentIds = Array.from(new Set(bookings.map((b: Booking) => b.studentId)));
 
     if (!db.notifications) db.notifications = [];
     const createdAt = new Date().toISOString();

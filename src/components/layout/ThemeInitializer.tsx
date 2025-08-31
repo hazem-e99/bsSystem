@@ -51,7 +51,7 @@ export default function ThemeInitializer() {
           } catch {}
         }
 
-        const data = await settingsAPI.get().catch(() => null as any);
+        const data = await settingsAPI.get().catch(() => null as unknown);
         if (!data) return;
         if (cancelled) return;
         applyThemeColors(data?.primaryColor || '#3B82F6', data?.secondaryColor || '#10B981');
@@ -59,7 +59,7 @@ export default function ThemeInitializer() {
         try {
           localStorage.setItem('themeColors', JSON.stringify({ primary: data?.primaryColor, secondary: data?.secondaryColor }));
         } catch {}
-      } catch (e) {
+      } catch {
         // ignore
       }
     })();

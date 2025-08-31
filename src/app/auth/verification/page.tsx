@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
-import { Mail, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowLeft } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 import { validateVerification } from '@/utils/validateVerification';
 
@@ -68,7 +68,7 @@ export default function VerificationPage() {
           message: data?.message || 'Verification failed. Please check your code and try again.' 
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Verification error:', err);
       setError('Verification failed. Please try again.');
       showToast({ 
@@ -99,7 +99,7 @@ export default function VerificationPage() {
         title: 'Code Resent', 
         message: 'A new verification code has been sent to your email.' 
       });
-    } catch (error) {
+    } catch {
       showToast({ 
         type: 'error', 
         title: 'Error', 

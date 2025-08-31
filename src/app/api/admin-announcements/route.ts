@@ -2,6 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Announcement {
+  id: string;
+  type: string;
+  priority: string;
+  status: string;
+  title: string;
+  content: string;
+  author: string;
+  targetRoles?: string[];
+  readBy?: Array<{
+    userId: string;
+    readAt: string;
+  }>;
+  expiryDate?: string;
+  createdAt: string;
+}
+
+interface EnrichedAnnouncement extends Announcement {
+  engagement: {
+    readCount: number;
+    totalTargetUsers: number;
+    readPercentage: number;
+    unreadCount: number;
+  };
+  recentReaders: Array<{
+    userId: string;
+    userName: string;
+    userRole: string;
+    readAt: string;
+  }>;
+  isActive: boolean;
+  isExpired: boolean;
+  daysUntilExpiry: number | null;
+}
+
+interface Reader {
+  userId: string;
+  readAt: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -24,26 +64,26 @@ export async function GET(request: NextRequest) {
     let filteredAnnouncements = announcements;
     
     if (type) {
-      filteredAnnouncements = filteredAnnouncements.filter((announcement: any) => announcement.type === type);
+      filteredAnnouncements = filteredAnnouncements.filter((announcement: Announcement) => announcement.type === type);
     }
     
     if (priority) {
-      filteredAnnouncements = filteredAnnouncements.filter((announcement: any) => announcement.priority === priority);
+      filteredAnnouncements = filteredAnnouncements.filter((announcement: Announcement) => announcement.priority === priority);
     }
     
     if (status) {
-      filteredAnnouncements = filteredAnnouncements.filter((announcement: any) => announcement.status === status);
+      filteredAnnouncements = filteredAnnouncements.filter((announcement: Announcement) => announcement.status === status);
     }
     
     if (targetRoles) {
-      filteredAnnouncements = filteredAnnouncements.filter((announcement: any) => 
+      filteredAnnouncements = filteredAnnouncements.filter((announcement: Announcement) => 
         announcement.targetRoles && announcement.targetRoles.includes(targetRoles)
       );
     }
     
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredAnnouncements = filteredAnnouncements.filter((announcement: any) => 
+      filteredAnnouncements = filteredAnnouncements.filter((announcement: Announcement) => 
         announcement.title?.toLowerCase().includes(searchLower) ||
         announcement.content?.toLowerCase().includes(searchLower) ||
         announcement.author?.toLowerCase().includes(searchLower)
@@ -51,7 +91,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Enrich announcement data with additional information
-    const enrichedAnnouncements = filteredAnnouncements.map((announcement: any) => {
+    const enrichedAnnouncements = filteredAnnouncements.map((announcement: Announcement) => {
       // Calculate read statistics
       const readCount = announcement.readBy ? announcement.readBy.length : 0;
       const totalTargetUsers = calculateTargetUsersCount(announcement.targetRoles, users);
@@ -68,10 +108,10 @@ export async function GET(request: NextRequest) {
       // Get recent readers
       const recentReaders = announcement.readBy ? 
         announcement.readBy
-          .sort((a: any, b: any) => new Date(b.readAt).getTime() - new Date(a.readAt).getTime())
+          .sort((a: Reader, b: Reader) => new Date(b.readAt).getTime() - new Date(a.readAt).getTime())
           .slice(0, 5)
-          .map((reader: any) => {
-            const user = users.find((u: any) => u.id === reader.userId);
+          .map((reader: Reader) => {
+            const user = users.find((u: User) => u.id === reader.userId);
             return {
               userId: reader.userId,
               userName: user ? user.name : 'Unknown User',
@@ -93,7 +133,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Sort announcements by priority and creation date
-    enrichedAnnouncements.sort((a: any, b: any) => {
+    enrichedAnnouncements.sort((a: EnrichedAnnouncement, b: EnrichedAnnouncement) => {
       const priorityOrder = { 'high': 1, 'medium': 2, 'low': 3 };
       const priorityDiff = (priorityOrder[a.priority] || 4) - (priorityOrder[b.priority] || 4);
       if (priorityDiff !== 0) return priorityDiff;
@@ -102,29 +142,29 @@ export async function GET(request: NextRequest) {
 
     // Calculate summary statistics
     const totalAnnouncements = enrichedAnnouncements.length;
-    const activeAnnouncements = enrichedAnnouncements.filter((a: any) => a.status === 'active').length;
-    const draftAnnouncements = enrichedAnnouncements.filter((a: any) => a.status === 'draft').length;
-    const archivedAnnouncements = enrichedAnnouncements.filter((a: any) => a.status === 'archived').length;
+    const activeAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => a.status === 'active').length;
+    const draftAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => a.status === 'draft').length;
+    const archivedAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => a.status === 'archived').length;
     
-    const highPriorityAnnouncements = enrichedAnnouncements.filter((a: any) => a.priority === 'high').length;
-    const mediumPriorityAnnouncements = enrichedAnnouncements.filter((a: any) => a.priority === 'medium').length;
-    const lowPriorityAnnouncements = enrichedAnnouncements.filter((a: any) => a.priority === 'low').length;
+    const highPriorityAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => a.priority === 'high').length;
+    const mediumPriorityAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => a.priority === 'medium').length;
+    const lowPriorityAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => a.priority === 'low').length;
     
-    const expiredAnnouncements = enrichedAnnouncements.filter((a: any) => a.isExpired).length;
-    const expiringSoonAnnouncements = enrichedAnnouncements.filter((a: any) => 
+    const expiredAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => a.isExpired).length;
+    const expiringSoonAnnouncements = enrichedAnnouncements.filter((a: EnrichedAnnouncement) => 
       a.daysUntilExpiry && a.daysUntilExpiry <= 7 && a.daysUntilExpiry > 0
     ).length;
 
     // Calculate type distribution
-    const typeDistribution = {};
-    enrichedAnnouncements.forEach((announcement: any) => {
+    const typeDistribution: Record<string, number> = {};
+    enrichedAnnouncements.forEach((announcement: EnrichedAnnouncement) => {
       const type = announcement.type || 'general';
       typeDistribution[type] = (typeDistribution[type] || 0) + 1;
     });
 
     // Calculate average engagement
     const averageReadPercentage = enrichedAnnouncements.length > 0 ? 
-      enrichedAnnouncements.reduce((sum: number, a: any) => sum + a.engagement.readPercentage, 0) / enrichedAnnouncements.length : 0;
+      enrichedAnnouncements.reduce((sum: number, a: EnrichedAnnouncement) => sum + a.engagement.readPercentage, 0) / enrichedAnnouncements.length : 0;
 
     const summary = {
       totalAnnouncements,
@@ -144,7 +184,7 @@ export async function GET(request: NextRequest) {
       announcements: enrichedAnnouncements,
       summary
     });
-  } catch (error) {
+  } catch {
     console.error('Error fetching announcements:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -185,7 +225,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newAnnouncement, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating announcement:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -214,7 +254,7 @@ export async function PUT(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find announcement index
-    const announcementIndex = db.announcements?.findIndex((announcement: any) => announcement.id === id);
+    const announcementIndex = db.announcements?.findIndex((announcement: Announcement) => announcement.id === id);
 
     if (announcementIndex === -1 || announcementIndex === undefined) {
       return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
@@ -235,7 +275,7 @@ export async function PUT(request: NextRequest) {
       message: 'Announcement updated successfully',
       announcement: db.announcements[announcementIndex]
     });
-  } catch (error) {
+  } catch {
     console.error('Error updating announcement:', error);
     return NextResponse.json(
       { error: 'Failed to update announcement' },
@@ -262,7 +302,7 @@ export async function DELETE(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Find announcement index
-    const announcementIndex = db.announcements?.findIndex((announcement: any) => announcement.id === id);
+    const announcementIndex = db.announcements?.findIndex((announcement: Announcement) => announcement.id === id);
 
     if (announcementIndex === -1 || announcementIndex === undefined) {
       return NextResponse.json({ error: 'Announcement not found' }, { status: 404 });
@@ -278,7 +318,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Announcement deleted successfully',
       deletedAnnouncement
     });
-  } catch (error) {
+  } catch {
     console.error('Error deleting announcement:', error);
     return NextResponse.json(
       { error: 'Failed to delete announcement' },
@@ -288,10 +328,10 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Helper function to calculate target users count
-function calculateTargetUsersCount(targetRoles: string[], users: any[]): number {
+function calculateTargetUsersCount(targetRoles: string[], users: User[]): number {
   if (!targetRoles || targetRoles.includes('all')) {
     return users.length;
   }
   
-  return users.filter((user: any) => targetRoles.includes(user.role)).length;
+  return users.filter((user: User) => targetRoles.includes(user.role)).length;
 }

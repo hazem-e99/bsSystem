@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Announcement {
+  id: string;
+  type: string;
+  priority: string;
+  targetRoles?: string[];
+  title: string;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,21 +28,21 @@ export async function GET(request: NextRequest) {
     
     // Apply filters
     if (type) {
-      announcements = announcements.filter((announcement: any) => announcement.type === type);
+      announcements = announcements.filter((announcement: Announcement) => announcement.type === type);
     }
     
     if (priority) {
-      announcements = announcements.filter((announcement: any) => announcement.priority === priority);
+      announcements = announcements.filter((announcement: Announcement) => announcement.priority === priority);
     }
     
     if (targetRoles) {
-      announcements = announcements.filter((announcement: any) => 
+      announcements = announcements.filter((announcement: Announcement) => 
         announcement.targetRoles && announcement.targetRoles.includes(targetRoles)
       );
     }
     
     return NextResponse.json(announcements);
-  } catch (error) {
+  } catch {
     console.error('Error reading announcements data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -65,7 +76,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newAnnouncement, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating announcement:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

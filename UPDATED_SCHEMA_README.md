@@ -12,6 +12,7 @@ interface StudentRegistrationDTO {
   nationalId: string;          // pattern: ^\d{14}$
   email: string;               // format: email, minLength: 1
   phoneNumber: string;         // format: tel, minLength: 1, pattern: ^01[0-2,5]{1}[0-9]{8}$
+  studentAcademicNumber: string; // minLength: 1
   department: StudentDepartment; // enum values
   yearOfStudy: AcademicYear;   // enum values
   password: string;            // format: password, minLength: 1
@@ -50,20 +51,26 @@ interface StudentRegistrationDTO {
   - `01412345678` ❌ (4 not allowed)
   - `01612345678` ❌ (6 not allowed)
 
-### 5. **Department**
+### 5. **Student Academic Number**
+- **Required**: ✅
+- **Min Length**: 1 character
+- **Format**: String (alphanumeric typically)
+- **Example**: `ST2024001`, `202401234`
+
+### 6. **Department**
 - **Required**: ✅
 - **Type**: Enum from predefined list
 
-### 6. **Year of Study**
+### 7. **Year of Study**
 - **Required**: ✅
 - **Type**: Enum from predefined list
 
-### 7. **Password**
+### 8. **Password**
 - **Required**: ✅
 - **Min Length**: 1 character
 - **Format**: password
 
-### 8. **Confirm Password**
+### 9. **Confirm Password**
 - **Required**: ✅
 - **Must Match**: password field
 
@@ -196,6 +203,7 @@ interface StudentRegistrationDTO {
   "nationalId": "19370037866089",
   "email": "ahmed@example.com",
   "phoneNumber": "01012345678",
+  "studentAcademicNumber": "ST2024001",
   "department": "Medicine",
   "yearOfStudy": "PreparatoryYear",
   "password": "password123",
@@ -220,6 +228,7 @@ curl -X POST http://busmanagementsystem.runasp.net/api/Authentication/registrati
     "nationalId": "19370037866089",
     "email": "ahmed@example.com",
     "phoneNumber": "01012345678",
+    "studentAcademicNumber": "ST2024001",
     "department": "Medicine",
     "yearOfStudy": "PreparatoryYear",
     "password": "password123",
@@ -241,7 +250,8 @@ import {
   validatePhoneNumber,
   validateEmail,
   validateFirstName,
-  validateLastName
+  validateLastName,
+  validateStudentAcademicNumber
 } from '@/utils/validateStudentRegistration';
 
 // Validate complete form
@@ -253,6 +263,7 @@ const isPhoneValid = validatePhoneNumber('01012345678');
 const isEmailValid = validateEmail('test@example.com');
 const isFirstNameValid = validateFirstName('أحمد');
 const isLastNameValid = validateLastName('محمد');
+const isStudentAcademicNumberValid = validateStudentAcademicNumber('ST2024001');
 ```
 
 ## Error Messages
@@ -263,6 +274,7 @@ const isLastNameValid = validateLastName('محمد');
 - `National ID must be exactly 14 digits`
 - `Please enter a valid email address`
 - `Please enter a valid phone number (format: 01XXXXXXXXX)`
+- `Student academic number is required`
 - `Passwords do not match`
 
 ## Notes

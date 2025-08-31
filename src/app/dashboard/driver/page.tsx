@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -95,8 +95,24 @@ export default function DriverDashboard() {
       
       // Transform Trip data for this component to match new schema
       const driverTripsData = allTrips
-        .filter((trip: any) => trip.driverId === user.id)
-        .map((trip: any) => ({
+        .filter((trip: { driverId: string | number }) => trip.driverId === user.id.toString())
+        .map((trip: { 
+          id: number; 
+          busId: number; 
+          driverId: string | number; 
+          conductorId: number; 
+          tripDate?: string; 
+          date?: string; 
+          startTime: string; 
+          endTime: string; 
+          startLocation: string; 
+          endLocation: string; 
+          stopLocations?: string[]; 
+          passengers?: number; 
+          revenue?: number; 
+          assignedStudents?: number[]; 
+          supervisorId?: number 
+        }) => ({
           id: trip.id,
           busId: trip.busId,
           driverId: trip.driverId,
@@ -152,7 +168,7 @@ export default function DriverDashboard() {
         buses: allBusesResponse.data.length
       });
       
-    } catch (error) {
+    } catch {
       console.error('❌ Failed to fetch driver data from db.json:', error);
       showToast({
         type: 'error',
@@ -241,7 +257,7 @@ export default function DriverDashboard() {
       
       // Refresh data after updating
       const allTrips = await tripAPI.getAll();
-      const driverTripsData = allTrips.filter((t: Trip) => t.driverId === user.id);
+      const driverTripsData = allTrips.filter((t: Trip) => t.driverId === user.id.toString());
       setDriverTrips(driverTripsData);
       
       // Update today's trips
@@ -263,7 +279,7 @@ export default function DriverDashboard() {
       
       setTimeout(() => setTripEnded(false), 3000);
       
-    } catch (error) {
+    } catch {
       console.error('Failed to end trip:', error);
       showToast({
         type: 'error',

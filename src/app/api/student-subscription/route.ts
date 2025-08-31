@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
+import { promises as fs } from 'next/server';
 import path from 'path';
+
+interface User {
+  id: string;
+  role: string;
+  name: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  subscriptionActivatedAt?: string;
+  updatedAt?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,11 +24,11 @@ export async function POST(request: NextRequest) {
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
 
-    const studentIndex = (db.users || []).findIndex((u: any) => u.id === studentId && u.role === 'student');
+    const studentIndex = (db.users || []).findIndex((u: User) => u.id === studentId && u.role === 'student');
     if (studentIndex === -1) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
-    const student = db.users[studentIndex];
+    const student = db.users[studentIndex] as User;
 
     const normalizedMethod = method === 'cash' ? 'cash' : 'bank';
     const status = normalizedMethod === 'cash' ? 'pending' : 'completed';
@@ -50,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     // If cash -> notify all admins
     if (normalizedMethod === 'cash') {
-      const admins = (db.users || []).filter((u: any) => u.role === 'admin');
+      const admins = (db.users || []).filter((u: User) => u.role === 'admin');
       if (!db.notifications) db.notifications = [];
       const timestamp = Date.now();
       for (const admin of admins) {
@@ -71,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json({ payment, user: db.users[studentIndex] }, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error updating student subscription:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

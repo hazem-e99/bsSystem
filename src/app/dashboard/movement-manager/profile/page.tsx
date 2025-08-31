@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -57,7 +57,7 @@ export default function MovementManagerProfilePage() {
         setProfile(data);
         setFormData({ name: data.name || '', email: data.email || '', phone: data.phone || '' });
         setLastRefresh(new Date());
-      } catch (error) {
+      } catch {
         console.error('Failed to fetch movement manager profile:', error);
       } finally {
         setIsLoading(false);
@@ -94,7 +94,7 @@ export default function MovementManagerProfilePage() {
         alert('Profile picture updated locally.');
       };
       reader.readAsDataURL(file);
-    } catch (error) {
+    } catch {
       console.error('Failed to upload image:', error);
       alert('Failed to upload image. Please try again.');
     } finally {
@@ -117,7 +117,7 @@ export default function MovementManagerProfilePage() {
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: updated }));
       alert('Profile refreshed from server.');
-    } catch (error) {
+    } catch {
       console.error('Failed to update profile:', error);
       alert('Failed to refresh profile.');
     } finally {
@@ -132,7 +132,7 @@ export default function MovementManagerProfilePage() {
 
   const getStatusBadge = (status?: string) => {
     const s = status || 'active';
-    const map: any = {
+    const map: Record<string, string> = {
       active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       inactive: 'bg-slate-50 text-slate-700 border-slate-200',
       suspended: 'bg-red-50 text-red-700 border-red-200'

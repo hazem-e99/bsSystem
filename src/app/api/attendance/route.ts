@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
+interface AttendanceRecord {
+  id: string;
+  tripId: string;
+  studentId: string;
+  status: string;
+  timestamp: string;
+  notes?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,23 +26,23 @@ export async function GET(request: NextRequest) {
 
     // Filter by tripId if provided
     if (tripId) {
-      attendanceRecords = attendanceRecords.filter((record: any) => record.tripId === tripId);
+      attendanceRecords = attendanceRecords.filter((record: AttendanceRecord) => record.tripId === tripId);
     }
 
     // Filter by studentId if provided
     if (studentId) {
-      attendanceRecords = attendanceRecords.filter((record: any) => record.studentId === studentId);
+      attendanceRecords = attendanceRecords.filter((record: AttendanceRecord) => record.studentId === studentId);
     }
 
     // Filter by timestamp if provided
     if (timestamp) {
-      attendanceRecords = attendanceRecords.filter((record: any) => 
+      attendanceRecords = attendanceRecords.filter((record: AttendanceRecord) => 
         record.timestamp.includes(timestamp)
       );
     }
 
     return NextResponse.json(attendanceRecords);
-  } catch (error) {
+  } catch {
     console.error('Error fetching attendance records:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -76,7 +85,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
 
     return NextResponse.json(newAttendanceRecord, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating attendance record:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -104,7 +113,7 @@ export async function PATCH(request: NextRequest) {
     const dbContent = await fs.readFile(dbPath, 'utf-8');
     const db = JSON.parse(dbContent);
 
-    const recordIndex = db.attendance.findIndex((record: any) => record.id === id);
+    const recordIndex = db.attendance.findIndex((record: AttendanceRecord) => record.id === id);
     if (recordIndex === -1) {
       return NextResponse.json(
         { error: 'Attendance record not found' },
@@ -119,7 +128,7 @@ export async function PATCH(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
 
     return NextResponse.json(db.attendance[recordIndex]);
-  } catch (error) {
+  } catch {
     console.error('Error updating attendance record:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

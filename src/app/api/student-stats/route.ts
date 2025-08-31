@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface Booking {
+  id: string;
+  studentId: string;
+  status: string;
+  date: string;
+}
+
+interface Payment {
+  id: string;
+  studentId: string;
+  amount: number;
+  status: string;
+  method: string;
+  date: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,58 +33,58 @@ export async function GET(request: NextRequest) {
     const db = JSON.parse(dbContent);
 
     // Get student bookings
-    const studentBookings = db.bookings?.filter((booking: any) => 
+    const studentBookings = db.bookings?.filter((booking: Booking) => 
       booking.studentId === studentId
     ) || [];
 
     // Get student payments
-    const studentPayments = db.payments?.filter((payment: any) => 
+    const studentPayments = db.payments?.filter((payment: Payment) => 
       payment.studentId === studentId
     ) || [];
 
     // Calculate statistics
     const totalBookings = studentBookings.length;
-    const activeBookings = studentBookings.filter((booking: any) => 
+    const activeBookings = studentBookings.filter((booking: Booking) => 
       ['confirmed', 'pending'].includes(booking.status)
     ).length;
-    const completedBookings = studentBookings.filter((booking: any) => 
+    const completedBookings = studentBookings.filter((booking: Booking) => 
       booking.status === 'completed'
     ).length;
 
-    const totalPayments = studentPayments.reduce((sum: number, payment: any) => 
+    const totalPayments = studentPayments.reduce((sum: number, payment: Payment) => 
       sum + (payment.amount || 0), 0
     );
-    const completedPayments = studentPayments.filter((payment: any) => 
+    const completedPayments = studentPayments.filter((payment: Payment) => 
       payment.status === 'completed'
-    ).reduce((sum: number, payment: any) => sum + (payment.amount || 0), 0);
-    const pendingPayments = studentPayments.filter((payment: any) => 
+    ).reduce((sum: number, payment: Payment) => sum + (payment.amount || 0), 0);
+    const pendingPayments = studentPayments.filter((payment: Payment) => 
       payment.status === 'pending'
-    ).reduce((sum: number, payment: any) => sum + (payment.amount || 0), 0);
+    ).reduce((sum: number, payment: Payment) => sum + (payment.amount || 0), 0);
 
     // Get monthly booking trends for charts
-    const monthlyBookings = {};
-    const monthlyPayments = {};
+    const monthlyBookings: Record<string, number> = {};
+    const monthlyPayments: Record<string, number> = {};
     
-    studentBookings.forEach((booking: any) => {
+    studentBookings.forEach((booking: Booking) => {
       const month = new Date(booking.date).toISOString().slice(0, 7); // YYYY-MM
       monthlyBookings[month] = (monthlyBookings[month] || 0) + 1;
     });
 
-    studentPayments.forEach((payment: any) => {
+    studentPayments.forEach((payment: Payment) => {
       const month = new Date(payment.date).toISOString().slice(0, 7); // YYYY-MM
       monthlyPayments[month] = (monthlyPayments[month] || 0) + (payment.amount || 0);
     });
 
     // Get payment methods distribution
-    const paymentMethods = {};
-    studentPayments.forEach((payment: any) => {
+    const paymentMethods: Record<string, number> = {};
+    studentPayments.forEach((payment: Payment) => {
       const method = payment.method || 'unknown';
       paymentMethods[method] = (paymentMethods[method] || 0) + 1;
     });
 
     // Get booking status distribution
-    const bookingStatuses = {};
-    studentBookings.forEach((booking: any) => {
+    const bookingStatuses: Record<string, number> = {};
+    studentBookings.forEach((booking: Booking) => {
       const status = booking.status || 'unknown';
       bookingStatuses[status] = (bookingStatuses[status] || 0) + 1;
     });
@@ -87,7 +103,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(stats);
-  } catch (error) {
+  } catch {
     console.error('Error fetching student stats:', error);
     return NextResponse.json(
       { error: 'Failed to fetch student statistics' },

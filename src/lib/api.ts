@@ -47,7 +47,7 @@ async function apiRequest<T>(
       if (qs) {
         url = `${url}${hasQuery ? "&" : "?"}${qs}`;
       }
-    } catch (e) {
+    } catch {
       console.warn("Failed to convert GET body to query params:", e);
     } finally {
       // Remove body to satisfy fetch constraints for GET/HEAD
@@ -196,13 +196,13 @@ async function apiRequest<T>(
       console.log("📥 Response success:", parsed?.success);
       console.log("📥 Response message:", parsed?.message);
       return parsed as T;
-    } catch (e) {
+    } catch {
       // Not JSON — return raw text to caller (caller may handle text). This is more robust than
       // silently returning an empty object when servers mis-label JSON responses.
       console.warn("⚠️ Response was not JSON, returning raw text");
       return rawText as unknown as T;
     }
-  } catch (error) {
+  } catch {
     console.error(`❌ API request failed for ${endpoint}:`, error);
 
     // For critical endpoints, re-throw the error
@@ -291,8 +291,8 @@ export const authAPI = {
     return apiRequest<any>(apiConfig.AUTH.VERIFICATION, {
       method: "POST",
       body: JSON.stringify({
-        email: (verificationData as any).email,
-        verificationCode: (verificationData as any).code,
+        email: verificationData.email,
+        verificationCode: verificationData.code,
       }),
     });
   },
@@ -363,10 +363,10 @@ const mapGlobalRole = (role: string | undefined) => {
   // Backend uses MovementManager, Conductor; app uses 'movement-manager' and may not use 'conductor'
   if (r === "movementmanager" || r === "movement manager")
     return "movement-manager";
-  return r as any;
+  return r;
 };
 
-const mapGlobalUserToApp = (u: any) => {
+const mapGlobalUserToApp = (u: User) => {
   if (!u) return null;
   const first = u.firstName || "";
   const last = u.lastName || "";
@@ -380,11 +380,11 @@ const mapGlobalUserToApp = (u: any) => {
     role: mapGlobalRole(u.role),
     phone: u.phoneNumber || u.phone || "",
     nationalId: u.nationalId || "",
-    status: mapGlobalStatus(u.status) as any,
+    status: mapGlobalStatus(u.status),
     avatar: u.profilePictureUrl || u.avatar || undefined,
     createdAt: u.createdAt || new Date().toISOString(),
     updatedAt: u.updatedAt || new Date().toISOString(),
-  } as any;
+  };
 };
 
 export const userAPI = {
@@ -422,7 +422,7 @@ export const userAPI = {
     } catch {
       const all = await userAPI.getAll();
       return (all || []).filter(
-        (u: any) => (u.email || "").toLowerCase() === email.toLowerCase()
+        (u: User) => (u.email || "").toLowerCase() === email.toLowerCase()
       );
     }
   },
@@ -452,8 +452,8 @@ export const userAPI = {
     }),
 
   // Update user (partial)
-  update: (id: string, payload: any) =>
-    apiRequest<any>(`/Users/${id}`, {
+  update: (id: string, payload: Record<string, unknown>) =>
+    apiRequest<unknown>(`/Users/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
@@ -477,7 +477,7 @@ export const busAPI = {
       ...defaultParams,
       ...(params || {}),
       _ts: Date.now(),
-    } as any;
+    };
     return apiRequest<BusApiResponse<Bus[]>>("/Buses", {
       method: "GET",
       body: JSON.stringify(body),
@@ -650,41 +650,41 @@ export const tripAPI = {
 // Payment-related API calls - use global endpoints
 export const paymentAPI = {
   // Get all payments
-  getAll: () => apiRequest<any[]>("/Payments"),
+  getAll: () => apiRequest<unknown[]>("/Payments"),
 
   // Get payment by ID
   getById: (id: string) => apiRequest<any>(`/Payments/${id}`),
 
   // Get payments by student
   getByStudent: (studentId: string) =>
-    apiRequest<any[]>(`/Payments?studentId=${studentId}`),
+    apiRequest<unknown[]>(`/Payments?studentId=${studentId}`),
 
   // Get payments by status
   getByStatus: (status: string) =>
-    apiRequest<any[]>(`/Payments?status=${status}`),
+    apiRequest<unknown[]>(`/Payments?status=${status}`),
 
   // Get payments by date range
   getByDateRange: (startDate: string, endDate: string) =>
-    apiRequest<any[]>(`/Payments?date_gte=${startDate}&date_lte=${endDate}`),
+    apiRequest<unknown[]>(`/Payments?date_gte=${startDate}&date_lte=${endDate}`),
 
   // Get payments by trip
   getByTrip: (tripId: string) =>
-    apiRequest<any[]>(`/Payments?tripId=${tripId}`),
+    apiRequest<unknown[]>(`/Payments?tripId=${tripId}`),
 
   // Get payments by method
   getByMethod: (method: string) =>
-    apiRequest<any[]>(`/Payments?method=${method}`),
+    apiRequest<unknown[]>(`/Payments?method=${method}`),
 
   // Create new payment
-  create: (paymentData: any) =>
-    apiRequest<any>("/Payments", {
+  create: (paymentData: Record<string, unknown>) =>
+    apiRequest<unknown>("/Payments", {
       method: "POST",
       body: JSON.stringify(paymentData),
     }),
 
   // Update payment
-  update: (id: string, paymentData: any) =>
-    apiRequest<any>(`/Payments/${id}`, {
+  update: (id: string, paymentData: Record<string, unknown>) =>
+    apiRequest<unknown>(`/Payments/${id}`, {
       method: "PATCH",
       body: JSON.stringify(paymentData),
     }),
@@ -699,32 +699,32 @@ export const paymentAPI = {
 // Notification-related API calls - use global endpoints
 export const notificationAPI = {
   // Get all notifications
-  getAll: () => apiRequest<any[]>("/Notifications"),
+  getAll: () => apiRequest<unknown[]>("/Notifications"),
 
   // Get notification by ID
   getById: (id: string) => apiRequest<any>(`/Notifications/${id}`),
 
   // Get notifications by user
   getByUser: (userId: string) =>
-    apiRequest<any[]>(`/Notifications?userId=${userId}`),
+    apiRequest<unknown[]>(`/Notifications?userId=${userId}`),
 
   // Get notifications by type
-  getByType: (type: string) => apiRequest<any[]>(`/Notifications?type=${type}`),
+  getByType: (type: string) => apiRequest<unknown[]>(`/Notifications?type=${type}`),
 
   // Get notifications by status
   getByStatus: (status: string) =>
-    apiRequest<any[]>(`/Notifications?status=${status}`),
+    apiRequest<unknown[]>(`/Notifications?status=${status}`),
 
   // Create new notification
-  create: (notificationData: any) =>
-    apiRequest<any>("/Notifications", {
+  create: (notificationData: Record<string, unknown>) =>
+    apiRequest<unknown>("/Notifications", {
       method: "POST",
       body: JSON.stringify(notificationData),
     }),
 
   // Update notification
-  update: (id: string, notificationData: any) =>
-    apiRequest<any>(`/Notifications/${id}`, {
+  update: (id: string, notificationData: Record<string, unknown>) =>
+    apiRequest<unknown>(`/Notifications/${id}`, {
       method: "PATCH",
       body: JSON.stringify(notificationData),
     }),
@@ -847,19 +847,19 @@ export const subscriptionPlansAPI = {
 
 // Booking API - use global endpoints
 export const bookingAPI = {
-  getAll: () => apiRequest<any[]>("/Bookings"),
+  getAll: () => apiRequest<unknown[]>("/Bookings"),
   getById: (id: string) => apiRequest<any>(`/Bookings/${id}`),
   getByStudent: (studentId: string) =>
-    apiRequest<any[]>(`/Bookings?studentId=${studentId}`),
+    apiRequest<unknown[]>(`/Bookings?studentId=${studentId}`),
   getByTrip: (tripId: string) =>
-    apiRequest<any[]>(`/Bookings?tripId=${tripId}`),
-  create: (bookingData: any) =>
-    apiRequest<any>("/Bookings", {
+    apiRequest<unknown[]>(`/Bookings?tripId=${tripId}`),
+  create: (bookingData: Record<string, unknown>) =>
+    apiRequest<unknown>("/Bookings", {
       method: "POST",
       body: JSON.stringify(bookingData),
     }),
-  update: (id: string, bookingData: any) =>
-    apiRequest<any>(`/Bookings/${id}`, {
+  update: (id: string, bookingData: Record<string, unknown>) =>
+    apiRequest<unknown>(`/Bookings/${id}`, {
       method: "PATCH",
       body: JSON.stringify(bookingData),
     }),
@@ -871,19 +871,19 @@ export const bookingAPI = {
 
 // Attendance API - use global endpoints
 export const attendanceAPI = {
-  getAll: () => apiRequest<any[]>("/Attendance"),
+  getAll: () => apiRequest<unknown[]>("/Attendance"),
   getById: (id: string) => apiRequest<any>(`/Attendance/${id}`),
   getByTrip: (tripId: string) =>
-    apiRequest<any[]>(`/Attendance?tripId=${tripId}`),
+    apiRequest<unknown[]>(`/Attendance?tripId=${tripId}`),
   getByStudent: (studentId: string) =>
-    apiRequest<any[]>(`/Attendance?studentId=${studentId}`),
-  create: (attendanceData: any) =>
-    apiRequest<any>("/Attendance", {
+    apiRequest<unknown[]>(`/Attendance?studentId=${studentId}`),
+  create: (attendanceData: Record<string, unknown>) =>
+    apiRequest<unknown>("/Attendance", {
       method: "POST",
       body: JSON.stringify(attendanceData),
     }),
-  update: (id: string, attendanceData: any) =>
-    apiRequest<any>(`/Attendance/${id}`, {
+  update: (id: string, attendanceData: Record<string, unknown>) =>
+    apiRequest<unknown>(`/Attendance/${id}`, {
       method: "PATCH",
       body: JSON.stringify(attendanceData),
     }),
@@ -896,12 +896,36 @@ export const attendanceAPI = {
 // Settings API - use global endpoints
 export const settingsAPI = {
   get: () => apiRequest<any>("/Settings"),
-  update: (settingsData: any) =>
-    apiRequest<any>("/Settings", {
+  update: (settingsData: Record<string, unknown>) =>
+    apiRequest<unknown>("/Settings", {
       method: "PUT",
       body: JSON.stringify(settingsData),
     }),
   getMaintenanceMode: () => apiRequest<any>("/Settings/maintenance-mode"),
+};
+
+// Student-specific API calls - use global endpoints
+export const studentAPI = {
+  // Get all students using GET /api/Users/students-data
+  getAll: async () => {
+    const resp = await apiRequest<any>("/Users/students-data");
+    const list = resp?.data ?? resp ?? [];
+    return Array.isArray(list) ? list : [];
+  },
+
+  // Get student by ID using GET /api/Users/students-data/{id}
+  getById: async (id: string | number) => {
+    const resp = await apiRequest<any>(`/Users/students-data/${id}`);
+    const item = resp?.data ?? resp ?? null;
+    return item ?? null;
+  },
+
+  // Get students by role using existing role endpoint
+  getByRole: async () => {
+    const resp = await apiRequest<any>("/Users/by-role/Student");
+    const list = resp?.data ?? resp ?? [];
+    return Array.isArray(list) ? list : [];
+  },
 };
 
 // Student Profile API - use global endpoints
@@ -909,13 +933,13 @@ export const studentProfileAPI = {
   get: (studentId: string) => apiRequest<any>(`/StudentProfiles/${studentId}`),
   getProfile: (studentId: string) =>
     apiRequest<any>(`/StudentProfiles/${studentId}`),
-  updateProfile: (studentId: string, profileData: any) =>
-    apiRequest<any>(`/StudentProfiles/${studentId}`, {
+  updateProfile: (studentId: string, profileData: Record<string, unknown>) =>
+    apiRequest<unknown>(`/StudentProfiles/${studentId}`, {
       method: "PATCH",
       body: JSON.stringify(profileData),
     }),
-  create: (profileData: any) =>
-    apiRequest<any>("/StudentProfiles", {
+  create: (profileData: Record<string, unknown>) =>
+    apiRequest<unknown>("/StudentProfiles", {
       method: "POST",
       body: JSON.stringify(profileData),
     }),
@@ -926,11 +950,11 @@ export const studentDashboardAPI = {
   getStats: (studentId: string) =>
     apiRequest<any>(`/StudentDashboard/${studentId}/stats`),
   getRecentTrips: (studentId: string) =>
-    apiRequest<any[]>(`/StudentDashboard/${studentId}/recent-trips`),
+    apiRequest<unknown[]>(`/StudentDashboard/${studentId}/recent-trips`),
   getUpcomingTrips: (studentId: string) =>
-    apiRequest<any[]>(`/StudentDashboard/${studentId}/upcoming-trips`),
+    apiRequest<unknown[]>(`/StudentDashboard/${studentId}/upcoming-trips`),
   getPaymentHistory: (studentId: string) =>
-    apiRequest<any[]>(`/StudentDashboard/${studentId}/payments`),
+    apiRequest<unknown[]>(`/StudentDashboard/${studentId}/payments`),
 };
 
 // Student Avatar API - use global endpoints
@@ -943,6 +967,37 @@ export const studentAvatarAPI = {
   get: (studentId: string) => apiRequest<any>(`/StudentAvatars/${studentId}`),
   removeAvatar: (studentId: string) =>
     apiRequest<any>(`/StudentAvatars/${studentId}`, {
+      method: "DELETE",
+    }),
+};
+
+// Route API - use global endpoints
+export const routeAPI = {
+  getAll: (params?: Record<string, unknown>) => {
+    const queryParams = params ? new URLSearchParams() : null;
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams!.append(key, String(value));
+        }
+      });
+    }
+    const endpoint = queryParams ? `/Routes?${queryParams.toString()}` : '/Routes';
+    return apiRequest<any[]>(endpoint);
+  },
+  getById: (id: string) => apiRequest<any>(`/Routes/${id}`),
+  create: (routeData: Record<string, unknown>) =>
+    apiRequest<unknown>("/Routes", {
+      method: "POST",
+      body: JSON.stringify(routeData),
+    }),
+  update: (id: string, routeData: Record<string, unknown>) =>
+    apiRequest<unknown>(`/Routes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(routeData),
+    }),
+  delete: (id: string) =>
+    apiRequest<any>(`/Routes/${id}`, {
       method: "DELETE",
     }),
 };

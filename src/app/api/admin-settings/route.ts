@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(allSettings);
-  } catch (error) {
+  } catch {
     console.error('Error fetching settings:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest) {
       message: `${section} settings updated successfully`,
       settings: db[sectionKey]
     });
-  } catch (error) {
+  } catch {
     console.error('Error updating settings:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
       message: `${section} settings created successfully`,
       settings: db[sectionKey]
     }, { status: 201 });
-  } catch (error) {
+  } catch {
     console.error('Error creating settings:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -40,7 +40,7 @@ export default function MovementManagerBusesPage() {
     speed: 0
   });
   const [buses, setBuses] = useState<BusType[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<unknown[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingBus, setIsAddingBus] = useState(false);
   const buildParams = (): BusListParams => {
@@ -53,7 +53,7 @@ export default function MovementManagerBusesPage() {
       page: 0,
       pageSize: 0,
       busNumber: searchTerm,
-      status: statusFilter === 'all' ? '' : (statusFilter as any),
+      status: statusFilter === 'all' ? '' : statusFilter,
       minSpeed: 0,
       maxSpeed: 0,
       minCapacity,
@@ -84,7 +84,7 @@ export default function MovementManagerBusesPage() {
           speed: bus.speed || 0
         }));
       setBuses(cleanBusesData);
-    } catch (e) {
+    } catch {
       console.error('Failed to apply filters:', e);
       setBuses([]);
     } finally {
@@ -105,7 +105,7 @@ export default function MovementManagerBusesPage() {
           }));
         setBuses(cleanBusesData);
         setUsers(usersData);
-      } catch (error) {
+      } catch {
         console.error('Failed to fetch data:', error);
         setBuses([]);
         setUsers([]);
@@ -139,7 +139,7 @@ export default function MovementManagerBusesPage() {
       throw new Error('Capacity must be an integer between 10 and 100');
     }
     const validStatuses = ['Active','Inactive','UnderMaintenance','OutOfService'];
-    if (!validStatuses.includes(data.status as any)) {
+    if (!validStatuses.includes(data.status)) {
       throw new Error('Status must be Active, Inactive, UnderMaintenance, or OutOfService');
     }
   };
@@ -171,7 +171,7 @@ export default function MovementManagerBusesPage() {
         setShowAddModal(false);
         setNewBus({ busNumber: '', capacity: 50, status: 'Active', speed: 0 });
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to add bus:', error);
       console.error(error instanceof Error ? error.message : 'Failed to add bus. Please try again.');
     } finally {
@@ -200,7 +200,7 @@ export default function MovementManagerBusesPage() {
         setShowEditModal(false);
         setSelectedBus(null);
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to update bus:', error);
       console.error(error instanceof Error ? error.message : 'Failed to update bus. Please try again.');
     }
@@ -216,7 +216,7 @@ export default function MovementManagerBusesPage() {
         setBuses(updatedBusesResponse.data);
         console.log('Bus deleted successfully!');
       }
-    } catch (error) {
+    } catch {
       console.error('Failed to delete bus:', error);
       console.error('Failed to delete bus. Please try again.');
     }
@@ -492,7 +492,7 @@ export default function MovementManagerBusesPage() {
                   { value: 'OutOfService', label: 'Out of Service' }
                 ]}
                 value={newBus.status}
-                onChange={(e) => setNewBus({ ...newBus, status: e.target.value as any })}
+                onChange={(e) => setNewBus({ ...newBus, status: e.target.value })}
                 required
               />
             </div>
@@ -576,7 +576,7 @@ export default function MovementManagerBusesPage() {
                     { value: 'OutOfService', label: 'Out of Service' }
                   ]}
                   value={selectedBus.status}
-                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value as any })}
+                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value })}
                   required
                 />
               </div>

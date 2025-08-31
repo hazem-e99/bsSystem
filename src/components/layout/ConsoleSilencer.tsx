@@ -7,18 +7,18 @@ export default function ConsoleSilencer() {
     try {
       const noop = () => {};
       // Preserve references if needed later
-      (window as any).__original_console__ = {
+      (window as { __original_console__?: typeof console }).__original_console__ = {
         log: console.log,
         warn: console.warn,
         error: console.error,
         info: console.info,
         debug: console.debug,
       };
-      console.log = noop as any;
-      console.warn = noop as any;
-      console.error = noop as any;
-      console.info = noop as any;
-      console.debug = noop as any;
+      console.log = noop as typeof console.log;
+      console.warn = noop as typeof console.warn;
+      console.error = noop as typeof console.error;
+      console.info = noop as typeof console.info;
+      console.debug = noop as typeof console.debug;
     } catch {}
   }, []);
   return null;
