@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -40,9 +40,9 @@ export default function StudentNotificationsPage() {
       
       try {
         const res = await notificationAPI.getByUser(user.id.toString());
-        setNotifications(res || []);
+        setNotifications((res as NotificationItem[]) || []);
       } catch {
-        console.error('Failed to fetch notifications:', error);
+        console.error('Failed to fetch notifications:', Error);
         setNotifications([]);
       }
     };
@@ -93,7 +93,7 @@ export default function StudentNotificationsPage() {
       await notificationAPI.update(id, { status: read ? 'read' : 'unread', read });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, status: read ? 'read' : 'unread', read } : n));
     } catch {
-      console.error('Failed to mark notification:', error);
+      console.error('Failed to mark notification:', Error);
     }
   };
 
@@ -102,7 +102,7 @@ export default function StudentNotificationsPage() {
       await notificationAPI.delete(id);
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch {
-      console.error('Failed to delete notification:', error);
+      console.error('Failed to delete notification:', Error);
     }
   };
 
@@ -112,7 +112,7 @@ export default function StudentNotificationsPage() {
       setNotifications(prev => prev.map(n => ({ ...n, status: 'read', read: true })));
       setToMark([]);
     } catch {
-      console.error('Failed to mark all as read:', error);
+      console.error('Failed to mark all as read:', Error);
     }
   };
 
@@ -144,10 +144,10 @@ export default function StudentNotificationsPage() {
               <Filter className="absolute left-3 top-3 h-4 w-4 text-[#757575]" />
               <Input placeholder="Search title, message..." value={search} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} />
+            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value as 'all' | 'unread' | 'read')} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} />
             <Select
               value={dateFilter}
-              onChange={e => setDateFilter(e.target.value)}
+              onChange={e => setDateFilter(e.target.value as 'all' | 'today' | '7d' | '30d')}
               options={[
                 { value: 'all', label: 'All Dates' },
                 { value: 'today', label: 'Today' },
@@ -156,7 +156,7 @@ export default function StudentNotificationsPage() {
               ]}
             />
             <div>
-              <Input type="date" value={specificDate} onChange={(e: unknown) => setSpecificDate(e.target.value)} />
+              <Input type="date" value={specificDate} onChange={(e: unknown) => setSpecificDate((e as any).target.value)} />
             </div>
             <div className="flex items-center text-sm text-[#757575]"><Clock className="w-4 h-4 mr-2" /> {filtered.length} notification(s)</div>
           </div>
@@ -179,7 +179,7 @@ export default function StudentNotificationsPage() {
             <div className="text-center py-12 text-[#757575]">
               <Bell className="w-16 h-16 mx-auto mb-4 text-[#BDBDBD]" />
               <h3 className="text-lg font-medium mb-2">No notifications</h3>
-              <p className="text-sm">You're all caught up!</p>
+              <p className="text-sm">You&apos;re all caught up!</p>
             </div>
           ) : (
             <div className="divide-y divide-border">

@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       summary
     });
   } catch {
-    console.error('Error fetching supervisor payments:', error);
+    console.error('Error fetching supervisor payments:', Error);
     return NextResponse.json(
       { error: 'Failed to fetch supervisor payments' },
       { status: 500 }
@@ -160,7 +160,7 @@ export async function PATCH(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.payments[paymentIndex]);
   } catch {
-    console.error('Error updating payment status:', error);
+    console.error('Error updating payment status:', Error);
     return NextResponse.json(
       { error: 'Failed to update payment status' },
       { status: 500 }

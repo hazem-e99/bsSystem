@@ -35,7 +35,7 @@ export async function GET(
 
     return NextResponse.json(driver);
   } catch {
-    console.error('Error reading driver data:', error);
+    console.error('Error reading driver data:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

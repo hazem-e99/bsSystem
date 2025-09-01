@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -24,6 +24,31 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/utils/formatDate';
 import { Modal } from '@/components/ui/Modal';
 
+interface Booking {
+  id: string;
+  tripId: string;
+  stopId?: string;
+  date: string;
+  status: string;
+  seatNumber?: number;
+  createdAt?: string;
+}
+
+interface Trip {
+  id: string;
+  tripDate: string;
+  startLocation: string;
+  endLocation: string;
+  startTime: string;
+  endTime?: string;
+  busId?: string;
+  stopLocations?: Array<{
+    stopId: string;
+    stopName: string;
+    arrivalTime: string;
+  }>;
+}
+
 export default function MyBookingsPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,12 +56,12 @@ export default function MyBookingsPage() {
   const [dateFilter, setDateFilter] = useState('all');
   const [specificDate, setSpecificDate] = useState('');
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [studentBookings, setStudentBookings] = useState<unknown[]>([]);
+  const [studentBookings, setStudentBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [enrichedBookings, setEnrichedBookings] = useState<unknown[]>([]);
+  const [enrichedBookings, setEnrichedBookings] = useState<(Booking & { _trip: Trip | null; _stopName: string })[]>([]);
   const { showToast } = useToast();
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<unknown | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<(Booking & { _trip: Trip | null; _stopName: string }) | null>(null);
 
   // Fetch student-specific bookings from API and join trip data
   useEffect(() => {
@@ -44,14 +69,14 @@ export default function MyBookingsPage() {
       if (!user) return;
       try {
         setIsLoading(true);
-        const bookings = await bookingAPI.getByStudent(user.id.toString());
+        const bookings = await bookingAPI.getByStudent(user.id.toString()) as Booking[];
         setStudentBookings(bookings);
         // fetch trips for those bookings
         const tripIds = Array.from(new Set((bookings || []).map((b: Booking) => b.tripId)));
         const tripsResp = await Promise.all(tripIds.map((id: string) => tripAPI.getById(id)));
         const tripsData = tripsResp.filter(Boolean);
-        const idToTrip = new Map<string, Trip>();
-        tripsData.forEach((t: Trip) => { if (t?.id) idToTrip.set(t.id, t); });
+        const idToTrip = new Map<string, any>();
+        tripsData.forEach((t: any) => { if (t?.id) idToTrip.set(t.id, t); });
 
         const enriched = (bookings || []).map((b: Booking) => {
           const trip = idToTrip.get(b.tripId) || null;
@@ -63,7 +88,7 @@ export default function MyBookingsPage() {
           return { ...b, _trip: trip, _stopName: stopName };
         });
         setEnrichedBookings(enriched);
-      } catch {
+      } catch (error) {
         console.error('Failed to fetch bookings:', error);
         setStudentBookings([]);
         setEnrichedBookings([]);
@@ -147,21 +172,21 @@ export default function MyBookingsPage() {
     // Refresh bookings data
     if (user) {
       try {
-        const bookings = await bookingAPI.getByStudent(user.id.toString());
+        const bookings = await bookingAPI.getByStudent(user.id.toString()) as Booking[];
         setStudentBookings(bookings);
         
         // Enrich bookings with trip data
-        const tripIds = Array.from(new Set(bookings.map((b) => b.tripId)));
+        const tripIds = Array.from(new Set(bookings.map((b: Booking) => b.tripId)));
         const tripsResp = await Promise.all(tripIds.map((id: string) => tripAPI.getById(id)));
         const tripsData = tripsResp.filter(Boolean);
-        const idToTrip = new Map();
-        tripsData.forEach((t) => { if (t?.id) idToTrip.set(t.id, t); });
+        const idToTrip = new Map<string, any>();
+        tripsData.forEach((t: any) => { if (t?.id) idToTrip.set(t.id, t); });
 
-        const enriched = bookings.map((b) => {
+        const enriched = bookings.map((b: Booking) => {
           const trip = idToTrip.get(b.tripId) || null;
           let stopName = '';
           if (trip?.stopLocations && b.stopId) {
-            const st = trip.stopLocations.find((s) => s.stopId === b.stopId);
+            const st = trip.stopLocations.find((s: any) => s.stopId === b.stopId);
             stopName = st?.stopName || '';
           }
           return { ...b, _trip: trip, _stopName: stopName };
@@ -169,7 +194,7 @@ export default function MyBookingsPage() {
         
         setEnrichedBookings(enriched);
       } catch {
-        console.error('Failed to refresh bookings:', error);
+        console.error('Failed to refresh bookings:', Error);
       }
     }
     
@@ -237,7 +262,7 @@ export default function MyBookingsPage() {
               ]}
             />
 
-            <Input type="date" value={specificDate} onChange={(e: unknown) => setSpecificDate(e.target.value)} />
+            <Input type="date" value={specificDate} onChange={(e: unknown) => setSpecificDate((e as any).target.value)} />
             
             <Button onClick={exportBookings} variant="outline">
               <Download className="w-4 h-4 mr-2" />
@@ -319,7 +344,7 @@ export default function MyBookingsPage() {
 function BookingDetailsModal({ isOpen, onClose, booking }: { isOpen: boolean; onClose: () => void; booking: Booking & { _trip: Trip | null; _stopName: string } }) {
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
 
-  const trip = booking?._trip || booking?.trip || null;
+  const trip = booking?._trip || null;
   const stop = trip?.stopLocations?.find((s: { stopId: string; stopName: string; arrivalTime: string }) => s.stopId === booking.stopId);
 
   useEffect(() => {

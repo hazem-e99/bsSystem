@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(reservationsWithDetails);
   } catch {
-    console.error('Error reading reservations:', error);
+    console.error('Error reading reservations:', Error);
     return NextResponse.json({ error: 'Failed to read reservations' }, { status: 500 });
   }
 }

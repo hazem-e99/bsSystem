@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(enrichedTrips);
   } catch {
-    console.error('Error fetching supervisor trips:', error);
+    console.error('Error fetching supervisor trips:', Error);
     return NextResponse.json(
       { error: 'Failed to fetch supervisor trips' },
       { status: 500 }

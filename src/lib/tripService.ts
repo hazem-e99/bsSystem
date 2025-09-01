@@ -30,7 +30,7 @@ class TripService {
     }
   }
 
-  async getById(id: number): Promise<TripResponse> {
+  async getById(id: number | string): Promise<TripResponse> {
     try {
       const response = await api.get<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}`);
       return response.data;
@@ -52,7 +52,7 @@ class TripService {
     }
   }
 
-  async update(id: number, tripData: UpdateTripDTO): Promise<TripResponse> {
+  async update(id: number | string, tripData: UpdateTripDTO): Promise<TripResponse> {
     try {
       const response = await api.put<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}`, tripData);
       return response.data;
@@ -63,7 +63,7 @@ class TripService {
     }
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: number | string): Promise<void> {
     try {
       await api.delete(`${this.baseUrl}/${id}`);
     } catch (error: unknown) {
@@ -152,7 +152,7 @@ class TripService {
 
   async updateStatus(id: number, status: string): Promise<TripResponse> {
     try {
-      const response = await api.patch<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/status`, { status });
+      const response = await api.put<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/status`, { status });
       return response.data;
     } catch (error: unknown) {
       const apiError = error as ApiErrorResponse;
@@ -163,7 +163,7 @@ class TripService {
 
   async assignDriver(id: number, driverId: number): Promise<TripResponse> {
     try {
-      const response = await api.patch<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/driver`, { driverId });
+      const response = await api.put<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/driver`, { driverId });
       return response.data;
     } catch (error: unknown) {
       const apiError = error as ApiErrorResponse;
@@ -174,7 +174,7 @@ class TripService {
 
   async assignBus(id: number, busId: number): Promise<TripResponse> {
     try {
-      const response = await api.patch<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/bus`, { busId });
+      const response = await api.put<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/bus`, { busId });
       return response.data;
     } catch (error: unknown) {
       const apiError = error as ApiErrorResponse;
@@ -185,7 +185,7 @@ class TripService {
 
   async assignConductor(id: number, conductorId: number): Promise<TripResponse> {
     try {
-      const response = await api.patch<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/conductor`, { conductorId });
+      const response = await api.put<ApiResponse<TripResponse>>(`${this.baseUrl}/${id}/conductor`, { conductorId });
       return response.data;
     } catch (error: unknown) {
       const apiError = error as ApiErrorResponse;

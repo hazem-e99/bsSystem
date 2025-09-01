@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { CreateTripDTO, UpdateTripDTO, TripViewModel } from "@/types/trip";
+import { CreateTripDTO, UpdateTripDTO, TripViewModel, TripResponse } from "@/types/trip";
 
 // Central Trip Service matching Swagger endpoints at base URL http://busmanagementsystem.runasp.net
 // Endpoints (relative to /api):
@@ -16,21 +16,21 @@ const unwrap = (resp: unknown) => (resp as { data?: unknown })?.data ?? resp ?? 
 
 export const tripService = {
   // List all trips
-  async getAll(): Promise<TripViewModel[]> {
-    const resp = await api.get<{ data: TripViewModel[] }>("/Trip");
+  async getAll(): Promise<TripResponse[]> {
+    const resp = await api.get<{ data: TripResponse[] }>("/Trip");
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },
 
   // Trip details
-  async getById(id: number | string): Promise<TripViewModel | null> {
-    const resp = await api.get<{ data: TripViewModel }>(`/Trip/${id}`);
+  async getById(id: number | string): Promise<TripResponse | null> {
+    const resp = await api.get<{ data: TripResponse }>(`/Trip/${id}`);
     const item = resp?.data ?? resp ?? null;
-    return item ?? null;
+    return item as TripResponse | null;
   },
 
   // Create trip using the specified API format
-  async create(payload: CreateTripDTO): Promise<unknown> {
+  async create(payload: CreateTripDTO): Promise<TripResponse> {
     const baseUrl = "http://busmanagementsystem.runasp.net";
 
     // Get token from localStorage
@@ -78,18 +78,18 @@ export const tripService = {
 
       // Try to parse as JSON, fallback to text
       try {
-        return JSON.parse(result);
-      } catch {
-        return result;
+        return JSON.parse(result) as TripResponse;
+      } catch (e: unknown) {
+        return result as unknown as TripResponse;
       }
     } catch (error: unknown) {
       console.error("Trip creation error:", error);
-      throw new Error(error?.message || "Trip creation failed");
+      throw new Error((error as Error)?.message || "Trip creation failed");
     }
   },
 
   // Update trip
-  async update(id: number | string, payload: UpdateTripDTO): Promise<unknown> {
+  async update(id: number | string, payload: UpdateTripDTO): Promise<TripResponse> {
     const body = { ...payload } as UpdateTripDTO;
     if (Array.isArray(body.stopLocations) && body.stopLocations.length === 0) {
       body.stopLocations = undefined;
@@ -103,11 +103,11 @@ export const tripService = {
     ) {
       throw new Error(resp.message || "Trip update failed");
     }
-    return resp;
+    return resp as unknown as TripResponse;
   },
 
   // Delete trip
-  async remove(id: number | string): Promise<unknown> {
+  async remove(id: number | string): Promise<void> {
     const resp = await api.delete<{ success: boolean; message?: string }>(`/Trip/${id}`);
     if (
       resp &&
@@ -117,26 +117,26 @@ export const tripService = {
     ) {
       throw new Error(resp.message || "Trip delete failed");
     }
-    return resp;
+    return;
   },
 
   // Filters
-  async getByDate(date: string): Promise<TripViewModel[]> {
-    const resp = await api.get<{ data: TripViewModel[] }>(
+  async getByDate(date: string): Promise<TripResponse[]> {
+    const resp = await api.get<{ data: TripResponse[] }>(
       `/Trip/by-date/${encodeURIComponent(date)}`
     );
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },
 
-  async getByDriver(driverId: number | string): Promise<TripViewModel[]> {
-    const resp = await api.get<{ data: TripViewModel[] }>(`/Trip/by-driver/${driverId}`);
+  async getByDriver(driverId: number | string): Promise<TripResponse[]> {
+    const resp = await api.get<{ data: TripResponse[] }>(`/Trip/by-driver/${driverId}`);
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },
 
-  async getByBus(busId: number | string): Promise<TripViewModel[]> {
-    const resp = await api.get<{ data: TripViewModel[] }>(`/Trip/by-bus/${busId}`);
+  async getByBus(busId: number | string): Promise<TripResponse[]> {
+    const resp = await api.get<{ data: TripResponse[] }>(`/Trip/by-bus/${busId}`);
     const list = resp?.data ?? resp ?? [];
     return Array.isArray(list) ? list : [];
   },

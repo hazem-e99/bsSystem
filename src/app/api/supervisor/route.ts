@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'next/server';
+import { promises as fs } from 'fs';
 import path from 'path';
 
 interface User {
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     });
     
     return NextResponse.json(enrichedSupervisors);
-  } catch {
+  } catch (error) {
     console.error('Error reading supervisors data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newSupervisor, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating supervisor:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

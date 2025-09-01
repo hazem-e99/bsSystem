@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const user = JSON.parse(raw);
     return NextResponse.json(user);
   } catch (e: unknown) {
-    return NextResponse.json({ error: e?.message || 'Failed' }, { status: 500 });
+    return NextResponse.json({ error: (e as any)?.message || 'Failed' }, { status: 500 });
   }
 }
 

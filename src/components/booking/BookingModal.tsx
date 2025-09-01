@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-
 import { Select } from '@/components/ui/Select';
 import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
-
 import { 
   Calendar, 
   Clock, 
@@ -14,9 +12,9 @@ import {
   Bus, 
   Users,
   X,
-  AlertCircle
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
-import { useToast } from '@/components/ui/Toast';
 import { tripAPI, bookingAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/utils/formatDate';
@@ -27,7 +25,9 @@ interface BookingModalProps {
   onSuccess: (booking: unknown) => void;
 }
 
-interface BookingFormData { date: string; }
+interface BookingFormData { 
+  date: string; 
+}
 
 interface TripWithStops {
   id: string;
@@ -52,7 +52,6 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
   const [selectedStopId, setSelectedStopId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { showToast } = useToast();
 
   // Generate available dates (next 30 days)
   const availableDates = Array.from({ length: 30 }, (_, i) => {
@@ -64,11 +63,16 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
   // Fetch trips for selected date
   useEffect(() => {
     const loadTrips = async () => {
-      if (!formData.date) { setTripsByDate([]); return; }
+      if (!formData.date) { 
+        setTripsByDate([]); 
+        return; 
+      }
       try {
         const data = await tripAPI.getByDate(formData.date);
-        setTripsByDate(Array.isArray(data) ? data : []);
-      } catch {
+        setTripsByDate(Array.isArray(data) ? data as unknown as TripWithStops[] : []);
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        console.error('Failed to load trips:', errorMessage);
         setTripsByDate([]);
       }
     };
@@ -82,7 +86,11 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
     setError('');
   };
 
-  const handleTripSelection = (trip: TripWithStops) => { setSelectedTrip(trip); setSelectedStopId(''); setError(''); };
+  const handleTripSelection = (trip: TripWithStops) => { 
+    setSelectedTrip(trip); 
+    setSelectedStopId(''); 
+    setError(''); 
+  };
 
   const handleSubmit = async () => {
     if (!selectedTrip || !selectedStopId) {
@@ -99,13 +107,19 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
     setError('');
 
     try {
-      const payload = { studentId: user.id.toString(), tripId: selectedTrip.id, stopId: selectedStopId };
+      const payload = { 
+        studentId: user.id.toString(), 
+        tripId: selectedTrip.id, 
+        stopId: selectedStopId 
+      };
       const data = await bookingAPI.create(payload);
-      showToast({ type: 'success', title: 'Booking confirmed' });
+      console.log('Booking confirmed successfully');
+      // showToast({ type: 'success', title: 'Booking confirmed' });
       onSuccess(data);
       handleClose();
-    } catch {
-      console.error('Booking creation failed:', err);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error('Booking creation failed:', errorMessage);
       setError('Failed to create booking. Please try again.');
     } finally {
       setIsLoading(false);
@@ -126,7 +140,7 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
   const canProceedToStep4 = !!selectedStopId;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="4xl">
+    <Modal isOpen={isOpen} onClose={handleClose} size="xl">
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

@@ -33,7 +33,9 @@ export default function TripsPage() {
       }
       setTrips(data);
     } catch (e: unknown) {
-      toast({ title: 'Failed to load trips', description: String(e?.message || e), variant: 'destructive' });
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error('Failed to load trips:', errorMessage);
+      // toast({ title: 'Failed to load trips', description: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -47,10 +49,13 @@ export default function TripsPage() {
   const onDelete = async (id: number) => {
     try {
       await tripService.remove(id);
-      toast({ title: 'Trip deleted' });
+      console.log('Trip deleted successfully');
+      // toast({ title: 'Trip deleted' });
       fetchTrips();
     } catch (e: unknown) {
-      toast({ title: 'Delete failed', description: String(e?.message || e), variant: 'destructive' });
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error('Delete failed:', errorMessage);
+      // toast({ title: 'Delete failed', description: errorMessage });
     }
   };
 
@@ -103,7 +108,7 @@ export default function TripsPage() {
                     <td className="p-3">{t.arrivalTimeOnly}</td>
                     <td className="p-3 flex gap-2">
                       <Link href={`/trips/${t.id}`}><Button variant="secondary" size="sm">View</Button></Link>
-                      <Link href={`/trips/edit/${t.id}`}><Button variant="warning" size="sm">Edit</Button></Link>
+                      <Link href={`/trips/edit/${t.id}`}><Button variant="outline" size="sm">Edit</Button></Link>
                       <Button variant="destructive" size="sm" onClick={() => onDelete(t.id)}>Delete</Button>
                     </td>
                   </tr>

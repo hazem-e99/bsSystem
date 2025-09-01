@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -23,6 +23,30 @@ interface Notification {
   createdAt: string;
   type?: string;
   priority?: string;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface Trip {
+  id: number;
+  stops?: Array<{
+    id: string;
+    stopName: string;
+    stopTime: string;
+  }>;
+}
+
+interface Booking {
+  id: string;
+  studentId: string;
+  tripId: string;
+  stopId: string;
+  status: string;
 }
 
 type NotificationItem = {
@@ -52,7 +76,7 @@ export default function SupervisorNotificationsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [sendModalOpen, setSendModalOpen] = useState(false);
-  const [students, setStudents] = useState<unknown[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [notificationForm, setNotificationForm] = useState({
     title: '',
@@ -68,8 +92,8 @@ export default function SupervisorNotificationsPage() {
       
       try {
         const res = await notificationAPI.getByUser(user.id.toString());
-        setNotifications(res || []);
-      } catch {
+        setNotifications((res as NotificationItem[]) || []);
+      } catch (error) {
         console.error('Failed to fetch notifications:', error);
         setNotifications([]);
       }
@@ -89,12 +113,12 @@ export default function SupervisorNotificationsPage() {
         let stopTime = n.stopTime;
         try {
           const tripRes = await tripAPI.getById(n.tripId);
-          const trip = tripRes ? tripRes : null;
+          const trip = tripRes as Trip;
           if (trip) {
             let stopId = (n as { stopId?: string }).stopId;
             if (!stopId && n.senderId) {
-              const bkRes = await bookingAPI.getByTrip(n.tripId, n.senderId);
-              const bks = bkRes ? bkRes : [];
+              const bkRes = await bookingAPI.getByTrip(n.tripId);
+              const bks = bkRes as Booking[];
               if (Array.isArray(bks) && bks[0]?.stopId) stopId = bks[0].stopId;
             }
             if (stopId && Array.isArray(trip.stops)) {
@@ -103,7 +127,9 @@ export default function SupervisorNotificationsPage() {
               stopTime = st?.stopTime || stopTime;
             }
           }
-        } catch {}
+        } catch (error) {
+          console.error('Failed to enrich notification:', error);
+        }
         updated.push({ ...n, stopName, stopTime });
       }
       if (updated.length) {
@@ -121,9 +147,11 @@ export default function SupervisorNotificationsPage() {
     const loadStudents = async () => {
       try {
         const res = await userAPI.getByRole('student');
-        const data = res ? res : [];
+        const data = res as Student[];
         setStudents(Array.isArray(data) ? data : []);
-      } catch {}
+      } catch (error) {
+        console.error('Failed to load students:', error);
+      }
     };
     loadStudents();
   }, []);
@@ -141,7 +169,7 @@ export default function SupervisorNotificationsPage() {
       const promises = targetIds.map(studentId => 
         notificationAPI.create({
           userId: studentId,
-          senderId: user?.id,
+          senderId: user?.id?.toString(),
           type: 'announcement',
           priority: notificationForm.priority,
           status: 'unread',
@@ -154,7 +182,7 @@ export default function SupervisorNotificationsPage() {
       );
 
       const results = await Promise.allSettled(promises);
-      const successful = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
+      const successful = results.filter(r => r.status === 'fulfilled' && (r.value as any)?.ok).length;
       const failed = results.length - successful;
 
       if (successful > 0) {
@@ -170,8 +198,8 @@ export default function SupervisorNotificationsPage() {
         setSendModalOpen(false);
         
         // Refresh notifications
-        const res = await notificationAPI.getByUser(user?.id);
-        setNotifications(res || []);
+        const res = await notificationAPI.getByUser(user?.id?.toString() || '');
+        setNotifications((res as NotificationItem[]) || []);
       } else {
         showToast({
           type: 'error',
@@ -179,7 +207,7 @@ export default function SupervisorNotificationsPage() {
           message: 'All notifications failed to send. Please try again.'
         });
       }
-    } catch {
+    } catch (error) {
       console.error('Failed to send notifications:', error);
       showToast({
         type: 'error',
@@ -204,8 +232,8 @@ export default function SupervisorNotificationsPage() {
     try {
       await notificationAPI.update(id, { status: read ? 'read' : 'unread', read });
       setNotifications(prev => prev.map(n => (n.id === id ? { ...n, status: read ? 'read' : 'unread', read } : n)));
-    } catch {
-      setNotifications(prev);
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
     }
   };
 
@@ -214,15 +242,17 @@ export default function SupervisorNotificationsPage() {
     setNotifications(prev => prev.map(n => (toMark.some(t => t.id === n.id) ? { ...n, status: 'read', read: true } : n)));
     try {
       await Promise.all(toMark.map(n => notificationAPI.update(n.id, { status: 'read', read: true })));
-    } catch {}
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
 
   const removeNotification = async (id: string) => {
     try {
       await notificationAPI.delete(id);
       setNotifications(prev => prev.filter(n => n.id !== id));
-    } catch {
-      setNotifications(prev);
+    } catch (error) {
+      console.error('Failed to remove notification:', error);
     }
   };
 
@@ -265,8 +295,16 @@ export default function SupervisorNotificationsPage() {
               <Filter className="absolute left-3 top-3 h-4 w-4 text-[#757575]" />
               <Input placeholder="Search title, message, stop..." value={search} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} />
-            <Select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} options={[{ value: 'all', label: 'All Priorities' }, { value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }]} />
+            <Select 
+              value={statusFilter} 
+              onChange={e => setStatusFilter(e.target.value as 'all' | 'unread' | 'read')} 
+              options={[{ value: 'all', label: 'All' }, { value: 'unread', label: 'Unread' }, { value: 'read', label: 'Read' }]} 
+            />
+            <Select 
+              value={priorityFilter} 
+              onChange={e => setPriorityFilter(e.target.value as 'all' | 'low' | 'medium' | 'high')} 
+              options={[{ value: 'all', label: 'All Priorities' }, { value: 'high', label: 'High' }, { value: 'medium', label: 'Medium' }, { value: 'low', label: 'Low' }]} 
+            />
             <div className="flex items-center text-sm text-[#757575]"><Calendar className="w-4 h-4 mr-2" /> {filtered.length} notification(s)</div>
           </div>
         </CardContent>
@@ -288,7 +326,7 @@ export default function SupervisorNotificationsPage() {
             <div className="text-center py-12 text-[#757575]">
               <Bell className="w-16 h-16 mx-auto mb-4 text-[#BDBDBD]" />
               <h3 className="text-lg font-medium mb-2">No notifications</h3>
-              <p className="text-sm">You're all caught up!</p>
+              <p className="text-sm">You&apos;re all caught up!</p>
             </div>
           ) : (
             <Table>
@@ -344,7 +382,7 @@ export default function SupervisorNotificationsPage() {
       </Card>
 
       {/* Send Notifications Modal */}
-      <Modal isOpen={sendModalOpen} onClose={() => setSendModalOpen(false)} size="2xl">
+      <Modal isOpen={sendModalOpen} onClose={() => setSendModalOpen(false)} size="xl">
         <div className="p-6 space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold">Send Notifications</h3>
@@ -378,7 +416,7 @@ export default function SupervisorNotificationsPage() {
                 <label className="block text-sm font-medium mb-2">Priority</label>
                 <Select
                   value={notificationForm.priority}
-                  onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value }))}
+                  onChange={(e) => setNotificationForm(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
                   options={[
                     { value: 'low', label: 'Low' },
                     { value: 'medium', label: 'Medium' },
@@ -391,7 +429,7 @@ export default function SupervisorNotificationsPage() {
                 <label className="block text-sm font-medium mb-2">Target</label>
                 <Select
                   value={notificationForm.target}
-                  onChange={(e) => setNotificationForm(prev => ({ ...prev, target: e.target.value }))}
+                  onChange={(e) => setNotificationForm(prev => ({ ...prev, target: e.target.value as 'all' | 'specific' }))}
                   options={[
                     { value: 'all', label: 'All Students' },
                     { value: 'specific', label: 'Specific Students' }

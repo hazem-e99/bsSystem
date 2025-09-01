@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(enrichedDrivers);
   } catch {
-    console.error('Error reading drivers data:', error);
+    console.error('Error reading drivers data:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(newDriver, { status: 201 });
   } catch {
-    console.error('Error creating driver:', error);
+    console.error('Error creating driver:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

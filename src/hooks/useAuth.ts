@@ -87,8 +87,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 				
 				// Create user object from LoginViewModel
 				const foundUser: User = {
-					id: userData.id.toString(),
-					profileId: userData.profileId.toString(),
+					id: userData.id,
+					profileId: userData.profileId,
 					email: userData.email || '',
 					fullName: userData.fullName || '',
 					role: normalizedRole,
@@ -114,7 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 					}
 				} catch (error: unknown) {
 					// Silently ignore 404 errors for maintenance mode check
-					if (!error?.message?.includes('404')) {
+					      if (!(error as Error)?.message?.includes('404')) {
 						console.error('Failed to check maintenance mode:', error);
 					}
 				}
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 			}
 			
 			return false;
-		} catch {
+		} catch (error: unknown) {
 			console.error('Login error:', error);
 			return false;
 		} finally {
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 			localStorage.removeItem('authToken');
 			localStorage.removeItem('access_token');
 			document.cookie = 'user=; path=/; max-age=0';
-		} catch {
+		} catch (error: unknown) {
 			console.error('Logout error:', error);
 		}
 	};

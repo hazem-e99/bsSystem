@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-  } catch {
-    console.error('Error in import/export operation:', error);
+    } catch (error) {
+    console.error('Error in import/export operation:', error);     
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -92,13 +92,13 @@ async function handleExport(request: NextRequest, entity: string | null, format:
         }
       });
     }
-  } catch {
-    console.error('Error during export:', error);
-    return NextResponse.json(
-      { error: 'Export failed' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error during export:', error);
+     return NextResponse.json(
+       { error: 'Export failed' },
+       { status: 500 }
+     );
+   }
 }
 
 async function handleImport(request: NextRequest, entity: string | null, format: string) {
@@ -124,12 +124,12 @@ async function handleImport(request: NextRequest, entity: string | null, format:
       } else {
         importData = JSON.parse(fileContent);
       }
-    } catch {
-      return NextResponse.json(
-        { error: `Failed to parse ${format.toUpperCase()} file` },
-        { status: 400 }
-      );
-    }
+         } catch (error) {
+       return NextResponse.json(
+         { error: `Failed to parse ${format.toUpperCase()} file` },
+         { status: 400 }
+       );
+     }
     
     // Read current db.json
     const dbPath = path.join(process.cwd(), 'db.json');
@@ -158,13 +158,13 @@ async function handleImport(request: NextRequest, entity: string | null, format:
       skippedRecords: importResult.skippedRecords,
       errors: importResult.errors
     });
-  } catch {
-    console.error('Error during import:', error);
-    return NextResponse.json(
-      { error: 'Import failed' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error during import:', error);
+     return NextResponse.json(
+       { error: 'Import failed' },
+       { status: 500 }
+     );
+   }
 }
 
 function convertToCSV(data: Record<string, unknown>): string {
@@ -320,19 +320,19 @@ async function performImport(db: Record<string, unknown[]>, importData: unknown,
       db[entity] = [];
     }
     
-    const existingIds = new Set(db[entity].map((item: Record<string, unknown>) => item.id as string));
+         const existingIds = new Set((db[entity] as Record<string, unknown>[]).map((item: Record<string, unknown>) => item.id as string));
     
     (importData as Record<string, unknown>[]).forEach((item: Record<string, unknown>) => {
       try {
         if (existingIds.has(item.id as string)) {
           // Update existing record
-          const existingIndex = db[entity].findIndex((existing: Record<string, unknown>) => existing.id === item.id);
+                     const existingIndex = (db[entity] as Record<string, unknown>[]).findIndex((existing: Record<string, unknown>) => existing.id === item.id);
           if (existingIndex !== -1) {
-            db[entity][existingIndex] = {
-              ...db[entity][existingIndex],
-              ...item,
-              updatedAt: new Date().toISOString()
-            };
+                         db[entity][existingIndex] = {
+               ...(db[entity][existingIndex] as Record<string, unknown>),
+               ...item,
+               updatedAt: new Date().toISOString()
+             };
             updatedRecords++;
           }
         } else {
@@ -357,19 +357,19 @@ async function performImport(db: Record<string, unknown[]>, importData: unknown,
           db[entityKey] = [];
         }
         
-        const existingIds = new Set(db[entityKey].map((item: Record<string, unknown>) => item.id as string));
+                 const existingIds = new Set((db[entityKey] as Record<string, unknown>[]).map((item: Record<string, unknown>) => item.id as string));
         
         ((importData as Record<string, unknown>)[entityKey] as Record<string, unknown>[]).forEach((item: Record<string, unknown>) => {
           try {
             if (existingIds.has(item.id as string)) {
               // Update existing record
-              const existingIndex = db[entityKey].findIndex((existing: Record<string, unknown>) => existing.id === item.id);
+                             const existingIndex = (db[entityKey] as Record<string, unknown>[]).findIndex((existing: Record<string, unknown>) => existing.id === item.id);
               if (existingIndex !== -1) {
-                db[entityKey][existingIndex] = {
-                  ...db[entityKey][existingIndex],
-                  ...item,
-                  updatedAt: new Date().toISOString()
-                };
+                                 db[entityKey][existingIndex] = {
+                   ...(db[entityKey][existingIndex] as Record<string, unknown>),
+                   ...item,
+                   updatedAt: new Date().toISOString()
+                 };
                 updatedRecords++;
               }
             } else {

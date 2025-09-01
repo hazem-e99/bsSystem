@@ -65,9 +65,9 @@ export default function WorkingTripForm() {
                     'Authorization': 'Bearer YOUR_TOKEN_HERE'
                 },
                 body: JSON.stringify({
-                    busId: parseInt(tripData.busId),
-                    driverId: parseInt(tripData.driverId),
-                    conductorId: parseInt(tripData.conductorId),
+                    busId: Number(tripData.busId),
+                    driverId: Number(tripData.driverId),
+                    conductorId: Number(tripData.conductorId),
                     startLocation: tripData.startLocation,
                     endLocation: tripData.endLocation,
                     tripDate: tripData.tripDate,
@@ -121,7 +121,7 @@ export default function WorkingTripForm() {
                     <label>السائق (Driver):</label>
                     <select 
                         value={tripData.driverId}
-                        onChange={(e) => setTripData({...tripData, driverId: e.target.value})}
+                        onChange={(e) => setTripData({...tripData, driverId: Number(e.target.value)})}
                         required
                     >
                         {WORKING_COMBINATIONS.map((combo, i) => (
@@ -136,7 +136,7 @@ export default function WorkingTripForm() {
                     <label>الكمساري (Conductor):</label>
                     <select 
                         value={tripData.conductorId}
-                        onChange={(e) => setTripData({...tripData, conductorId: e.target.value})}
+                        onChange={(e) => setTripData({...tripData, conductorId: Number(e.target.value)})}
                         required
                     >
                         {WORKING_COMBINATIONS.map((combo, i) => (
@@ -151,7 +151,7 @@ export default function WorkingTripForm() {
                     <label>الأتوبيس (Bus):</label>
                     <select 
                         value={tripData.busId}
-                        onChange={(e) => setTripData({...tripData, busId: e.target.value})}
+                        onChange={(e) => setTripData({...tripData, busId: Number(e.target.value)})}
                         required
                     >
                         {WORKING_COMBINATIONS.map((combo, i) => (

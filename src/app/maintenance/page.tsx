@@ -25,7 +25,7 @@ export default function MaintenancePage() {
         }));
       } catch (error: unknown) {
         // Silently ignore 404 errors and use default system name
-        if (!error?.message?.includes('404')) {
+        if (error instanceof Error && !error.message.includes('404')) {
           console.error('Failed to load system info:', error);
         }
         setMaintenanceInfo(prev => ({
@@ -85,7 +85,7 @@ export default function MaintenancePage() {
         {/* Additional Info */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
-            What's happening?
+            What&apos;s happening?
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
             <div className="flex items-start space-x-3">

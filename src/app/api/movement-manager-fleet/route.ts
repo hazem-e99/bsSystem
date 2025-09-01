@@ -9,6 +9,15 @@ interface Bus {
   capacity: number;
   lastMaintenance?: string;
   nextMaintenance?: string;
+  maintenanceInterval?: number;
+  performance?: {
+    totalRevenue: number;
+    utilizationRate: number;
+  };
+  maintenance?: {
+    isMaintenanceDue: boolean;
+    status: string;
+  };
 }
 
 interface Trip {
@@ -200,7 +209,7 @@ export async function GET(request: NextRequest) {
       fleet: enrichedFleet,
       summary: fleetSummary
     });
-  } catch {
+  } catch (error) {
     console.error('Error fetching fleet data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -236,7 +245,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBus, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating bus:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

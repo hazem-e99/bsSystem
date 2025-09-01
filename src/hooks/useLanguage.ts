@@ -122,7 +122,7 @@ export function useLanguage(): LanguageContextType {
         setLanguageState(settings.language || 'en');
       } catch (error: unknown) {
         // Silently ignore 404 errors and use default language
-        if (!error?.message?.includes('404')) {
+        if (!(error as Error)?.message?.includes('404')) {
           console.error('Failed to load language setting:', error);
         }
         setLanguageState('en'); // Default to English
@@ -145,7 +145,7 @@ export function useLanguage(): LanguageContextType {
         });
       } catch (settingsError: unknown) {
         // Ignore 404 errors for settings API
-        if (!settingsError?.message?.includes('404')) {
+        if (!(settingsError as Error)?.message?.includes('404')) {
           console.error('Failed to update language in settings:', settingsError);
         }
       }
@@ -154,7 +154,7 @@ export function useLanguage(): LanguageContextType {
       document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
       document.documentElement.lang = lang;
       
-    } catch {
+    } catch (error: unknown) {
       console.error('Failed to update language:', error);
     }
   };

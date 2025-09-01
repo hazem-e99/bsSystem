@@ -34,4 +34,21 @@ export interface TripResponse {
   stopLocations: StopLocationDTO[] | null;
 }
 
+// Add missing types for backward compatibility
+export interface UpdateTripDTO extends CreateTripDTO {
+  id?: number;
+}
+
+export interface Trip extends TripResponse {
+  // Additional fields if needed
+  startLocation?: string;
+  endLocation?: string;
+}
+
+export interface TripViewModel extends TripResponse {
+  // Additional view model fields if needed
+  startLocation?: string;
+  endLocation?: string;
+}
+
 

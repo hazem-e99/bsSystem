@@ -1,7 +1,8 @@
 export type UserRole = 'admin' | 'student' | 'supervisor' | 'movement-manager' | 'driver' | 'conductor';
 
 export interface User {
-  id: number;
+  id: string | number;
+  profileId?: string | number;
   firstName?: string;
   lastName?: string;
   name?: string; // Keep for backward compatibility
@@ -20,6 +21,10 @@ export interface User {
   // New fields from LoginViewModel
   token?: string;
   expiration?: string;
+  // Additional fields for compatibility
+  department?: string;
+  academicYear?: string;
+  subscriptionStatus?: 'active' | 'expired' | 'none';
 }
 
 // StudentViewModel from Swagger API

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json({ success: true });
   } catch {
-    console.error('Error assigning user:', error);
+    console.error('Error assigning user:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -27,6 +27,15 @@ interface Route {
   name: string;
 }
 
+interface User {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+  status: string;
+}
+
 interface Booking {
   id: string;
 }
@@ -268,7 +277,7 @@ export async function GET(request: NextRequest) {
       attendance: enrichedAttendance,
       summary
     });
-  } catch {
+  } catch (error) {
     console.error('Error fetching attendance data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -306,7 +315,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newRecord, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating attendance record:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

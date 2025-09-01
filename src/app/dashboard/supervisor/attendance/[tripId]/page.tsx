@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
 import { attendanceAPI, bookingAPI, notificationAPI, tripAPI, userAPI } from '@/lib/api';
-import { MapPin, Clock, Users, XCircle } from 'lucide-react';
+import { MapPin, Clock, Users, XCircle, CheckCircle } from 'lucide-react';
 
 interface TripWithStops {
 	id: string;
@@ -26,15 +26,55 @@ interface TripWithStops {
 	status: string;
 }
 
+interface Student {
+	id: string;
+	name: string;
+	email: string;
+	role: string;
+}
+
+interface Booking {
+	id: string;
+	studentId: string;
+	tripId: string;
+	stopId: string;
+	status: string;
+	date: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+interface Attendance {
+	id: string;
+	studentId: string;
+	tripId: string;
+	status: 'present' | 'absent' | 'late';
+	timestamp: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+interface TableRow {
+	id: string;
+	studentId: string;
+	studentName: string;
+	studentEmail: string;
+	stopId: string;
+	stopName: string;
+	stopTime: string;
+	bookingStatus: string;
+	attendanceStatus: 'present' | 'absent' | 'late' | null;
+}
+
 export default function TripAttendancePage() {
 	const params = useParams();
 	const tripId = (params?.tripId as string) || '';
 	const { user } = useAuth();
 	const { showToast } = useToast();
 	const [trip, setTrip] = useState<TripWithStops | null>(null);
-	const [students, setStudents] = useState<unknown[]>([]);
-	const [bookings, setBookings] = useState<unknown[]>([]);
-	const [attendances, setAttendances] = useState<unknown[]>([]);
+	const [students, setStudents] = useState<Student[]>([]);
+	const [bookings, setBookings] = useState<Booking[]>([]);
+	const [attendances, setAttendances] = useState<Attendance[]>([]);
 	const [stopFilter, setStopFilter] = useState<string>('all');
 	const [search, setSearch] = useState<string>('');
 	const [loading, setLoading] = useState(true);
@@ -51,11 +91,28 @@ export default function TripAttendancePage() {
 					userAPI.getByRole('student'),
 					attendanceAPI.getByTrip(tripId)
 				]);
-				setTrip(t || null);
-				setBookings(Array.isArray(bks) ? bks : []);
-				setStudents(Array.isArray(allStudents) ? allStudents : []);
-				setAttendances(Array.isArray(atts) ? atts : []);
-			} catch {
+				
+				// Transform trip data to match TripWithStops interface
+				const tripData = t as any;
+				const transformedTrip: TripWithStops = {
+					id: tripData.id,
+					date: tripData.date || new Date().toISOString().split('T')[0],
+					startTime: tripData.startTime,
+					endTime: tripData.endTime,
+					routeId: tripData.routeId || '',
+					busId: tripData.busId || '',
+					driverId: tripData.driverId || '',
+					supervisorId: tripData.supervisorId,
+					stops: tripData.stops || [],
+					status: tripData.status || 'active'
+				};
+				
+				setTrip(transformedTrip);
+				setBookings(Array.isArray(bks) ? bks as Booking[] : []);
+				setStudents(Array.isArray(allStudents) ? allStudents as Student[] : []);
+				setAttendances(Array.isArray(atts) ? atts as Attendance[] : []);
+			} catch (error) {
+				console.error('Failed to load data:', error);
 				setTrip(null);
 				setBookings([]);
 				setStudents([]);
@@ -71,7 +128,7 @@ export default function TripAttendancePage() {
 	useEffect(() => {
 		if (!Array.isArray(attendances) || attendances.length === 0 || bookings.length === 0) return;
 		// Choose latest record per student for this trip by timestamp
-		    const latestByStudent = new Map<string, unknown>();
+		const latestByStudent = new Map<string, Attendance>();
 		for (const rec of attendances) {
 			if (rec.tripId !== tripId) continue;
 			const prev = latestByStudent.get(rec.studentId);
@@ -117,7 +174,12 @@ export default function TripAttendancePage() {
 	}, [bookings, students, trip?.stops, stopFilter, search, attendanceByBooking]);
 
 	const refreshAttendance = async () => {
-		try { const atts = await attendanceAPI.getByTrip(tripId); setAttendances(Array.isArray(atts) ? atts : []); } catch {}
+		try { 
+			const atts = await attendanceAPI.getByTrip(tripId); 
+			setAttendances(Array.isArray(atts) ? atts as Attendance[] : []); 
+		} catch (error) {
+			console.error('Failed to refresh attendance:', error);
+		}
 	};
 
 	const markPresent = async (row: { studentId: string; id: string; studentName: string }) => {
@@ -126,7 +188,8 @@ export default function TripAttendancePage() {
 			setAttendanceByBooking(prev => ({ ...prev, [row.id]: 'present' }));
 			showToast({ type: 'success', title: 'Marked present', message: `${row.studentName} marked present.` });
 			refreshAttendance();
-		} catch {
+		} catch (error) {
+			console.error('Failed to mark present:', error);
 			showToast({ type: 'error', title: 'Failed', message: 'Could not mark present.' });
 		}
 	};
@@ -140,7 +203,8 @@ export default function TripAttendancePage() {
 			setBookings(prev => prev.map(b => b.id === row.id ? { ...b, status: 'cancelled' } : b));
 			showToast({ type: 'success', title: 'Marked absent', message: `${row.studentName} marked absent and booking cancelled.` });
 			refreshAttendance();
-		} catch {
+		} catch (error) {
+			console.error('Failed to mark absent:', error);
 			showToast({ type: 'error', title: 'Failed', message: 'Could not mark absent.' });
 		}
 	};

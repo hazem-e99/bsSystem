@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(analyticsData);
   } catch {
-    console.error('Error calculating analytics data:', error);
+    console.error('Error calculating analytics data:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -39,6 +39,23 @@ interface AttendanceRecord {
   studentId: string;
   status: string;
   timestamp: string;
+  trip?: any;
+  route?: any;
+  bus?: any;
+  student?: any;
+}
+
+interface TripAttendanceData {
+  trip: any;
+  route: any;
+  bus: any;
+  records: AttendanceRecord[];
+  summary: {
+    total: number;
+    present: number;
+    absent: number;
+    rate: number;
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -76,7 +93,7 @@ export async function GET(request: NextRequest) {
     const tripIds = supervisorTrips.map((trip: Trip) => trip.id);
 
     // Get attendance records for these trips
-    let attendanceRecords = db.attendance?.filter((record: AttendanceRecord) => 
+    const attendanceRecords = db.attendance?.filter((record: AttendanceRecord) => 
       tripIds.includes(record.tripId)
     ) || [];
 
@@ -127,7 +144,7 @@ export async function GET(request: NextRequest) {
     const attendanceRate = totalRecords > 0 ? (presentStudents / totalRecords) * 100 : 0;
 
     // Group by trip for better organization
-    const attendanceByTrip: Record<string, unknown> = {};
+    const attendanceByTrip: Record<string, TripAttendanceData> = {};
     enrichedAttendance.forEach((record: AttendanceRecord) => {
       const tripId = record.tripId;
       if (!attendanceByTrip[tripId]) {
@@ -155,7 +172,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate rate for each trip
-    Object.values(attendanceByTrip).forEach((tripData: { summary: { total: number; present: number; rate: number } }) => {
+    Object.values(attendanceByTrip).forEach((tripData) => {
       tripData.summary.rate = tripData.summary.total > 0 ? 
         (tripData.summary.present / tripData.summary.total) * 100 : 0;
     });
@@ -173,7 +190,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(response);
-  } catch {
+  } catch (error) {
     console.error('Error fetching supervisor attendance:', error);
     return NextResponse.json(
       { error: 'Failed to fetch supervisor attendance' },
@@ -244,7 +261,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(attendanceRecord, { status: 201 });
   } catch {
-    console.error('Error creating/updating attendance record:', error);
+    console.error('Error creating/updating attendance record:', Error);
     return NextResponse.json(
       { error: 'Failed to create/update attendance record' },
       { status: 500 }

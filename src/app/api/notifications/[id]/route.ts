@@ -32,7 +32,7 @@ export async function GET(
 
     return NextResponse.json(notification);
   } catch {
-    console.error('Error fetching notification:', error);
+    console.error('Error fetching notification:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -63,7 +63,7 @@ export async function PATCH(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.notifications[index]);
   } catch {
-    console.error('Error updating notification:', error);
+    console.error('Error updating notification:',Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -89,7 +89,7 @@ export async function DELETE(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json({ message: 'Notification deleted', notification: deleted });
   } catch {
-    console.error('Error deleting notification:', error);
+    console.error('Error deleting notification:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

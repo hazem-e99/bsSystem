@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
-import path from 'path';
+import * as path from 'path';
 
 interface Booking {
   id: string;
@@ -11,16 +11,28 @@ interface Booking {
   updatedAt: string;
 }
 
+interface Context {
+  params: Promise<{ id: string }>;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: Context
+): Promise<NextResponse> {
   try {
-    const { id } = params;
+    const { id } = await context.params;
+    
+    // Validate id parameter
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid booking ID' },
+        { status: 400 }
+      );
+    }
     
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
-    const db = JSON.parse(dbContent);
+    const db = JSON.parse(dbContent) as { bookings?: Booking[] };
     
     const booking = (db.bookings || []).find((booking: Booking) => booking.id === id);
     
@@ -32,7 +44,7 @@ export async function GET(
     }
     
     return NextResponse.json(booking);
-  } catch {
+  } catch (error: unknown) {
     console.error('Error reading booking data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -43,17 +55,34 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: Context
+): Promise<NextResponse> {
   try {
-    const { id } = params;
-    const body = await request.json();
+    const { id } = await context.params;
+    
+    // Validate id parameter
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid booking ID' },
+        { status: 400 }
+      );
+    }
+    
+    const body = await request.json() as Partial<Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>>;
     
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
-    const db = JSON.parse(dbContent);
+    const db = JSON.parse(dbContent) as { bookings?: Booking[] };
     
-    const bookingIndex = (db.bookings || []).findIndex((booking: Booking) => booking.id === id);
+    // Ensure bookings array exists
+    if (!db.bookings) {
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+    
+    const bookingIndex = db.bookings.findIndex((booking: Booking) => booking.id === id);
     if (bookingIndex === -1) {
       return NextResponse.json(
         { error: 'Booking not found' },
@@ -71,7 +100,7 @@ export async function PATCH(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(db.bookings[bookingIndex]);
-  } catch {
+  } catch (error: unknown) {
     console.error('Error updating booking:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -82,16 +111,32 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: Context
+): Promise<NextResponse> {
   try {
-    const { id } = params;
+    const { id } = await context.params;
+    
+    // Validate id parameter
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid booking ID' },
+        { status: 400 }
+      );
+    }
     
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
-    const db = JSON.parse(dbContent);
+    const db = JSON.parse(dbContent) as { bookings?: Booking[] };
     
-    const bookingIndex = (db.bookings || []).findIndex((booking: Booking) => booking.id === id);
+    // Ensure bookings array exists
+    if (!db.bookings) {
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+    
+    const bookingIndex = db.bookings.findIndex((booking: Booking) => booking.id === id);
     if (bookingIndex === -1) {
       return NextResponse.json(
         { error: 'Booking not found' },
@@ -104,7 +149,7 @@ export async function DELETE(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Booking deleted successfully' });
-  } catch {
+  } catch (error: unknown) {
     console.error('Error deleting booking:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

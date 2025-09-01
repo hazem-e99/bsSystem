@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -41,11 +41,27 @@ interface Driver {
   avatar: string;
   createdAt: string;
   updatedAt: string;
-  licenseNumber: string;
-  experience: number;
-  assignedBusId: string;
-  currentRouteId: string;
-  assignedSupervisorId: string;
+  licenseNumber?: string;
+  experience?: number;
+  assignedBusId?: string;
+  currentRouteId?: string;
+  assignedSupervisorId?: string;
+}
+
+// Interface to match the API response structure
+interface UserResponse {
+  id: string;
+  profileId: string;
+  name: any;
+  fullName: string;
+  email: any;
+  role: string;
+  phone: any;
+  nationalId: any;
+  status: string;
+  avatar: any;
+  createdAt: any;
+  updatedAt: any;
 }
 
 interface Bus {
@@ -94,41 +110,47 @@ export default function DriverProfile() {
       console.log('🔄 Fetching driver profile from db.json...');
       
       // Fetch driver data
-      const driverData = await userAPI.getById(user.id.toString());
+      const driverData = await userAPI.getById(user.id.toString()) as UserResponse;
       console.log('📊 Driver data loaded:', driverData);
-      setDriver(driverData);
+      
+      // Transform API response to Driver interface
+      const transformedDriver: Driver = {
+        id: driverData.id,
+        name: driverData.name || driverData.fullName,
+        email: driverData.email,
+        role: driverData.role,
+        phone: driverData.phone,
+        status: driverData.status,
+        avatar: driverData.avatar,
+        createdAt: driverData.createdAt,
+        updatedAt: driverData.updatedAt,
+        licenseNumber: undefined, // Not available in API response
+        experience: undefined, // Not available in API response
+        assignedBusId: undefined, // Not available in API response
+        currentRouteId: undefined, // Not available in API response
+        assignedSupervisorId: undefined // Not available in API response
+      };
+      
+      setDriver(transformedDriver);
       
       // Set form data
       setFormData({
-        name: driverData.name || '',
-        email: driverData.email || '',
-        phone: driverData.phone || '',
-        licenseNumber: driverData.licenseNumber || '',
-        experience: driverData.experience || 0
+        name: transformedDriver.name || '',
+        email: transformedDriver.email || '',
+        phone: transformedDriver.phone || '',
+        licenseNumber: transformedDriver.licenseNumber || '',
+        experience: transformedDriver.experience || 0
       });
       
-      // Fetch assigned bus if available
-      if (driverData.assignedBusId) {
-        try {
-          const busResponse = await busAPI.getById(parseInt(driverData.assignedBusId));
-          setAssignedBus(busResponse.data);
-          console.log('🚌 Assigned bus loaded:', busResponse.data);
-        } catch {
-          console.log('🚌 No bus assigned or bus not found');
-        }
-      }
-      
-      // Fetch current route if available
-      if (driverData.currentRouteId) {
-        const routeData = await routeAPI.getById(driverData.currentRouteId);
-        setCurrentRoute(routeData);
-        console.log('🛣️ Current route loaded:', routeData);
-      }
+      // Note: Bus and route assignments are not available in the current API response
+      // These would need to be fetched separately or added to the API
+      console.log('🚌 Bus assignment not available in current API');
+      console.log('🛣️ Route assignment not available in current API');
       
       setLastRefresh(new Date());
       console.log('✅ Driver profile loaded successfully');
       
-    } catch {
+    } catch (error) {
       console.error('❌ Failed to fetch driver profile:', error);
       showToast({
         type: 'error',
@@ -196,7 +218,7 @@ export default function DriverProfile() {
         console.log('✅ Avatar updated successfully:', updatedDriver);
         
         // Update local state
-        setDriver(updatedDriver);
+        setDriver(updatedDriver as Driver);
         
         showToast({
           type: 'success',
@@ -207,7 +229,7 @@ export default function DriverProfile() {
       
       reader.readAsDataURL(file);
       
-    } catch {
+    } catch (error) {
       console.error('❌ Failed to upload image:', error);
       showToast({
         type: 'error',
@@ -241,7 +263,7 @@ export default function DriverProfile() {
       console.log('✅ Profile updated successfully:', updatedDriver);
       
       // Update local state
-      setDriver(updatedDriver);
+      setDriver(updatedDriver as Driver);
       setIsEditing(false);
       
       showToast({
@@ -251,7 +273,7 @@ export default function DriverProfile() {
       });
       
     } catch {
-      console.error('❌ Failed to update profile:', error);
+      console.error('❌ Failed to update profile:', Error);
       showToast({
         type: 'error',
         title: 'Error!',

@@ -14,6 +14,18 @@ interface Trip {
   startTime: string;
   endTime: string;
   passengers: number;
+  bookings?: {
+    total: number;
+  };
+  payments?: {
+    totalRevenue: number;
+  };
+  metrics?: {
+    utilizationRate: number;
+  };
+  attendance?: {
+    rate: number;
+  };
 }
 
 interface Route {
@@ -44,7 +56,9 @@ interface User {
 interface Booking {
   id: string;
   tripId: string;
+  studentId: string;
   status: string;
+  date?: string;
 }
 
 interface Payment {
@@ -242,8 +256,8 @@ export async function GET(request: NextRequest) {
       trips: enrichedTrips,
       summary: tripsSummary
     });
-  } catch {
-    console.error('Error fetching trips data:', error);
+  } catch (error) {
+    console.error('Error fetching trips data:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -329,13 +343,13 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date().toISOString()
         });
       }
-    } catch { console.error('Failed to create notifications for new trip (movement manager):', e); }
+    } catch (e) { console.error('Failed to create notifications for new trip (movement manager):', e); }
 
     // Write back to db.json
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newTrip, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating trip:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

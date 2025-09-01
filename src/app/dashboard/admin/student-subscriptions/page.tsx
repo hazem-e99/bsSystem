@@ -3,14 +3,33 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { userAPI, paymentAPI } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
+interface User {
+  id: string;
+  name: string;
+  role: string;
+  subscriptionPlan?: string;
+  paymentMethod?: string;
+  subscriptionStatus?: string;
+}
+
+interface Payment {
+  id: string;
+  studentId: string;
+  tripId?: string;
+  date: string;
+  status: string;
+  method?: string;
+  description?: string;
+}
+
 export default function StudentSubscriptionsPage() {
-  const [users, setUsers] = useState<unknown[]>([]);
-  const [payments, setPayments] = useState<unknown[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { showToast } = useToast();
@@ -62,8 +81,8 @@ export default function StudentSubscriptionsPage() {
       await userAPI.update(String(studentId), { subscriptionStatus: 'active' });
       await load();
       showToast({ type: 'success', title: 'Subscription confirmed' });
-    } catch {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       showToast({ type: 'error', title: 'Failed to confirm' });
     }
   };

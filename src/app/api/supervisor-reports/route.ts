@@ -5,6 +5,8 @@ import path from 'path';
 interface Trip {
   id: string;
   supervisorId: string;
+  routeId: string;
+  busId: string;
   date: string;
   status: string;
   passengers: number;
@@ -21,6 +23,19 @@ interface Payment {
   tripId: string;
   status: string;
   amount: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+}
+
+interface Bus {
+  id: string;
+  number: string;
+  capacity: number;
 }
 
 interface MonthlyStats {
@@ -176,7 +191,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(report);
   } catch {
-    console.error('Error generating supervisor report:', error);
+    console.error('Error generating supervisor report:', Error);
     return NextResponse.json(
       { error: 'Failed to generate supervisor report' },
       { status: 500 }

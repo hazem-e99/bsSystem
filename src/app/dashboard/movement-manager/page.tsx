@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import Link from 'next/link';
@@ -33,7 +33,8 @@ import {
   AlertCircle,
   PlayCircle,
   PauseCircle,
-  StopCircle
+  StopCircle,
+  CheckCircle
 } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
 import { useState, useEffect } from 'react';
@@ -44,7 +45,7 @@ interface Bus {
   id: number;
   busNumber: string;
   capacity: number;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService';
   speed: number;
 }
 
@@ -117,12 +118,30 @@ export default function MovementManagerDashboard() {
       ]);
 
       setBuses(busesResponse.data);
-      setRoutes(routesData);
-      setDrivers(driversData);
-      setTrips(tripsData);
+      setRoutes([]); // TODO: Implement routes API call
+      setDrivers(driversData.map(driver => ({
+        id: driver.id,
+        name: driver.fullName || driver.name,
+        email: driver.email,
+        status: driver.status,
+        licenseNumber: driver.nationalId || '',
+        experience: 0,
+        phone: driver.phone
+      })));
+      setTrips(tripsData.map(trip => ({
+        id: trip.id?.toString() || '',
+        busId: trip.busId?.toString() || '',
+        routeId: '', // TODO: Add routeId when available
+        driverId: trip.driverId?.toString() || '',
+        date: trip.tripDate || '',
+        status: trip.status || '',
+        startTime: '', // TODO: Add startTime when available
+        endTime: '', // TODO: Add endTime when available
+        passengers: 0 // TODO: Add passengers when available
+      })));
 
     } catch {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching data:', Error);
       showToast({
         type: 'error',
         title: 'Error!',
@@ -318,7 +337,7 @@ export default function MovementManagerDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-indigo-700">Today's Trips</p>
+                  <p className="text-sm font-medium text-indigo-700">Today&apos;s Trips</p>
                   <p className="text-2xl font-bold text-indigo-900">
                     {stats.todayScheduled + stats.todayInProgress + stats.todayCompleted}
                   </p>
@@ -426,7 +445,7 @@ export default function MovementManagerDashboard() {
               
               <div className="space-y-3">
                 {recentTrips.slice(0, 6).map((trip) => {
-                  const bus = buses.find(b => b.id === trip.busId);
+                  const bus = buses.find(b => b.id === Number(trip.busId));
                   const route = routes.find(r => r.id === trip.routeId);
                   const driver = drivers.find(d => d.id === trip.driverId);
                   
@@ -445,7 +464,7 @@ export default function MovementManagerDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">{bus ? `Bus ${bus.number}` : '-'}</p>
+                        <p className="text-sm font-medium text-gray-900">{bus ? `Bus ${bus.busNumber}` : '-'}</p>
                         <p className="text-xs text-gray-500">{route ? route.name : '-'}</p>
                       </div>
                     </div>

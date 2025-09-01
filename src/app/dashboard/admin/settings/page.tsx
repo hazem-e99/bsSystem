@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -16,7 +16,8 @@ import {
   Building2,
   Palette,
   Globe,
-  Wrench
+  Wrench,
+  CheckCircle
 } from 'lucide-react';
 import { settingsAPI } from '@/lib/api';
 import { useLanguage } from '@/hooks/useLanguage';
@@ -85,7 +86,7 @@ export default function SettingsPage() {
       applyThemeColors(normalized.primaryColor, normalized.secondaryColor);
     } catch (error: unknown) {
       // Handle 404 errors gracefully by using defaults
-      if (error?.message?.includes('404')) {
+      if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('404')) {
         const defaults: SystemSettings = {
           id: 'system-settings',
           systemName: 'University Bus Management System',
@@ -140,7 +141,7 @@ export default function SettingsPage() {
       setTimeout(() => setSaved(false), 3000);
       
     } catch {
-      console.error('Error saving settings:', error);
+      console.error('Error saving settings:', Error);
       showToast({
         type: 'error',
         title: 'Error!',
@@ -155,18 +156,18 @@ export default function SettingsPage() {
     try {
       setSaving(true);
       
-      const defaultSettings = {
+      const defaultSettings: SystemSettings = {
         id: 'system-settings',
         systemName: 'University Bus Management System',
         logo: '/logo.png',
         primaryColor: '#3B82F6',
         secondaryColor: '#10B981',
         maintenanceMode: false,
-        language: 'en',
+        language: 'en' as 'en' | 'ar',
         updatedAt: new Date().toISOString()
       };
 
-      await settingsAPI.update(defaultSettings);
+      await settingsAPI.update(defaultSettings as unknown as Record<string, unknown>);
       setSettings(defaultSettings);
       
       // Apply default colors and persist
@@ -182,7 +183,7 @@ export default function SettingsPage() {
       });
       
     } catch {
-      console.error('Error resetting settings:', error);
+      console.error('Error resetting settings:', Error);
       showToast({
         type: 'error',
         title: 'Error!',
@@ -329,7 +330,7 @@ export default function SettingsPage() {
                 {/* Logo Settings */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <Image className="w-5 h-5 mr-2 text-green-600" />
+                    <Building2 className="w-5 h-5 mr-2 text-green-600" />
                     {t('logo')} {t('settings')}
                   </h3>
                   <div className="space-y-4">
@@ -338,7 +339,7 @@ export default function SettingsPage() {
                         {settings.logo ? (
                           <Image src={settings.logo} alt="System Logo" width={40} height={40} className="w-full h-full object-contain" />
                         ) : (
-                          <Image className="w-8 h-8 text-gray-400" />
+                          <Building2 className="w-8 h-8 text-gray-400" />
                         )}
                       </div>
                       <div className="flex-1">
@@ -477,7 +478,7 @@ export default function SettingsPage() {
                   <Image src={settings.logo} alt="Logo Preview" width={40} height={40} className="w-full h-full object-contain" />
                 ) : (
                   <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Image className="w-8 h-8 text-gray-400" />
+                    <Building2 className="w-8 h-8 text-gray-400" />
                   </div>
                 )}
               </div>

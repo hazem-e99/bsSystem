@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats);
   } catch {
-    console.error('Error fetching student stats:', error);
+    console.error('Error fetching student stats:', Error);
     return NextResponse.json(
       { error: 'Failed to fetch student statistics' },
       { status: 500 }

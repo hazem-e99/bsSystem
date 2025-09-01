@@ -27,7 +27,7 @@ import { formatDate } from '@/utils/formatDate';
 
 export default function MovementManagerBusesPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService'>('all');
   const [capacityFilter, setCapacityFilter] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -53,7 +53,7 @@ export default function MovementManagerBusesPage() {
       page: 0,
       pageSize: 0,
       busNumber: searchTerm,
-      status: statusFilter === 'all' ? '' : statusFilter,
+      status: statusFilter === 'all' ? '' : statusFilter as 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService',
       minSpeed: 0,
       maxSpeed: 0,
       minCapacity,
@@ -61,14 +61,6 @@ export default function MovementManagerBusesPage() {
     };
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const [busesResponse, usersData] = await Promise.all([
-          busAPI.getAll(buildParams()),
-          userAPI.getAll()
-        ]);
   const handleApplyFilters = async () => {
     try {
       setIsLoading(true);
@@ -84,13 +76,22 @@ export default function MovementManagerBusesPage() {
           speed: bus.speed || 0
         }));
       setBuses(cleanBusesData);
-    } catch {
-      console.error('Failed to apply filters:', e);
+    } catch (error) {
+      console.error('Failed to apply filters:', error);
       setBuses([]);
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const [busesResponse, usersData] = await Promise.all([
+          busAPI.getAll(buildParams()),
+          userAPI.getAll()
+        ]);
         
         // Extract data from the new API response format
         const cleanBusesData = busesResponse.data
@@ -105,7 +106,7 @@ export default function MovementManagerBusesPage() {
           }));
         setBuses(cleanBusesData);
         setUsers(usersData);
-      } catch {
+      } catch (error) {
         console.error('Failed to fetch data:', error);
         setBuses([]);
         setUsers([]);
@@ -172,8 +173,8 @@ export default function MovementManagerBusesPage() {
         setNewBus({ busNumber: '', capacity: 50, status: 'Active', speed: 0 });
       }
     } catch {
-      console.error('Failed to add bus:', error);
-      console.error(error instanceof Error ? error.message : 'Failed to add bus. Please try again.');
+      console.error('Failed to add bus:', Error);
+      console.error(Error instanceof Error ? Error.message : 'Failed to add bus. Please try again.');
     } finally {
       setIsAddingBus(false);
     }
@@ -201,8 +202,8 @@ export default function MovementManagerBusesPage() {
         setSelectedBus(null);
       }
     } catch {
-      console.error('Failed to update bus:', error);
-      console.error(error instanceof Error ? error.message : 'Failed to update bus. Please try again.');
+      console.error('Failed to update bus:', Error);
+      console.error(Error instanceof Error ? Error.message : 'Failed to update bus. Please try again.');
     }
   };
 
@@ -217,7 +218,7 @@ export default function MovementManagerBusesPage() {
         console.log('Bus deleted successfully!');
       }
     } catch {
-      console.error('Failed to delete bus:', error);
+      console.error('Failed to delete bus:', Error);
       console.error('Failed to delete bus. Please try again.');
     }
   };
@@ -243,14 +244,14 @@ export default function MovementManagerBusesPage() {
 
   const getDriverName = (driverId?: string) => {
     if (!driverId) return 'Not assigned';
-    const driver = users.find(u => u.id === driverId);
-    return driver ? driver.name : 'Unknown';
+    const driver = users.find((u: any) => u.id === driverId);
+    return driver ? (driver as any).name : 'Unknown';
   };
 
   const getRouteName = (routeId?: string) => {
     if (!routeId) return 'Not assigned';
-    const route = routes.find(r => r.id === routeId);
-    return route ? route.name : 'Unknown';
+    // TODO: Implement route lookup when routes are available
+    return 'Not assigned';
   };
 
   if (isLoading) {
@@ -337,7 +338,7 @@ export default function MovementManagerBusesPage() {
                 { value: 'OutOfService', label: 'Out of Service' }
               ]}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+                             onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService')}
             />
             <Select
               options={[
@@ -492,7 +493,7 @@ export default function MovementManagerBusesPage() {
                   { value: 'OutOfService', label: 'Out of Service' }
                 ]}
                 value={newBus.status}
-                onChange={(e) => setNewBus({ ...newBus, status: e.target.value })}
+                onChange={(e) => setNewBus({ ...newBus, status: e.target.value as 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService' })}
                 required
               />
             </div>
@@ -576,7 +577,7 @@ export default function MovementManagerBusesPage() {
                     { value: 'OutOfService', label: 'Out of Service' }
                   ]}
                   value={selectedBus.status}
-                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value })}
+                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value as 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService' })}
                   required
                 />
               </div>

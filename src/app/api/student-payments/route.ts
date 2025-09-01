@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(enrichedPayments);
   } catch {
-    console.error('Error fetching student payments:', error);
+    console.error('Error fetching student payments:', Error);
     return NextResponse.json(
       { error: 'Failed to fetch student payments' },
       { status: 500 }

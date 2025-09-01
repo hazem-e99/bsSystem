@@ -128,13 +128,13 @@ export default function TripDetails({
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Created</span>
               <span className="text-sm text-gray-900">
-                {trip.createdAt ? formatDate(trip.createdAt) : 'N/A'}
+                {(trip as any).createdAt ? formatDate((trip as any).createdAt) : 'N/A'}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Last Updated</span>
               <span className="text-sm text-gray-900">
-                {trip.updatedAt ? formatDate(trip.updatedAt) : 'N/A'}
+                {(trip as any).updatedAt ? formatDate((trip as any).updatedAt) : 'N/A'}
               </span>
             </div>
           </CardContent>
@@ -152,22 +152,22 @@ export default function TripDetails({
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Date</span>
               <span className="text-sm text-gray-900">
-                {formatDate(trip.departureTime)}
+                {formatDate(trip.departureTimeOnly)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Departure Time</span>
               <span className="text-sm text-gray-900 flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {formatTime(trip.departureTime)}
+                {formatTime(trip.departureTimeOnly)}
               </span>
             </div>
-            {trip.arrivalTime && (
+            {trip.arrivalTimeOnly && (
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-500">Arrival Time</span>
                 <span className="text-sm text-gray-900 flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  {formatTime(trip.arrivalTime)}
+                  {formatTime(trip.arrivalTimeOnly)}
                 </span>
               </div>
             )}
@@ -188,14 +188,14 @@ export default function TripDetails({
                 <MapPin className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium text-gray-500">Origin</span>
               </div>
-              <span className="text-sm text-gray-900 ml-6">{trip.origin}</span>
+              <span className="text-sm text-gray-900 ml-6">{(trip as any).origin || (trip as any).startLocation || 'N/A'}</span>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-red-600" />
                 <span className="text-sm font-medium text-gray-500">Destination</span>
               </div>
-              <span className="text-sm text-gray-900 ml-6">{trip.destination}</span>
+              <span className="text-sm text-gray-900 ml-6">{(trip as any).destination || (trip as any).endLocation || 'N/A'}</span>
             </div>
           </CardContent>
         </Card>
@@ -237,22 +237,22 @@ export default function TripDetails({
       </div>
 
       {/* Additional Details */}
-      {(trip.notes || trip.description) && (
+      {((trip as any).notes || (trip as any).description) && (
         <Card>
           <CardHeader>
             <CardTitle>Additional Details</CardTitle>
           </CardHeader>
           <CardContent>
-            {trip.notes && (
+            {(trip as any).notes && (
               <div className="space-y-2">
                 <span className="text-sm font-medium text-gray-500">Notes</span>
-                <p className="text-sm text-gray-900">{trip.notes}</p>
+                <p className="text-sm text-gray-900">{(trip as any).notes}</p>
               </div>
             )}
-            {trip.description && (
+            {(trip as any).description && (
               <div className="space-y-2 mt-4">
                 <span className="text-sm font-medium text-gray-500">Description</span>
-                <p className="text-sm text-gray-900">{trip.description}</p>
+                <p className="text-sm text-gray-900">{(trip as any).description}</p>
               </div>
             )}
           </CardContent>

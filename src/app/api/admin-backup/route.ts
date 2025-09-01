@@ -59,16 +59,16 @@ export async function GET(request: NextRequest) {
       const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
       const toDate = dateTo ? new Date(dateTo) : new Date();
       
-      filteredBackups = filteredBackups.filter((backup: Backup) => {
-        const backupDate = new Date(backup.createdAt || backup.date);
-        return backupDate >= fromDate && backupDate <= toDate;
+            filteredBackups = filteredBackups.filter((backup: Backup) => {
+        const backupDate = new Date(backup.createdAt || backup.date || new Date().toISOString());
+        return backupDate >= fromDate && backupDate <= toDate;     
       });
     }
 
     // Enrich backup data with additional information
     const enrichedBackups = filteredBackups.map((backup: Backup) => {
-      // Calculate backup age
-      const backupDate = new Date(backup.createdAt || backup.date);
+             // Calculate backup age
+       const backupDate = new Date(backup.createdAt || backup.date || new Date().toISOString());
       const today = new Date();
       const ageInMinutes = Math.floor((today.getTime() - backupDate.getTime()) / (1000 * 60));
       const ageInHours = Math.floor(ageInMinutes / 60);
@@ -127,10 +127,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Sort backups by date (newest first)
-    enrichedBackups.sort((a: EnrichedBackup, b: EnrichedBackup) => 
-      new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
-    );
+         // Sort backups by date (newest first)
+     enrichedBackups.sort((a: EnrichedBackup, b: EnrichedBackup) => 
+       new Date(b.createdAt || b.date || new Date().toISOString()).getTime() - new Date(a.createdAt || a.date || new Date().toISOString()).getTime()
+     );
 
     // Calculate backup summary
     const totalBackups = enrichedBackups.length;
@@ -176,13 +176,13 @@ export async function GET(request: NextRequest) {
       backups: enrichedBackups,
       summary
     });
-  } catch {
-    console.error('Error fetching backup data:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error fetching backup data:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function POST(request: NextRequest) {
@@ -215,13 +215,13 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBackup, { status: 201 });
-  } catch {
-    console.error('Error creating backup:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error creating backup:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function PUT(request: NextRequest) {
@@ -271,13 +271,13 @@ export async function PUT(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(updatedBackup);
-  } catch {
-    console.error('Error updating backup:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error updating backup:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -320,11 +320,11 @@ export async function DELETE(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Backup deleted successfully', deletedBackup });
-  } catch {
-    console.error('Error deleting backup:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error deleting backup:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }

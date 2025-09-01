@@ -50,6 +50,22 @@ interface Trip {
   supervisorId?: string;
 }
 
+// Interface to match the API response structure
+interface ApiTripViewModel {
+  id: number;
+  busId: number;
+  driverId: number;
+  conductorId: number;
+  tripDate: string;
+  startLocation: string;
+  endLocation: string;
+  stopLocations?: string[];
+  passengers?: number;
+  revenue?: number;
+  assignedStudents?: number[];
+  supervisorId?: number;
+}
+
 interface Bus {
   id: number;
   busNumber: string;
@@ -95,40 +111,24 @@ export default function DriverDashboard() {
       
       // Transform Trip data for this component to match new schema
       const driverTripsData = allTrips
-        .filter((trip: { driverId: string | number }) => trip.driverId === user.id.toString())
-        .map((trip: { 
-          id: number; 
-          busId: number; 
-          driverId: string | number; 
-          conductorId: number; 
-          tripDate?: string; 
-          date?: string; 
-          startTime: string; 
-          endTime: string; 
-          startLocation: string; 
-          endLocation: string; 
-          stopLocations?: string[]; 
-          passengers?: number; 
-          revenue?: number; 
-          assignedStudents?: number[]; 
-          supervisorId?: number 
-        }) => ({
-          id: trip.id,
-          busId: trip.busId,
-          driverId: trip.driverId,
-          conductorId: trip.conductorId,
-          tripDate: trip.tripDate || trip.date, // Handle both old and new field names
+        .filter((trip: any) => trip.driverId.toString() === user.id.toString())
+        .map((trip: any) => ({
+          id: trip.id.toString(),
+          busId: trip.busId.toString(),
+          driverId: trip.driverId.toString(),
+          conductorId: trip.conductorId.toString(),
+          tripDate: trip.tripDate,
           status: 'scheduled' as const, // Default status since new schema doesn't include status
-          startTime: trip.startTime,
-          endTime: trip.endTime,
+          startTime: '08:00', // Default time since API doesn't provide it
+          endTime: '18:00', // Default time since API doesn't provide it
           startLocation: trip.startLocation,
           endLocation: trip.endLocation,
           stopLocations: trip.stopLocations,
           passengers: trip.passengers || 0,
           revenue: trip.revenue || 0,
-          assignedStudents: trip.assignedStudents,
-          supervisorId: trip.supervisorId
-        }));
+          assignedStudents: trip.assignedStudents?.map(s => s.toString()),
+          supervisorId: trip.supervisorId?.toString()
+        })) as Trip[];
       console.log('👨‍✈️ Filtered trips for driver:', driverTripsData.length);
       setDriverTrips(driverTripsData);
       
@@ -168,7 +168,7 @@ export default function DriverDashboard() {
         buses: allBusesResponse.data.length
       });
       
-    } catch {
+    } catch (error) {
       console.error('❌ Failed to fetch driver data from db.json:', error);
       showToast({
         type: 'error',
@@ -244,28 +244,34 @@ export default function DriverDashboard() {
     setIsEndingTrip(true);
     
     try {
-      // Update trip status in API
+      // Update trip status in API - remove unsupported properties
       await tripAPI.update(activeTrip.id, {
-        ...activeTrip,
-        status: 'completed',
-        actualEndTime: new Date().toLocaleTimeString('en-US', { 
-          hour12: false, 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        })
+        busId: Number(activeTrip.busId),
+        driverId: Number(activeTrip.driverId),
+        conductorId: Number(activeTrip.conductorId),
+        tripDate: activeTrip.tripDate,
+        startLocation: activeTrip.startLocation,
+        endLocation: activeTrip.endLocation,
+        stopLocations: activeTrip.stopLocations?.map(stop => ({ 
+          address: stop, 
+          arrivalTimeOnly: '08:00', 
+          departureTimeOnly: '08:00' 
+        })) || [],
+        departureTimeOnly: activeTrip.startTime,
+        arrivalTimeOnly: activeTrip.endTime || ''
       });
       
       // Refresh data after updating
       const allTrips = await tripAPI.getAll();
-      const driverTripsData = allTrips.filter((t: Trip) => t.driverId === user.id.toString());
-      setDriverTrips(driverTripsData);
+      const driverTripsData = allTrips.filter((t: any) => t.driverId.toString() === user.id.toString());
+      setDriverTrips(driverTripsData as unknown as Trip[]);
       
       // Update today's trips
       const today = new Date().toISOString().split('T')[0];
-      const todayTripsData = driverTripsData.filter((t: Trip) => 
-        t.date === today || t.date.startsWith(today)
+      const todayTripsData = driverTripsData.filter((t: any) => 
+        t.tripDate === today || t.tripDate.startsWith(today)
       );
-      setTodayTrips(todayTripsData);
+      setTodayTrips(todayTripsData as unknown as Trip[]);
       
       // Clear active trip
       setActiveTrip(null);
@@ -279,7 +285,7 @@ export default function DriverDashboard() {
       
       setTimeout(() => setTripEnded(false), 3000);
       
-    } catch {
+    } catch (error) {
       console.error('Failed to end trip:', error);
       showToast({
         type: 'error',
@@ -309,9 +315,9 @@ export default function DriverDashboard() {
   };
 
   const getBusLabel = (busId: string) => {
-    const bus = buses.find(b => b.id === busId);
+    const bus = buses.find(b => b.id === Number(busId));
     if (bus) {
-      return bus.number ? `Bus ${bus.number}` : `Bus ${bus.id}`;
+      return bus.busNumber ? `Bus ${bus.busNumber}` : `Bus ${bus.id}`;
     }
     return 'Unknown Bus';
   };
@@ -337,7 +343,7 @@ export default function DriverDashboard() {
     const now = new Date();
     const upcoming = driverTrips
       .filter(t => t.status === 'scheduled')
-      .map(t => ({ t, start: new Date(`${t.date}T${t.startTime}`) }))
+      .map(t => ({ t, start: new Date(`${t.tripDate}T${t.startTime}`) }))
       .filter(x => !isNaN(x.start.getTime()) && x.start.getTime() > now.getTime())
       .sort((a, b) => a.start.getTime() - b.start.getTime());
     return upcoming.length ? upcoming[0].t : null;
@@ -417,7 +423,7 @@ export default function DriverDashboard() {
           </Card>
           <Card className="bg-white border-0 shadow-lg rounded-xl hover:shadow-xl transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Today's Trips</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-600">Today&apos;s Trips</CardTitle>
               <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
                 <Calendar className="h-5 w-5 text-white" />
               </div>

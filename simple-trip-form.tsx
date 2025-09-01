@@ -1,11 +1,23 @@
+import React, { useState } from 'react';
+
 // Default Solution - استخدام IDs مضمونة
 export const GUARANTEED_WORKING_IDS = {
   driverId: 2,    // Yousry Essam - مضمون 100%
   conductorId: 3  // Yousry Essam - مضمون 100%
 };
 
+interface TripData {
+  busId: number;
+  startLocation: string;
+  endLocation: string;
+  tripDate: string;
+  departureTimeOnly: string;
+  arrivalTimeOnly: string;
+  stopLocations: any[];
+}
+
 // استخدم هذه الـ IDs في أي Trip creation
-export function createTripSafe(tripData) {
+export function createTripSafe(tripData: TripData) {
   return {
     ...tripData,
     driverId: GUARANTEED_WORKING_IDS.driverId,
@@ -23,7 +35,7 @@ export default function SimpleTripForm() {
     arrivalTimeOnly: ''
   });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     // استخدم IDs مضمونة

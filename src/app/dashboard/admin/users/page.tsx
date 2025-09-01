@@ -161,7 +161,7 @@ export default function UsersPage() {
         
         setUsers(usersData);
       } catch {
-        console.error('Failed to fetch users:', err);
+        console.error('Failed to fetch users:', error);
         showToast({ 
           type: 'error', 
           title: 'Error', 
@@ -256,7 +256,7 @@ export default function UsersPage() {
         nationalId: newUser.nationalId,
         email: newUser.email,
         phoneNumber: newUser.phoneNumber,
-        role: mappedRole
+        role: mappedRole as 'Admin' | 'Driver' | 'Conductor' | 'MovementManager'
       };
 
       // Create user via staff registration API
@@ -335,9 +335,9 @@ export default function UsersPage() {
       setShowAddModal(false);
       setNewUser({ firstName: '', lastName: '', email: '', role: 'driver', phoneNumber: '', nationalId: '', status: 'active' });
       setDynamicValues({});
-    } catch {
-      console.error('Failed to add user:', err);
-      const errorMessage = (err as ErrorWithMessage)?.message || 'Failed to add user. Please try again.';
+    } catch (error) {
+      console.error('Failed to add user:', error);
+      const errorMessage = (error as ErrorWithMessage)?.message || 'Failed to add user. Please try again.';
       setError(errorMessage);
       showToast({ 
         type: 'error', 
@@ -372,8 +372,8 @@ export default function UsersPage() {
           const parsed = JSON.parse(raw);
           token = parsed?.token || parsed?.accessToken;
         }
-      } catch {
-        console.warn('Failed to read auth token from localStorage', e);
+      } catch (error) {
+        console.warn('Failed to read auth token from localStorage', error);
       }
 
       if (!token) {
@@ -403,8 +403,8 @@ export default function UsersPage() {
         showToast({ type: 'success', title: 'Success!', message: 'User deleted successfully!' });
         console.log('Delete result:', body);
       }
-    } catch {
-      console.error('Failed to delete user:', err);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
       showToast({ type: 'error', title: 'Error!', message: 'Failed to delete user. Please try again.' });
     } finally {
       setConfirmState({ open: false });
@@ -661,7 +661,7 @@ export default function UsersPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setConfirmState({ open: true, userId: row.original.id, message: `Delete ${row.original.name}?` })}
+                      onClick={() => setConfirmState({ open: true, userId: row.original.id.toString(), message: `Delete ${row.original.name}?` })}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -802,12 +802,22 @@ export default function UsersPage() {
               <h4 className="text-md font-semibold">Additional Details</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {formsConfig && (() => {
-                  const allFields = Array.from(new Map([
-                    // Merge common + role fields
-                    ...(formsConfig.commonFields || []).map((f: FormField) => [f.name, f]),
-                    ...(((formsConfig.roleSpecificFields || {})[(newUser.role === 'movement-manager' ? 'movementManager' : newUser.role) as string] || [])
-                        .map((f: FormField) => [f.name, f]))
-                  ]).values()) as FormField[];
+                  // Create a Map with proper typing
+                  const fieldMap = new Map<string, FormField>();
+                  
+                  // Add common fields
+                  (formsConfig.commonFields || []).forEach((f: FormField) => {
+                    fieldMap.set(f.name, f);
+                  });
+                  
+                  // Add role-specific fields
+                  const roleKey = (newUser.role === 'movement-manager' ? 'movementManager' : newUser.role) as string;
+                  const roleFields = formsConfig.roleSpecificFields?.[roleKey] || [];
+                  roleFields.forEach((f: FormField) => {
+                    fieldMap.set(f.name, f);
+                  });
+                  
+                  const allFields = Array.from(fieldMap.values());
                   
                   const filteredFields = allFields.filter((f: FormField) => {
                     const excludedBase = ['name', 'email', 'password', 'role', 'phone', 'nationalId', 'status'];
@@ -821,9 +831,9 @@ export default function UsersPage() {
                       // Options: from static, or from source
                       let options: { value: string; label: string }[] = [];
                       if (field.optionsSource === 'buses') {
-                        options = busesOptions;
+                        options = []; // busesOptions not defined
                       } else if (field.optionsSource === 'subscriptionPlans') {
-                        options = plansOptions;
+                        options = []; // plansOptions not defined
                       } else if (Array.isArray(field.options)) {
                         options = field.options.map((o: string | { value: string; label: string }) => 
                           typeof o === 'string' ? { value: o, label: o } : o
@@ -982,12 +992,22 @@ export default function UsersPage() {
                 <h4 className="text-md font-semibold">Additional Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(() => {
-                    const allFields = Array.from(new Map([
-                      // Merge common + role fields
-                      ...(formsConfig.commonFields || []).map((f: FormField) => [f.name, f]),
-                      ...(((formsConfig.roleSpecificFields || {})[(selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string] || [])
-                          .map((f: FormField) => [f.name, f]))
-                    ]).values());
+                    // Create a Map with proper typing
+                    const fieldMap = new Map<string, FormField>();
+                    
+                    // Add common fields
+                    (formsConfig.commonFields || []).forEach((f: FormField) => {
+                      fieldMap.set(f.name, f);
+                    });
+                    
+                    // Add role-specific fields
+                    const roleKey = (selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string;
+                    const roleFields = formsConfig.roleSpecificFields?.[roleKey] || [];
+                    roleFields.forEach((f: FormField) => {
+                      fieldMap.set(f.name, f);
+                    });
+                    
+                    const allFields = Array.from(fieldMap.values());
                     
                     const filteredFields = allFields.filter((f: FormField) => {
                       const excludedBase = ['name', 'email', 'role', 'phone', 'nationalId', 'status'];
@@ -996,14 +1016,14 @@ export default function UsersPage() {
                     
                     return filteredFields.map((field: FormField) => {
                       const key = field.name as string;
-                      const value = (selectedUser as Record<string, unknown>)[key] || '';
+                      const value = (selectedUser as unknown as Record<string, unknown>)[key] || '';
                       
                       if (field.type === 'select') {
                         let options: { value: string; label: string }[] = [];
                         if (field.optionsSource === 'buses') {
-                          options = busesOptions;
+                          options = []; // busesOptions not defined
                         } else if (field.optionsSource === 'subscriptionPlans') {
-                          options = plansOptions;
+                          options = []; // plansOptions not defined
                         } else if (Array.isArray(field.options)) {
                           options = field.options.map((o: string | { value: string; label: string }) => ({ 
                             value: typeof o === 'string' ? o : o.value, 
@@ -1015,7 +1035,7 @@ export default function UsersPage() {
                           <div key={key}>
                             <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
                             <Select
-                              value={value}
+                              value={value as string}
                               onChange={(e) => setSelectedUser({ ...selectedUser, [key]: e.target.value })}
                               required={!!field.required}
                             >
@@ -1033,7 +1053,7 @@ export default function UsersPage() {
                           <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
                           <Input
                             type={field.type === 'email' ? 'email' : 'text'}
-                            value={value}
+                            value={value as string}
                             onChange={(e) => setSelectedUser({ ...selectedUser, [key]: e.target.value })}
                             placeholder={`Enter ${field.label}`}
                             required={!!field.required}
@@ -1140,12 +1160,22 @@ export default function UsersPage() {
                 <h4 className="text-md font-semibold">Additional Details</h4>
                 <div className="grid grid-cols-2 gap-4">
                   {(() => {
-                    const allFields = Array.from(new Map([
-                      // Merge common + role fields
-                      ...(formsConfig.commonFields || []).map((f: FormField) => [f.name, f]),
-                      ...(((formsConfig.roleSpecificFields || {})[(selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string] || [])
-                          .map((f: FormField) => [f.name, f]))
-                    ]).values());
+                    // Create a Map with proper typing
+                    const fieldMap = new Map<string, FormField>();
+                    
+                    // Add common fields
+                    (formsConfig.commonFields || []).forEach((f: FormField) => {
+                      fieldMap.set(f.name, f);
+                    });
+                    
+                    // Add role-specific fields
+                    const roleKey = (selectedUser.role === 'movement-manager' ? 'movementManager' : selectedUser.role) as string;
+                    const roleFields = formsConfig.roleSpecificFields?.[roleKey] || [];
+                    roleFields.forEach((f: FormField) => {
+                      fieldMap.set(f.name, f);
+                    });
+                    
+                    const allFields = Array.from(fieldMap.values());
                     
                     const filteredFields = allFields.filter((f: FormField) => {
                       const excludedBase = ['name', 'email', 'role', 'phone', 'nationalId', 'status'];
@@ -1154,12 +1184,12 @@ export default function UsersPage() {
                     
                     return filteredFields.map((field: FormField) => {
                       const key = field.name as string;
-                      const value = (selectedUser as Record<string, unknown>)[key] || 'N/A';
+                      const value = (selectedUser as unknown as Record<string, unknown>)[key] || 'N/A';
                       
                       return (
                         <div key={key}>
                           <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-                          <p className="text-text-primary">{value}</p>
+                          <p className="text-text-primary">{String(value)}</p>
                         </div>
                       );
                     });

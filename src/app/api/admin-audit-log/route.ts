@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface AuditLog {
   id: string;
   action: string;
@@ -91,8 +98,8 @@ export async function GET(request: NextRequest) {
       const fromDate = dateFrom ? new Date(dateFrom) : new Date(0);
       const toDate = dateTo ? new Date(dateTo) : new Date();
       
-      filteredLogs = filteredLogs.filter((log: AuditLog) => {
-        const logDate = new Date(log.timestamp || log.createdAt);
+            filteredLogs = filteredLogs.filter((log: AuditLog) => {      
+        const logDate = new Date(log.timestamp || log.createdAt || new Date().toISOString());  
         return logDate >= fromDate && logDate <= toDate;
       });
     }
@@ -111,8 +118,8 @@ export async function GET(request: NextRequest) {
     const enrichedLogs = filteredLogs.map((log: AuditLog) => {
       const user = users.find((u: User) => u.id === log.userId);
       
-      // Calculate log age
-      const logDate = new Date(log.timestamp || log.createdAt);
+             // Calculate log age
+       const logDate = new Date(log.timestamp || log.createdAt || new Date().toISOString());
       const today = new Date();
       const ageInMinutes = Math.floor((today.getTime() - logDate.getTime()) / (1000 * 60));
       const ageInHours = Math.floor(ageInMinutes / 60);
@@ -182,10 +189,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Sort logs by timestamp (newest first)
-    enrichedLogs.sort((a: EnrichedAuditLog, b: EnrichedAuditLog) => 
-      new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime()
-    );
+         // Sort logs by timestamp (newest first)
+     enrichedLogs.sort((a: EnrichedAuditLog, b: EnrichedAuditLog) => 
+       new Date(b.timestamp || b.createdAt || new Date().toISOString()).getTime() - new Date(a.timestamp || a.createdAt || new Date().toISOString()).getTime()
+     );
 
     // Apply pagination
     const paginatedLogs = enrichedLogs.slice(offset, offset + limit);
@@ -266,13 +273,13 @@ export async function GET(request: NextRequest) {
       logs: paginatedLogs,
       summary
     });
-  } catch {
-    console.error('Error fetching audit logs:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error fetching audit logs:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function POST(request: NextRequest) {
@@ -306,13 +313,13 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newLog, { status: 201 });
-  } catch {
-    console.error('Error creating audit log:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error creating audit log:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function PUT(request: NextRequest) {
@@ -362,13 +369,13 @@ export async function PUT(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
 
     return NextResponse.json(updatedLog);
-  } catch {
-    console.error('Error updating audit log:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error updating audit log:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -411,11 +418,11 @@ export async function DELETE(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Audit log deleted successfully', deletedLog });
-  } catch {
-    console.error('Error deleting audit log:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error deleting audit log:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }

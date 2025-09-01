@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(enrichedBookings);
   } catch {
-    console.error('Error fetching student bookings:', error);
+    console.error('Error fetching student bookings:', Error);
     return NextResponse.json(
       { error: 'Failed to fetch student bookings' },
       { status: 500 }

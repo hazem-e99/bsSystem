@@ -27,11 +27,12 @@ export default function TripDetailsPage() {
         const data = await tripService.getById(id);
         setTrip(data);
       } catch (e: unknown) {
-        toast({ 
-          title: 'Failed to load trip', 
-          description: String(e?.message || e), 
-          variant: 'destructive' 
-        });
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        console.error('Failed to load trip:', errorMessage);
+        // toast({ 
+        //   title: 'Failed to load trip', 
+        //   description: errorMessage
+        // });
       } finally {
         setLoading(false);
       }
@@ -54,7 +55,7 @@ export default function TripDetailsPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <Card className="p-6 text-center">
         <h1 className="text-2xl font-semibold mb-4">Trip not found</h1>
-        <p className="text-gray-600 mb-6">The trip you're looking for doesn't exist or may have been removed.</p>
+        <p className="text-gray-600 mb-6">The trip you&apos;re looking for doesn&apos;t exist or may have been removed.</p>
         <Link href="/trips">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />

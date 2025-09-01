@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
-import path from 'path';
+import * as path from 'path';
 
 interface User {
   id: string;
@@ -10,19 +10,33 @@ interface User {
   phone: string;
 }
 
+interface Context {
+  params: Promise<{ id: string }>;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: Context
+): Promise<NextResponse> {
   try {
+    const { id } = await context.params;
+    
+    // Validate id parameter
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid supervisor ID' },
+        { status: 400 }
+      );
+    }
+    
     // Read db.json file
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
-    const db = JSON.parse(dbContent);
+    const db = JSON.parse(dbContent) as { users?: User[] };
 
     // Find supervisor by ID
     const supervisor = db.users?.find((user: User) => 
-      user.id.toString() === params.id && user.role === 'supervisor'
+      user.id.toString() === id && user.role === 'supervisor'
     );
 
     if (!supervisor) {
@@ -33,7 +47,7 @@ export async function GET(
     }
 
     return NextResponse.json(supervisor);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error reading supervisor data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -4,23 +4,40 @@ import path from 'path';
 
 interface Trip {
   id: string;
-  date: string;
-  status: string;
+  busId: string;
+  driverId: string;
+  conductorId: string;
+  supervisorId: string;
   routeId: string;
+  status: string;
   passengers?: number;
+  startLocation: string;
+  endLocation: string;
+  tripDate: string;
+  departureTimeOnly: string;
+  arrivalTimeOnly: string;
+  date: string;
 }
 
 interface Payment {
   id: string;
-  date: string;
+  tripId: string;
+  studentId: string;
   status: string;
   amount: number;
+  date: string;
+  method: string;
 }
 
 interface Booking {
   id: string;
-  date: string;
+  tripId: string;
+  studentId: string;
+  stopId: string;
   status: string;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AttendanceRecord {
@@ -39,6 +56,9 @@ interface User {
 interface Route {
   id: string;
   name: string;
+  startPoint: string;
+  endPoint: string;
+  status: string;
 }
 
 interface MonthlyTrend {
@@ -57,6 +77,7 @@ interface RoutePerformance {
   totalPassengers: number;
   averagePassengers: number;
   completionRate: number;
+  totalRevenue: number;
 }
 
 interface Bus {
@@ -471,7 +492,7 @@ export async function GET(request: NextRequest) {
     };
     
     return NextResponse.json(analyticsData);
-  } catch {
+  } catch (error) {
     console.error('Error calculating admin analytics:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

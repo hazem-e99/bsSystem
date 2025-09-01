@@ -22,6 +22,31 @@ interface Trip {
   startTime: string;
   endTime: string;
   passengers: number;
+  bookings?: {
+    total: number;
+    confirmed: number;
+    pending: number;
+    cancelled: number;
+    list: any[];
+  };
+  payments?: {
+    total: number;
+    completed: number;
+    pending: number;
+    failed: number;
+    totalRevenue: number;
+  };
+  metrics?: {
+    tripDuration: number;
+    utilizationRate: number;
+    revenuePerPassenger: number;
+  };
+  attendance?: {
+    total: number;
+    present: number;
+    absent: number;
+    rate: number;
+  };
 }
 
 interface Route {
@@ -44,7 +69,9 @@ interface Bus {
 interface Booking {
   id: string;
   tripId: string;
+  studentId: string;
   status: string;
+  date?: string;
 }
 
 interface Payment {
@@ -242,7 +269,7 @@ export async function GET(request: NextRequest) {
       trips: enrichedTrips,
       summary
     });
-  } catch {
+  } catch (error) {
     console.error('Error fetching driver trips:', error);
     return NextResponse.json(
       { error: 'Failed to fetch driver trips' },

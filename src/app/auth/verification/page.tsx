@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
-import { Mail, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 import { validateVerification } from '@/utils/validateVerification';
 
-export default function VerificationPage() {
+function VerificationForm() {
   const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
@@ -183,7 +183,7 @@ export default function VerificationPage() {
             Verify Your Email
           </CardTitle>
           <CardDescription className="text-gray-600">
-            We've sent a verification code to:
+            We&apos;ve sent a verification code to:
             <br />
             <span className="font-medium text-gray-900">{email}</span>
           </CardDescription>
@@ -248,5 +248,20 @@ export default function VerificationPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function VerificationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <VerificationForm />
+    </Suspense>
   );
 }

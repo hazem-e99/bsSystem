@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import TripForm from '@/components/trips/TripForm';
 import TripList from '@/components/trips/TripList';
 import TripDetails from '@/components/trips/TripDetails';
 import { tripService } from '@/lib/tripService';
@@ -172,32 +171,30 @@ export default function AdminTripsPage() {
       {mode === 'create' && (
         <div className="space-y-4">
           <Button variant="outline" onClick={() => setMode('list')}>Back</Button>
-          <TripForm onSaved={onSaved} onCancel={() => setMode('list')} />
+          <div className="text-center p-8 text-gray-500">
+            Trip creation form is not available yet.
+          </div>
         </div>
       )}
 
       {mode === 'edit' && current && (
         <div className="space-y-4">
           <Button variant="outline" onClick={() => setMode('list')}>Back</Button>
-          <TripForm initial={{
-            id: current.id,
-            busId: current.busId,
-            driverId: current.driverId,
-            conductorId: current.conductorId,
-            startLocation: current.startLocation,
-            endLocation: current.endLocation,
-            tripDate: current.tripDate,
-            departureTimeOnly: current.departureTimeOnly,
-            arrivalTimeOnly: current.arrivalTimeOnly,
-            stopLocations: current.stopLocations || [],
-          }} onSaved={onSaved} onCancel={() => setMode('list')} />
+          <div className="text-center p-8 text-gray-500">
+            Trip editing form is not available yet.
+          </div>
         </div>
       )}
 
       {mode === 'view' && current && (
         <div className="space-y-4">
           <Button variant="outline" onClick={() => setMode('list')}>Back</Button>
-          <TripDetails trip={current} />
+          <TripDetails 
+            trip={current} 
+            onBack={() => setMode('list')}
+            onEdit={(trip) => { setCurrent(trip); setMode('edit'); }}
+            onDelete={(trip) => onDelete(trip)}
+          />
         </div>
       )}
     </div>

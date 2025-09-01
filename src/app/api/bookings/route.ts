@@ -32,6 +32,12 @@ interface Payment {
 interface Bus {
   id: string;
   capacity: number;
+  assignedSupervisorId?: string;
+}
+
+interface Route {
+  id: string;
+  assignedSupervisors?: string[];
 }
 
 export async function GET(request: NextRequest) {
@@ -57,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(bookings);
-  } catch {
+  } catch (error) {
     console.error('Error reading bookings data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -150,7 +156,9 @@ export async function POST(request: NextRequest) {
         const passengers = Number(db.trips[tripIndex].passengers || 0) + 1;
         db.trips[tripIndex] = { ...db.trips[tripIndex], assignedStudents, passengers };
       }
-    } catch {}
+    } catch (error) {
+      console.error('Error updating trip passengers:', error);
+    }
     
     // Send notification to supervisor (bus.assignedSupervisorId -> trip.supervisorId -> route.assignedSupervisors[0])
     try {
@@ -183,12 +191,14 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date().toISOString()
         });
       }
-    } catch {}
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBooking, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating booking:', error);
     return NextResponse.json(
       { message: 'Internal server error' },

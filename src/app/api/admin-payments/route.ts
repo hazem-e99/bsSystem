@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  studentId?: string;
+  department?: string;
+  year?: string;
+}
+
 interface Payment {
   id: string;
   status: string;
@@ -179,7 +189,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate monthly trends
-    const monthlyTrends: Record<string, number> = {};
+    const monthlyTrends: Record<string, {
+      month: string;
+      total: number;
+      completed: number;
+      pending: number;
+      failed: number;
+      revenue: number;
+    }> = {};
     enrichedPayments.forEach((payment: EnrichedPayment) => {
       const month = new Date(payment.date).toISOString().slice(0, 7); // YYYY-MM
       if (!monthlyTrends[month]) {
@@ -245,8 +262,8 @@ export async function GET(request: NextRequest) {
         monthly: monthlyTrendsArray
       }
     });
-  } catch {
-    console.error('Error fetching payments data:', error);
+     } catch (error) {
+     console.error('Error fetching payments data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -283,8 +300,8 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newPayment, { status: 201 });
-  } catch {
-    console.error('Error creating payment:', error);
+     } catch (error) {
+     console.error('Error creating payment:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

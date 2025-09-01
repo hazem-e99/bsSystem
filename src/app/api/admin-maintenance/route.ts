@@ -41,21 +41,32 @@ interface EnrichedMaintenance extends MaintenanceRecord {
     id: string;
     name: string;
     email: string;
-    phone: string;
     role: string;
   } | null;
-  metadata: {
+  metrics: {
     ageInDays: number;
     priorityLevel: number;
     isOpen: boolean;
     isInProgress: boolean;
     isCompleted: boolean;
     isCancelled: boolean;
+    estimatedCost: number;
+    actualCost: number;
     costVariance: number;
     costVariancePercentage: number;
+    estimatedDuration: number;
+    actualDuration: number;
     timeVariance: number;
     timeVariancePercentage: number;
   };
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
 }
 
 interface Bus {
@@ -126,10 +137,10 @@ export async function GET(request: NextRequest) {
       const assignedUser = users.find((u: User) => u.id === record.assignedTo);
       const reportedBy = users.find((u: User) => u.id === record.reportedBy);
       
-      // Calculate maintenance age
-      const maintenanceDate = new Date(record.createdAt || record.date);
-      const today = new Date();
-      const ageInDays = Math.floor((today.getTime() - maintenanceDate.getTime()) / (1000 * 60 * 60 * 24));
+             // Calculate maintenance age
+       const maintenanceDate = new Date(record.createdAt || record.date || new Date().toISOString());
+       const today = new Date();
+       const ageInDays = Math.floor((today.getTime() - maintenanceDate.getTime()) / (1000 * 60 * 60 * 24));
       
       // Calculate priority level
       const priorityLevel = record.priority === 'critical' ? 4 : 
@@ -191,12 +202,12 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      return {
-        ...record,
-        bus: busDetails,
-        assignedUser: assignedUserDetails,
-        reportedBy: reportedByDetails,
-        metrics: {
+             return {
+         ...record,
+         bus: busDetails,
+         assignedUser: assignedUserDetails,
+         reportedByUser: reportedByDetails,
+         metrics: {
           ageInDays,
           priorityLevel,
           isOpen,
@@ -215,13 +226,13 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Sort maintenance by priority and date (highest priority and oldest first)
-    enrichedMaintenance.sort((a: EnrichedMaintenance, b: EnrichedMaintenance) => {
-      if (a.metadata.priorityLevel !== b.metadata.priorityLevel) {
-        return b.metadata.priorityLevel - a.metadata.priorityLevel;
-      }
-      return new Date(a.createdAt || a.date).getTime() - new Date(b.createdAt || b.date).getTime();
-    });
+         // Sort maintenance by priority and date (highest priority and oldest first)
+     enrichedMaintenance.sort((a: EnrichedMaintenance, b: EnrichedMaintenance) => {
+       if (a.metrics.priorityLevel !== b.metrics.priorityLevel) {
+         return b.metrics.priorityLevel - a.metrics.priorityLevel;
+       }
+       return new Date(a.createdAt || a.date || new Date().toISOString()).getTime() - new Date(b.createdAt || b.date || new Date().toISOString()).getTime();
+     });
 
     // Calculate maintenance summary
     const totalMaintenance = enrichedMaintenance.length;
@@ -240,13 +251,13 @@ export async function GET(request: NextRequest) {
     const emergencyMaintenance = enrichedMaintenance.filter((m: EnrichedMaintenance) => m.type === 'emergency').length;
     const inspectionMaintenance = enrichedMaintenance.filter((m: EnrichedMaintenance) => m.type === 'inspection').length;
     
-    const totalEstimatedCost = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metadata.estimatedCost || 0), 0);
-    const totalActualCost = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metadata.actualCost || 0), 0);
-    const totalCostVariance = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + m.metadata.costVariance, 0);
-    
-    const totalEstimatedDuration = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metadata.estimatedDuration || 0), 0);
-    const totalActualDuration = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metadata.actualDuration || 0), 0);
-    const totalTimeVariance = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + m.metadata.timeVariance, 0);
+         const totalEstimatedCost = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metrics.estimatedCost || 0), 0);
+     const totalActualCost = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metrics.actualCost || 0), 0);
+     const totalCostVariance = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + m.metrics.costVariance, 0);
+     
+     const totalEstimatedDuration = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metrics.estimatedDuration || 0), 0);
+     const totalActualDuration = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + (m.metrics.actualDuration || 0), 0);
+     const totalTimeVariance = enrichedMaintenance.reduce((sum: number, m: EnrichedMaintenance) => sum + m.metrics.timeVariance, 0);
     
     const completionRate = totalMaintenance > 0 ? (completedMaintenance / totalMaintenance) * 100 : 0;
     const averageCostVariance = enrichedMaintenance.length > 0 ? totalCostVariance / enrichedMaintenance.length : 0;
@@ -281,13 +292,13 @@ export async function GET(request: NextRequest) {
       maintenance: enrichedMaintenance,
       summary
     });
-  } catch {
-    console.error('Error fetching maintenance data:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error fetching maintenance data:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function POST(request: NextRequest) {
@@ -324,13 +335,13 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newMaintenance, { status: 201 });
-  } catch {
-    console.error('Error creating maintenance record:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error creating maintenance record:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function PUT(request: NextRequest) {
@@ -380,13 +391,13 @@ export async function PUT(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
 
     return NextResponse.json(updatedMaintenance);
-  } catch {
-    console.error('Error updating maintenance record:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error updating maintenance record:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -429,11 +440,11 @@ export async function DELETE(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Maintenance record deleted successfully', deletedMaintenance });
-  } catch {
-    console.error('Error deleting maintenance record:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error deleting maintenance record:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }

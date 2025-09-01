@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -27,6 +27,21 @@ import { ColumnDef } from '@tanstack/react-table';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { User, UserRole } from '@/types/user';
 import { formatDate } from '@/utils/formatDate';
+
+// Student interface to match the API response
+interface Student {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  nationalId: string;
+  status?: string;
+  profilePictureUrl?: string;
+  studentAcademicNumber?: string;
+  department?: string;
+  yearOfStudy?: string;
+}
 
 // API response interfaces
 interface ApiResponse {
@@ -100,7 +115,10 @@ export default function UsersPage() {
         } else if (roleFilter !== 'all') {
           // Use role-specific endpoint for staff
           const roleUsers = await userAPI.getByRole(roleFilter);
-          usersData = roleUsers;
+          usersData = roleUsers.map((user: any) => ({
+            ...user,
+            role: user.role as UserRole
+          })) as User[];
         } else {
           // Get all users (staff only from /Users)
           const allUsers = await userAPI.getAll();
@@ -125,12 +143,18 @@ export default function UsersPage() {
             updatedAt: new Date().toISOString(),
           })) as User[];
           
-          usersData = [...allUsers, ...mappedStudents];
+          // Map staff users to ensure proper typing
+          const mappedStaff = allUsers.map((user: any) => ({
+            ...user,
+            role: user.role as UserRole
+          })) as User[];
+          
+          usersData = [...mappedStaff, ...mappedStudents];
         }
         
         setUsers(usersData);
-      } catch {
-        console.error('Failed to fetch users:', err);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
         showToast({ 
           type: 'error', 
           title: 'Error', 
@@ -229,7 +253,10 @@ export default function UsersPage() {
       const refreshed = roleFilter === 'student' ? [] : 
                        roleFilter !== 'all' ? await userAPI.getByRole(roleFilter) : 
                        await userAPI.getAll();
-      setUsers(refreshed);
+      setUsers(refreshed.map((user: any) => ({
+        ...user,
+        role: user.role as UserRole
+      })) as User[]);
       
       // Show success message
       showToast({ 
@@ -240,9 +267,9 @@ export default function UsersPage() {
       
       setShowAddModal(false);
       setNewUser({ firstName: '', lastName: '', email: '', role: 'driver', phoneNumber: '', nationalId: '', status: 'active' });
-    } catch {
-      console.error('Failed to add user:', err);
-      const errorMessage = (err as ErrorWithMessage)?.message || 'Failed to add user. Please try again.';
+    } catch (error) {
+      console.error('Failed to add user:', error);
+      const errorMessage = (error as ErrorWithMessage)?.message || 'Failed to add user. Please try again.';
       setError(errorMessage);
       showToast({ 
         type: 'error', 
@@ -277,8 +304,8 @@ export default function UsersPage() {
           const parsed = JSON.parse(raw);
           token = parsed?.token || parsed?.accessToken;
         }
-      } catch {
-        console.warn('Failed to read auth token from localStorage', e);
+      } catch (error) {
+        console.warn('Failed to read auth token from localStorage', error);
       }
 
       if (!token) {
@@ -308,8 +335,8 @@ export default function UsersPage() {
         showToast({ type: 'success', title: 'Success!', message: 'User deleted successfully!' });
         console.log('Delete result:', body);
       }
-    } catch {
-      console.error('Failed to delete user:', err);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
       showToast({ type: 'error', title: 'Error!', message: 'Failed to delete user. Please try again.' });
     } finally {
       setConfirmState({ open: false });
@@ -972,8 +999,11 @@ export default function UsersPage() {
               } else {
                 setCpMessage({ type: 'error', text: (resp as { success: boolean; message?: string })?.message || 'Failed to change password.' });
               }
-            } catch (err: unknown) {
-              setCpMessage({ type: 'error', text: err?.message || 'Failed to change password.' });
+            } catch (error: unknown) {
+              const errorMessage = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' 
+                ? error.message 
+                : 'Failed to change password.';
+              setCpMessage({ type: 'error', text: errorMessage });
             } finally {
               setCpLoading(false);
             }

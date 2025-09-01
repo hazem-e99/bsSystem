@@ -9,6 +9,9 @@ export interface Bus {
   speed: number;
   capacity: number;
   status: 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService';
+  fuelLevel?: number;
+  location?: Location;
+  updatedAt?: string;
 }
 
 // API Response Schema

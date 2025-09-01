@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(announcements);
   } catch {
-    console.error('Error reading announcements data:', error);
+    console.error('Error reading announcements data:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(newAnnouncement, { status: 201 });
   } catch {
-    console.error('Error creating announcement:', error);
+    console.error('Error creating announcement:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

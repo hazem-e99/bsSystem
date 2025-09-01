@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -21,7 +21,8 @@ import {
   CreditCard,
   Wallet,
   Smartphone,
-  DollarSign
+  DollarSign,
+  CheckCircle
 } from 'lucide-react';
 import { userAPI, bookingAPI, tripAPI, paymentAPI } from '@/lib/api';
 
@@ -113,7 +114,7 @@ export default function SupervisorAttendancePage() {
 
         // Generate initial attendance records
         generateInitialAttendanceRecords();
-      } catch {
+      } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
         setIsLoading(false);

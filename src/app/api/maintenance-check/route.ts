@@ -16,7 +16,7 @@ export async function GET() {
     return NextResponse.json({
       maintenanceMode: false,
       timestamp: new Date().toISOString(),
-      error: error?.message?.includes('404') ? 'Maintenance endpoint not available' : 'Failed to check maintenance mode'
+      error: (error as any)?.message?.includes('404') ? 'Maintenance endpoint not available' : 'Failed to check maintenance mode'
     });
   }
 }

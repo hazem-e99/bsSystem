@@ -7,7 +7,7 @@ export default function ConsoleSilencer() {
     try {
       const noop = () => {};
       // Preserve references if needed later
-      (window as { __original_console__?: typeof console }).__original_console__ = {
+      (window as { __original_console__?: Partial<typeof console> }).__original_console__ = {
         log: console.log,
         warn: console.warn,
         error: console.error,

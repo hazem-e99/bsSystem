@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -10,10 +10,9 @@ import { useToast } from '@/components/ui/Toast';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
   const [error, setError] = useState('');
   
   const router = useRouter();
@@ -56,7 +55,7 @@ export default function ForgotPasswordPage() {
         });
       }
       
-    } catch {
+    } catch (err) {
       console.error('Failed to send reset email:', err);
       setError('Failed to send reset email. Please try again.');
       showToast({ 
@@ -86,7 +85,7 @@ export default function ForgotPasswordPage() {
             Forgot Password?
           </CardTitle>
           <CardDescription className="text-gray-600">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we&apos;ll send you a link to reset your password.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -133,5 +132,20 @@ export default function ForgotPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

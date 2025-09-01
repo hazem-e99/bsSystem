@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -15,10 +15,39 @@ import { Switch } from '@/components/ui/Switch';
 import { userAPI, paymentAPI } from '@/lib/api';
 import { formatDate } from '@/utils/formatDate';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  subscriptionPlan?: string;
+  paymentMethod?: string;
+  subscriptionStatus?: string;
+}
+
+interface Payment {
+  id: string;
+  studentId: string;
+  tripId?: string;
+  date: string;
+  status: string;
+  method?: string;
+  description?: string;
+}
+
+interface SubscriptionRow {
+  student: User;
+  plan: string;
+  method: string;
+  status: string;
+  paymentId: string | null;
+  lastPayment: Payment | null;
+}
+
 export default function AdminSubscriptionsPage() {
   const { showToast } = useToast();
-  const [users, setUsers] = useState<unknown[]>([]);
-  const [payments, setPayments] = useState<unknown[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [methodFilter, setMethodFilter] = useState<'all' | 'cash' | 'bank'>('all');
@@ -128,8 +157,11 @@ export default function AdminSubscriptionsPage() {
       await userAPI.update(String(studentId), { subscriptionStatus: 'active' });
       await load();
       showToast({ type: 'success', title: 'Success', message: 'Subscription confirmed.' });
-    } catch (e: unknown) {
-      showToast({ type: 'error', title: 'Error', message: e.message || 'Failed to confirm' });
+    } catch (error) {
+      const message = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' 
+        ? error.message 
+        : 'Failed to confirm';
+      showToast({ type: 'error', title: 'Error', message });
     }
   };
 
@@ -166,8 +198,11 @@ export default function AdminSubscriptionsPage() {
           showToast({ type: 'success', title: 'Deactivated', message: `${row.student.name} is now inactive.` });
         }
       }
-    } catch (e: unknown) {
-      showToast({ type: 'error', title: 'Update failed', message: e.message || 'Could not change status.' });
+    } catch (error) {
+      const message = error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' 
+        ? error.message 
+        : 'Could not change status.';
+      showToast({ type: 'error', title: 'Update failed', message });
     }
   };
 
@@ -219,7 +254,7 @@ export default function AdminSubscriptionsPage() {
             <Input placeholder="Search name or email" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            <Select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)} className="min-w-[160px]">
+                         <Select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value as 'all' | 'cash' | 'bank')} className="min-w-[160px]">
               <option value="all">All Methods</option>
               <option value="cash">Cash</option>
               <option value="bank">Bank</option>
@@ -308,17 +343,17 @@ export default function AdminSubscriptionsPage() {
         </CardHeader>
         <CardContent>
           {(() => {
-            const columns: ColumnDef<unknown>[] = [
-              {
-                header: 'Student',
-                accessorKey: 'student.name',
-                cell: ({ row }) => (
-                  <div>
-                    <div className="font-medium text-text-primary">{row.original.student.name}</div>
-                    <div className="text-sm text-text-secondary">{row.original.student.email}</div>
-                  </div>
-                )
-              },
+                         const columns: ColumnDef<SubscriptionRow>[] = [
+               {
+                 header: 'Student',
+                 accessorKey: 'student.name',
+                 cell: ({ row }) => (
+                   <div>
+                     <div className="font-medium text-text-primary">{row.original.student.name}</div>
+                     <div className="text-sm text-text-secondary">{row.original.student.email}</div>
+                   </div>
+                 )
+               },
               { 
                 header: 'Plan', 
                 accessorKey: 'plan',

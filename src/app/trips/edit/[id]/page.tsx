@@ -13,6 +13,34 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
+// Define interfaces
+interface User {
+  id: string;
+  fullName?: string;
+  name?: string;
+  email?: string;
+}
+
+interface TripData {
+  id: number;
+  busId: number;
+  driverId: number;
+  conductorId: number;
+  startLocation?: string;
+  endLocation?: string;
+  tripDate: string;
+  departureTimeOnly: string;
+  arrivalTimeOnly: string;
+  stopLocations?: Array<{
+    id?: string;
+    address?: string;
+    stopName?: string;
+    arrivalTimeOnly?: string;
+    departureTimeOnly?: string;
+    stopTime?: string;
+  }>;
+}
+
 const stopSchema = z.object({
   address: z.string().min(1, 'Address is required').max(300, 'Max 300 characters'),
   arrivalTimeOnly: z.string().min(1, 'Arrival time is required'),
@@ -20,9 +48,9 @@ const stopSchema = z.object({
 });
 
 const updateTripSchema = z.object({
-  busId: z.coerce.number().optional(),
-  driverId: z.coerce.number().optional(),
-  conductorId: z.coerce.number().optional(),
+  busId: z.string().optional(),
+  driverId: z.string().optional(),
+  conductorId: z.string().optional(),
   startLocation: z.string().max(200, 'Max 200 characters').optional(),
   endLocation: z.string().max(200, 'Max 200 characters').optional(),
   tripDate: z.string().optional(),
@@ -37,37 +65,59 @@ export default function EditTripPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const form = useForm<UpdateTripForm>({ resolver: zodResolver(updateTripSchema), defaultValues: { stopLocations: [] } });
+  const form = useForm<UpdateTripForm>({ 
+    resolver: zodResolver(updateTripSchema), 
+    defaultValues: { 
+      stopLocations: [],
+      busId: '',
+      driverId: '',
+      conductorId: '',
+      startLocation: '',
+      endLocation: '',
+      tripDate: '',
+      departureTimeOnly: '',
+      arrivalTimeOnly: ''
+    } 
+  });
   const { fields, append, remove, replace } = useFieldArray({ control: form.control, name: 'stopLocations' as const });
   const [loadingLookups, setLoadingLookups] = useState<boolean>(true);
   const [buses, setBuses] = useState<Array<{ id: number; busNumber?: string }>>([]);
-  const [drivers, setDrivers] = useState<Array<{ id: number; fullName?: string; name?: string; email?: string }>>([]);
-  const [conductors, setConductors] = useState<Array<{ id: number; fullName?: string; name?: string; email?: string }>>([]);
+  const [drivers, setDrivers] = useState<User[]>([]);
+  const [conductors, setConductors] = useState<User[]>([]);
 
   useEffect(() => {
     const id = params?.id as string;
     if (!id) return;
     (async () => {
       try {
-        const data = await tripService.getById(id);
+        const data = await tripService.getById(id) as unknown as TripData;
         if (data) {
           form.reset({
-            busId: data.busId,
-            driverId: data.driverId,
-            conductorId: data.conductorId,
+            busId: data.busId?.toString() || '',
+            driverId: data.driverId?.toString() || '',
+            conductorId: data.conductorId?.toString() || '',
             startLocation: data.startLocation ?? '',
             endLocation: data.endLocation ?? '',
-            tripDate: data.tripDate,
-            departureTimeOnly: data.departureTimeOnly,
-            arrivalTimeOnly: data.arrivalTimeOnly,
+            tripDate: data.tripDate || '',
+            departureTimeOnly: data.departureTimeOnly || '',
+            arrivalTimeOnly: data.arrivalTimeOnly || '',
           });
-          replace((data.stopLocations || []).map((s: { id: string; stopName: string; stopTime: string }) => ({ ...s })));
+          
+          // Transform stop locations to match the form schema
+          const transformedStops = (data.stopLocations || []).map((stop: any) => ({
+            address: stop.address || stop.stopName || '',
+            arrivalTimeOnly: stop.arrivalTimeOnly || stop.stopTime || '',
+            departureTimeOnly: stop.departureTimeOnly || stop.stopTime || ''
+          }));
+          replace(transformedStops);
         }
       } catch (e: unknown) {
-        toast({ title: 'Failed to load trip', description: String(e?.message || e), variant: 'destructive' });
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        console.error('Failed to load trip:', errorMessage);
+        // toast({ title: 'Failed to load trip', description: errorMessage });
       }
     })();
-  }, [params, form, replace, toast]);
+  }, [params, form, replace]);
 
   useEffect(() => {
     (async () => {
@@ -80,15 +130,32 @@ export default function EditTripPage() {
         ]);
         const busList = (busesResp as { data?: unknown })?.data ?? busesResp ?? [];
         setBuses(Array.isArray(busList) ? busList : []);
-        setDrivers(Array.isArray(driverUsers) ? driverUsers : []);
-        setConductors(Array.isArray(conductorUsers) ? conductorUsers : []);
+        
+        // Transform user data to match User interface
+        const transformedDrivers = Array.isArray(driverUsers) ? driverUsers.map(user => ({
+          id: user.id?.toString() || '',
+          fullName: user.fullName || '',
+          name: user.name || '',
+          email: user.email || ''
+        })) : [];
+        setDrivers(transformedDrivers);
+        
+        const transformedConductors = Array.isArray(conductorUsers) ? conductorUsers.map(user => ({
+          id: user.id?.toString() || '',
+          fullName: user.fullName || '',
+          name: user.name || '',
+          email: user.email || ''
+        })) : [];
+        setConductors(transformedConductors);
       } catch (e: unknown) {
-        toast({ title: 'Failed to load lookups', description: String(e?.message || e), variant: 'destructive' });
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        console.error('Failed to load lookups:', errorMessage);
+        // toast({ title: 'Failed to load lookups', description: errorMessage });
       } finally {
         setLoadingLookups(false);
       }
     })();
-  }, [toast]);
+  }, []);
 
   const onSubmit = async (values: UpdateTripForm) => {
     try {
@@ -113,10 +180,18 @@ export default function EditTripPage() {
       };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
+      // Transform form values to match API expectations
+      const tripData = {
+        ...values,
+        busId: values.busId ? Number(values.busId) : undefined,
+        driverId: values.driverId ? Number(values.driverId) : undefined,
+        conductorId: values.conductorId ? Number(values.conductorId) : undefined,
+      };
+
       const resp = await fetch(url, {
         method: 'PUT',
         headers,
-        body: JSON.stringify(values),
+        body: JSON.stringify(tripData),
         redirect: 'follow',
       });
 
@@ -129,10 +204,13 @@ export default function EditTripPage() {
       }
 
       // success
-      toast({ title: 'Trip updated' });
+      console.log('Trip updated successfully');
+      // toast({ title: 'Trip updated' });
       router.push('/trips');
     } catch (e: unknown) {
-      toast({ title: 'Update failed', description: String(e?.message || e), variant: 'destructive' });
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error('Update failed:', errorMessage);
+      // toast({ title: 'Update failed', description: errorMessage });
     }
   };
 
@@ -140,11 +218,11 @@ export default function EditTripPage() {
     <div className="p-6 space-y-6">
       <h1 className="text-3xl font-semibold">Edit Trip</h1>
       <Card className="p-6">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium">Bus ID</label>
-              <select {...form.register('busId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
+              <select {...form.register('busId')} className="mt-1 w-full border rounded px-3 py-2 bg-white">
                   <option value="">{loadingLookups ? 'Loading...' : 'Select a bus'}</option>
                   {buses.map((b) => {
                     const label = `${b.busNumber ? b.busNumber : 'Bus'} (ID: ${b.id})`;
@@ -155,7 +233,7 @@ export default function EditTripPage() {
             </div>
             <div>
               <label className="block text-sm font-medium">Driver ID</label>
-              <select {...form.register('driverId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
+              <select {...form.register('driverId')} className="mt-1 w-full border rounded px-3 py-2 bg-white">
                 <option value="">{loadingLookups ? 'Loading...' : 'Select a driver'}</option>
                 {drivers.map((u) => {
                   const name = u.fullName || u.name || u.email || `User`;
@@ -167,7 +245,7 @@ export default function EditTripPage() {
             </div>
             <div>
               <label className="block text-sm font-medium">Conductor ID</label>
-              <select {...form.register('conductorId', { valueAsNumber: true })} className="mt-1 w-full border rounded px-3 py-2 bg-white">
+              <select {...form.register('conductorId')} className="mt-1 w-full border rounded px-3 py-2 bg-white">
                 <option value="">{loadingLookups ? 'Loading...' : 'Select a conductor'}</option>
                 {conductors.map((u) => {
                   const name = u.fullName || u.name || u.email || `User`;

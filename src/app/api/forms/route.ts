@@ -62,7 +62,7 @@ export async function GET() {
     const forms = db.forms || getDefaultFormsConfig();
     return NextResponse.json(forms);
   } catch {
-    console.error('Error fetching forms config:', error);
+    console.error('Error fetching forms config:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -78,7 +78,7 @@ export async function PATCH(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.forms);
   } catch {
-    console.error('Error updating forms config:', error);
+    console.error('Error updating forms config:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

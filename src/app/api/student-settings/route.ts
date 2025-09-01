@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(studentSettings);
   } catch {
-    console.error('Error fetching student settings:', error);
+    console.error('Error fetching student settings:', Error);
     return NextResponse.json(
       { error: 'Failed to fetch student settings' },
       { status: 500 }
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest) {
       student: db.users[studentIndex]
     });
   } catch {
-    console.error('Error updating student settings:', error);
+    console.error('Error updating student settings:', Error);
     return NextResponse.json(
       { error: 'Failed to update student settings' },
       { status: 500 }

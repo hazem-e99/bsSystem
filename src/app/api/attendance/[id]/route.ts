@@ -31,7 +31,7 @@ export async function GET(
 
     return NextResponse.json(record);
   } catch {
-    console.error('Error fetching attendance record:', error);
+    console.error('Error fetching attendance record:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -62,7 +62,7 @@ export async function PATCH(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.attendance[index]);
   } catch {
-    console.error('Error updating attendance record:', error);
+    console.error('Error updating attendance record:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(systemSettings);
   } catch {
-    console.error('Error fetching system settings:', error);
+    console.error('Error fetching system settings:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.systemSettings);
   } catch {
-    console.error('Error updating system settings:', error);
+    console.error('Error updating system settings:', Error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'next/server';
+import { promises as fs } from 'fs';
 import path from 'path';
 
 interface User {
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json({ payment, user: db.users[studentIndex] }, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error updating student subscription:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

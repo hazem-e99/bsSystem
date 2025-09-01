@@ -9,8 +9,41 @@ interface Notification {
   message: string;
   read: boolean;
   createdAt: string;
+  date?: string;
   type?: string;
   priority?: string;
+  status?: string;
+  senderId?: string;
+  userId?: string;
+  targetUsers?: string[];
+  targetRoles?: string[];
+  sender?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+  metadata?: {
+    ageInMinutes: number;
+    ageInHours: number;
+    ageInDays: number;
+    ageText: string;
+    priorityLevel: number;
+    isRead: boolean;
+    isUnread: boolean;
+    isArchived: boolean;
+    targetUsersCount: number;
+    targetRoles: string[];
+    readCount: number;
+    engagementRate: number;
+  };
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -67,10 +100,10 @@ export async function GET(request: NextRequest) {
     const enrichedNotifications = filteredNotifications.map((notification: Notification) => {
       const sender = users.find((u: User) => u.id === notification.senderId);
       
-      // Calculate notification age
-      const notificationDate = new Date(notification.createdAt || notification.date);
-      const today = new Date();
-      const ageInMinutes = Math.floor((today.getTime() - notificationDate.getTime()) / (1000 * 60));
+             // Calculate notification age
+       const notificationDate = new Date(notification.createdAt || notification.date || new Date().toISOString());
+       const today = new Date();
+       const ageInMinutes = Math.floor((today.getTime() - notificationDate.getTime()) / (1000 * 60));
       const ageInHours = Math.floor(ageInMinutes / 60);
       const ageInDays = Math.floor(ageInHours / 24);
       
@@ -99,7 +132,7 @@ export async function GET(request: NextRequest) {
       const targetRoles = notification.targetRoles || [];
       
       // Calculate engagement metrics
-      const readCount = notification.readBy ? notification.readBy.length : 0;
+      const readCount = notification.read ? 1 : 0;
       const engagementRate = targetUsersCount > 0 ? (readCount / targetUsersCount) * 100 : 0;
 
       return {
@@ -127,13 +160,13 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Sort notifications by priority and date (highest priority and newest first)
-    enrichedNotifications.sort((a: Notification, b: Notification) => {
-      if (a.metadata.priorityLevel !== b.metadata.priorityLevel) {
-        return b.metadata.priorityLevel - a.metadata.priorityLevel;
-      }
-      return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime();
-    });
+         // Sort notifications by priority and date (highest priority and newest first)
+     enrichedNotifications.sort((a: Notification, b: Notification) => {
+       if (a.metadata.priorityLevel !== b.metadata.priorityLevel) {
+         return b.metadata.priorityLevel - a.metadata.priorityLevel;
+       }
+       return new Date(b.createdAt || b.date || new Date().toISOString()).getTime() - new Date(a.createdAt || a.date || new Date().toISOString()).getTime();
+     });
 
     // Apply pagination
     const paginatedNotifications = enrichedNotifications.slice(offset, offset + limit);
@@ -184,13 +217,13 @@ export async function GET(request: NextRequest) {
       notifications: paginatedNotifications,
       summary
     });
-  } catch {
-    console.error('Error fetching notifications data:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error fetching notifications data:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function POST(request: NextRequest) {
@@ -226,13 +259,13 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newNotification, { status: 201 });
-  } catch {
-    console.error('Error creating notification:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error creating notification:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function PUT(request: NextRequest) {
@@ -282,13 +315,13 @@ export async function PUT(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(updatedNotification);
-  } catch {
-    console.error('Error updating notification:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error updating notification:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -331,11 +364,11 @@ export async function DELETE(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Notification deleted successfully', deletedNotification });
-  } catch {
-    console.error('Error deleting notification:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error deleting notification:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }

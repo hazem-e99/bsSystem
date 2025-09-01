@@ -58,7 +58,7 @@ export const BarChart = ({ data, title, height = 300 }: BarChartProps) => {
         font: {
           family: 'Inter, sans-serif',
           size: 16,
-          weight: '600',
+          weight: 600,
         },
       },
       tooltip: {
@@ -72,7 +72,7 @@ export const BarChart = ({ data, title, height = 300 }: BarChartProps) => {
         titleFont: {
           family: 'Inter, sans-serif',
           size: 14,
-          weight: '600',
+          weight: 600,
         },
         bodyFont: {
           family: 'Inter, sans-serif',

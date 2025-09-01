@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 
-export default function NewPasswordPage() {
+function NewPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -48,7 +48,7 @@ export default function NewPasswordPage() {
         setError((resp as { message?: string })?.message || 'Failed to reset password.');
       }
     } catch (e: unknown) {
-      setError(e?.message || 'Failed to reset password.');
+      setError((e as any)?.message || 'Failed to reset password.');
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +93,21 @@ export default function NewPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function NewPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <NewPasswordForm />
+    </Suspense>
   );
 }
 

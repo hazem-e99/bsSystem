@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
-import path from 'path';
+import * as path from 'path';
 
 interface Announcement {
   id: string;
@@ -13,16 +13,28 @@ interface Announcement {
   updatedAt: string;
 }
 
+interface Context {
+  params: Promise<{ id: string }>;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: Context
+): Promise<NextResponse> {
   try {
-    const { id } = params;
+    const { id } = await context.params;
+    
+    // Validate id parameter
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid announcement ID' },
+        { status: 400 }
+      );
+    }
     
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
-    const db = JSON.parse(dbContent);
+    const db = JSON.parse(dbContent) as { announcements?: Announcement[] };
     
     const announcement = (db.announcements || []).find((announcement: Announcement) => announcement.id === id);
     
@@ -34,7 +46,7 @@ export async function GET(
     }
     
     return NextResponse.json(announcement);
-  } catch {
+  } catch (error: unknown) {
     console.error('Error reading announcement data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -45,17 +57,34 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: Context
+): Promise<NextResponse> {
   try {
-    const { id } = params;
-    const body = await request.json();
+    const { id } = await context.params;
+    
+    // Validate id parameter
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid announcement ID' },
+        { status: 400 }
+      );
+    }
+    
+    const body = await request.json() as Partial<Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>>;
     
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
-    const db = JSON.parse(dbContent);
+    const db = JSON.parse(dbContent) as { announcements?: Announcement[] };
     
-    const announcementIndex = (db.announcements || []).findIndex((announcement: Announcement) => announcement.id === id);
+    // Ensure announcements array exists
+    if (!db.announcements) {
+      return NextResponse.json(
+        { error: 'Announcement not found' },
+        { status: 404 }
+      );
+    }
+    
+    const announcementIndex = db.announcements.findIndex((announcement: Announcement) => announcement.id === id);
     if (announcementIndex === -1) {
       return NextResponse.json(
         { error: 'Announcement not found' },
@@ -73,7 +102,7 @@ export async function PATCH(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(db.announcements[announcementIndex]);
-  } catch {
+  } catch (error: unknown) {
     console.error('Error updating announcement:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -84,16 +113,32 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: Context
+): Promise<NextResponse> {
   try {
-    const { id } = params;
+    const { id } = await context.params;
+    
+    // Validate id parameter
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid announcement ID' },
+        { status: 400 }
+      );
+    }
     
     const dbPath = path.join(process.cwd(), 'db.json');
     const dbContent = await fs.readFile(dbPath, 'utf-8');
-    const db = JSON.parse(dbContent);
+    const db = JSON.parse(dbContent) as { announcements?: Announcement[] };
     
-    const announcementIndex = (db.announcements || []).findIndex((announcement: Announcement) => announcement.id === id);
+    // Ensure announcements array exists
+    if (!db.announcements) {
+      return NextResponse.json(
+        { error: 'Announcement not found' },
+        { status: 404 }
+      );
+    }
+    
+    const announcementIndex = db.announcements.findIndex((announcement: Announcement) => announcement.id === id);
     if (announcementIndex === -1) {
       return NextResponse.json(
         { error: 'Announcement not found' },
@@ -106,7 +151,7 @@ export async function DELETE(
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json({ message: 'Announcement deleted successfully' });
-  } catch {
+  } catch (error: unknown) {
     console.error('Error deleting announcement:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

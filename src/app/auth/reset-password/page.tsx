@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
-import { Lock, Eye, EyeOff } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,9 +46,10 @@ export default function ResetPasswordPage() {
     
     try {
       const data = await authAPI.resetPassword({ 
-        token, 
+        resetToken: token, 
         email, 
-        password 
+        newPassword: password,
+        confirmPassword: confirmPassword
       });
 
       if (data && data.success) {
@@ -68,7 +69,7 @@ export default function ResetPasswordPage() {
         });
       }
       
-    } catch {
+    } catch (err) {
       console.error('Failed to reset password:', err);
       setError('Failed to reset password. Please try again.');
       showToast({ 
@@ -234,5 +235,20 @@ export default function ResetPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

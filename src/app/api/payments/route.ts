@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(payments);
   } catch {
-    console.error('Error reading payments data:', error);
+    console.error('Error reading payments data:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(newPayment, { status: 201 });
   } catch {
-    console.error('Error creating payment:', error);
+    console.error('Error creating payment:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

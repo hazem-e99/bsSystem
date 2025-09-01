@@ -4,7 +4,25 @@ import React, { useState } from 'react';
 // محاكاة النظام محلياً
 const LOCAL_TRIP_STORAGE = 'busSystem_trips';
 
-function getStoredTrips() {
+interface TripData {
+  busId: number;
+  driverId: number;
+  conductorId: number;
+  startLocation: string;
+  endLocation: string;
+  tripDate: string;
+  departureTimeOnly: string;
+  arrivalTimeOnly: string;
+  stopLocations: any[];
+}
+
+interface StoredTrip extends TripData {
+  id: number;
+  createdAt: string;
+  status: 'Pending' | 'Synced';
+}
+
+function getStoredTrips(): StoredTrip[] {
   try {
     return JSON.parse(localStorage.getItem(LOCAL_TRIP_STORAGE) || '[]');
   } catch {
@@ -12,9 +30,9 @@ function getStoredTrips() {
   }
 }
 
-function saveTrip(trip) {
+function saveTrip(trip: TripData): StoredTrip {
   const trips = getStoredTrips();
-  const newTrip = {
+  const newTrip: StoredTrip = {
     ...trip,
     id: Date.now(),
     createdAt: new Date().toISOString(),
@@ -38,7 +56,7 @@ export default function OfflineTripForm() {
   
   const [savedTrips, setSavedTrips] = useState(getStoredTrips());
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     // حفظ محلي فوري
@@ -73,7 +91,7 @@ export default function OfflineTripForm() {
     });
   };
 
-  const syncWithBackend = async (trip) => {
+  const syncWithBackend = async (trip: StoredTrip) => {
     // محاولة مزامنة مع Backend
     try {
       const response = await fetch('/api/Trip', {

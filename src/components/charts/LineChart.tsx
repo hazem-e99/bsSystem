@@ -60,7 +60,7 @@ export const LineChart = ({ data, title, height = 300 }: LineChartProps) => {
         font: {
           family: 'Inter, sans-serif',
           size: 16,
-          weight: '600',
+          weight: 600,
         },
       },
       tooltip: {
@@ -74,7 +74,7 @@ export const LineChart = ({ data, title, height = 300 }: LineChartProps) => {
         titleFont: {
           family: 'Inter, sans-serif',
           size: 14,
-          weight: '600',
+          weight: 600,
         },
         bodyFont: {
           family: 'Inter, sans-serif',

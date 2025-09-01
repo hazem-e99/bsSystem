@@ -19,21 +19,53 @@ import { useToast } from '@/components/ui/Toast';
 import { studentProfileAPI, studentAvatarAPI, subscriptionPlansAPI, busAPI } from '@/lib/api';
 import { formatDate } from '@/utils/formatDate';
 
+// Define proper types for the profile data
+interface StudentProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  year: number;
+  studentId: string;
+  avatar?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  subscriptionStatus?: string;
+  subscriptionPlan?: any;
+}
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  maxNumberOfRides: number;
+  durationInDays: number;
+  isActive: boolean;
+}
+
+interface Bus {
+  id: number;
+  name: string;
+  assignedStudents: string[];
+}
+
 export default function StudentSettingsPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [profile, setProfile] = useState<unknown>(null);
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [plans, setPlans] = useState<unknown[]>([]);
-  const [buses, setBuses] = useState<unknown[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [buses, setBuses] = useState<Bus[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank'>('bank');
   const [assignBusId, setAssignBusId] = useState<string>('');
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
   
   // Load profile data on component mount
   useEffect(() => {
@@ -42,9 +74,9 @@ export default function StudentSettingsPage() {
       
       try {
         setIsLoadingProfile(true);
-        const profileData = await studentProfileAPI.getProfile(user.id);
+        const profileData = await studentProfileAPI.getProfile(user.id.toString());
         if (profileData) {
-          setProfile(profileData);
+          setProfile(profileData as StudentProfile);
         }
         // Load plans and buses
         try {
@@ -54,10 +86,10 @@ export default function StudentSettingsPage() {
           ]);
           setPlans(p || []);
           setBuses(bResponse?.data || []);
-        } catch {
-          console.warn('Failed to load plans/buses', e);
+        } catch (error) {
+          console.warn('Failed to load plans/buses', error);
         }
-      } catch {
+      } catch (error) {
         console.error('Failed to load profile:', error);
         showToast({
           type: 'error',
@@ -74,22 +106,22 @@ export default function StudentSettingsPage() {
 
   // Check for changes
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || !user) return;
     
     const hasProfileChanges = 
-      profile.name !== user?.name ||
-      profile.email !== user?.email ||
-      profile.phone !== user?.phone ||
-      profile.year !== user?.year;
+      profile.name !== user.name ||
+      profile.email !== user.email ||
+      profile.phone !== user.phone ||
+      profile.year !== (user as any).year;
     
     setHasChanges(hasProfileChanges);
   }, [profile, user]);
 
-  const handleInputChange = (field: string, value: string | number) => {
-    setProfile(prev => ({
+  const handleInputChange = (field: keyof StudentProfile, value: string | number) => {
+    setProfile(prev => prev ? ({
       ...prev,
       [field]: value
-    }));
+    }) : null);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,14 +136,14 @@ export default function StudentSettingsPage() {
 
     try {
       setIsLoading(true);
-      const result = await studentAvatarAPI.uploadAvatar(user.id, selectedFile);
+      const result = await studentAvatarAPI.uploadAvatar(user.id.toString(), selectedFile);
       
       if (result.success) {
         // Update local profile state
-        setProfile(prev => ({
+        setProfile(prev => prev ? ({
           ...prev,
           avatar: result.avatar
-        }));
+        }) : null);
         
         setSelectedFile(null);
         
@@ -123,10 +155,11 @@ export default function StudentSettingsPage() {
       }
     } catch (error: unknown) {
       console.error('Failed to upload avatar:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload photo. Please try again.';
       showToast({
         type: 'error',
         title: 'Error!',
-        message: error.message || 'Failed to upload photo. Please try again.'
+        message: errorMessage
       });
     } finally {
       setIsLoading(false);
@@ -138,14 +171,14 @@ export default function StudentSettingsPage() {
 
     try {
       setIsLoading(true);
-      const result = await studentAvatarAPI.removeAvatar(user.id);
+      const result = await studentAvatarAPI.removeAvatar(user.id.toString());
       
       if (result.success) {
         // Update local profile state
-        setProfile(prev => ({
+        setProfile(prev => prev ? ({
           ...prev,
           avatar: null
-        }));
+        }) : null);
         
         showToast({
           type: 'success',
@@ -155,10 +188,11 @@ export default function StudentSettingsPage() {
       }
     } catch (error: unknown) {
       console.error('Failed to remove avatar:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove photo. Please try again.';
       showToast({
         type: 'error',
         title: 'Error!',
-        message: error.message || 'Failed to remove photo. Please try again.'
+        message: errorMessage
       });
     } finally {
       setIsLoading(false);
@@ -174,7 +208,7 @@ export default function StudentSettingsPage() {
     
     setIsLoading(true);
     try {
-      const updatedProfile = await studentProfileAPI.updateProfile(user.id, {
+      const updatedProfile = await studentProfileAPI.updateProfile(user.id.toString(), {
         name: profile.name,
         email: profile.email,
         phone: profile.phone,
@@ -194,7 +228,7 @@ export default function StudentSettingsPage() {
       } else {
         throw new Error('Failed to update profile');
       }
-    } catch {
+    } catch (error) {
       console.error('Failed to update profile:', error);
       showToast({
         type: 'error',
@@ -210,19 +244,25 @@ export default function StudentSettingsPage() {
     if (!user || !selectedPlan) return;
     try {
       setSubscriptionLoading(true);
+      // Note: This API call structure may need to be adjusted based on your actual API
       const response = await subscriptionPlansAPI.create({
-        studentId: user.id,
-        planId: selectedPlan.id,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + selectedPlan.duration * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active'
+        name: selectedPlan.name,
+        description: selectedPlan.description,
+        price: selectedPlan.price,
+        maxNumberOfRides: selectedPlan.maxNumberOfRides,
+        durationInDays: selectedPlan.durationInDays,
+        isActive: selectedPlan.isActive
       });
       if (response) {
-        setProfile((prev: User) => ({ ...prev, subscriptionStatus: 'active', subscriptionPlan: selectedPlan }));
+        setProfile(prev => prev ? ({ 
+          ...prev, 
+          subscriptionStatus: 'active', 
+          subscriptionPlan: selectedPlan 
+        }) : null);
         showToast({ type: 'success', title: 'Success!', message: 'Subscription updated' });
       }
-    } catch {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       showToast({ type: 'error', title: 'Error!', message: 'Failed to update subscription' });
     } finally {
       setSubscriptionLoading(false);
@@ -233,14 +273,24 @@ export default function StudentSettingsPage() {
     if (!user || !assignBusId) return;
     try {
       setSubscriptionLoading(true);
-      const response = await busAPI.update(assignBusId, {
-        assignedStudents: [...(selectedBus?.assignedStudents || []), user.id]
+      const response = await fetch('/api/student-assign-bus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: user.id.toString(),
+          busId: assignBusId
+        })
       });
-      if (response) {
+      
+      const result = await response.json();
+      if (result.success) {
         showToast({ type: 'success', title: 'Success!', message: 'Bus assigned successfully' });
+      } else {
+        throw new Error(result.error || 'Failed to assign bus');
       }
-    } catch (e: unknown) {
-      showToast({ type: 'error', title: 'Error!', message: e.message || 'Failed to assign bus' });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to assign bus';
+      showToast({ type: 'error', title: 'Error!', message: errorMessage });
     } finally {
       setSubscriptionLoading(false);
     }

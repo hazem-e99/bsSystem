@@ -33,7 +33,8 @@ import {
   UserCheck,
   UserX,
   FileText,
-  BarChart3
+  BarChart3,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { userAPI, tripAPI, busAPI, notificationAPI } from '@/lib/api';
@@ -174,12 +175,44 @@ export default function SupervisorDashboard() {
           return;
         }
 
+        // Transform supervisor data to match SupervisorData interface
+        const transformedSupervisor: SupervisorData = {
+          id: supervisor.id?.toString() || '',
+          name: supervisor.name || supervisor.fullName || '',
+          email: supervisor.email || '',
+          role: supervisor.role || 'supervisor',
+          phone: supervisor.phone || '',
+          status: supervisor.status || 'active',
+          avatar: supervisor.avatar || '',
+          assignedBusId: (supervisor as any).assignedBusId || '',
+          assignedRouteId: (supervisor as any).assignedRouteId || '',
+          assignedStudents: (supervisor as any).assignedStudents || [],
+          assignedDrivers: (supervisor as any).assignedDrivers || []
+        };
+
         // Fetch trips (global backend). If supervisor filter not supported, filter client-side
-        const allTrips = await tripAPI.getAll();
-        setAllTrips(allTrips);
+        const tripsRes = await tripAPI.getAll();
+        
+        // Transform trips data to match TripData interface
+        const transformedTrips = (tripsRes as any[]).map((trip: any) => ({
+          id: trip.id?.toString() || '',
+          busId: trip.busId?.toString() || '',
+          routeId: trip.routeId?.toString() || '',
+          driverId: trip.driverId?.toString() || '',
+          supervisorId: trip.supervisorId?.toString() || '',
+          date: trip.tripDate || trip.date || '',
+          status: (trip.status || 'scheduled') as 'scheduled' | 'in-progress' | 'completed' | 'cancelled',
+          startTime: trip.startTime || '00:00',
+          endTime: trip.endTime || '00:00',
+          passengers: trip.passengers || 0,
+          revenue: trip.revenue || 0,
+          assignedStudents: trip.assignedStudents || []
+        }));
+
+        setAllTrips(transformedTrips);
 
         // Filter trips for this supervisor and find the next one
-        const supervisorTrips = allTrips.filter((trip: TripData) => 
+        const supervisorTrips = transformedTrips.filter((trip: TripData) => 
           trip.supervisorId === supervisorId && 
           trip.status === 'scheduled'
         );
@@ -206,29 +239,69 @@ export default function SupervisorDashboard() {
             userAPI.getById(String(nextTrip.driverId)).catch(() => null),
             Promise.resolve(null), // No longer using routes
           ]);
-          if (bus) setTripBus(bus);
-          if (driver) setTripDriver(driver);
+          
+          if (bus) {
+            const transformedBus: BusData = {
+              id: bus.id?.toString() || '',
+              number: bus.busNumber || bus.number || '',
+              capacity: bus.capacity || 0,
+              driverId: bus.driverId?.toString() || null,
+              status: bus.status || 'active',
+              location: bus.location || { lat: 0, lng: 0 },
+              currentRouteId: bus.currentRouteId?.toString() || null,
+              lastUpdated: bus.lastUpdated || new Date().toISOString(),
+              fuelLevel: bus.fuelLevel || 0,
+              speed: bus.speed || 0,
+              assignedStudents: bus.assignedStudents || [],
+              assignedSupervisorId: bus.assignedSupervisorId?.toString() || null
+            };
+            setTripBus(transformedBus);
+          }
+          
+          if (driver) {
+            const transformedDriver: DriverData = {
+              id: driver.id?.toString() || '',
+              name: driver.name || driver.fullName || '',
+              email: driver.email || '',
+              role: driver.role || 'driver',
+              phone: driver.phone || '',
+              status: driver.status || 'active',
+              avatar: driver.avatar || ''
+            };
+            setTripDriver(transformedDriver);
+          }
+          
           if (route) setTripRoute(route);
         }
 
         // Fetch notifications
         try {
           const notificationsData = await notificationAPI.getByUser(String(supervisorId));
-          setNotifications((notificationsData || []).slice(0, 4));
-        } catch {
+          const transformedNotifications = (notificationsData as any[] || []).map((notification: any) => ({
+            id: notification.id?.toString() || '',
+            title: notification.title || '',
+            message: notification.message || '',
+            type: notification.type || '',
+            priority: notification.priority || 'medium',
+            status: notification.status || 'unread',
+            read: notification.read || false,
+            createdAt: notification.createdAt || new Date().toISOString()
+          }));
+          setNotifications(transformedNotifications.slice(0, 4));
+        } catch (error) {
           console.log('No notifications available');
         }
 
-        setSupervisorData(supervisor);
+        setSupervisorData(transformedSupervisor);
         
         console.log('✅ Dashboard data loaded from global API:', {
-          supervisor: supervisor.name,
+          supervisor: transformedSupervisor.name,
           nextTrip: nextTrip ? `${nextTrip.date} at ${nextTrip.startTime}` : 'No upcoming trips',
-          totalTrips: allTrips.length
+          totalTrips: transformedTrips.length
         });
         
         setLoading(false);
-    } catch {
+    } catch (error) {
         console.error('Error fetching data from global API:', error);
         setError('Failed to load dashboard data. Please refresh the page.');
         setLoading(false);

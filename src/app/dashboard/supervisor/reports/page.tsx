@@ -57,6 +57,20 @@ interface Booking {
   price: number;
 }
 
+interface Trip {
+  id: number;
+  busId: string;
+  driverId: string;
+  conductorId?: string;
+  tripDate: string;
+  startLocation: string;
+  endLocation: string;
+  passengers?: number;
+  revenue?: number;
+  assignedStudents?: string[];
+  supervisorId?: string;
+}
+
 interface LocalTrip {
   id: string;
   busId: string;
@@ -112,28 +126,41 @@ export default function SupervisorReportsPage() {
       ]);
 
       // Transform Trip data to LocalTrip format for this component
-      const transformedTrips = tripsRes.map((trip: Trip) => ({
-        id: trip.id,
-        busId: trip.busId,
-        driverId: trip.driverId,
-        conductorId: trip.conductorId,
-        date: trip.tripDate,
+      const transformedTrips = (tripsRes as any[]).map((trip: any) => ({
+        id: trip.id?.toString() || '',
+        busId: trip.busId?.toString() || '',
+        driverId: trip.driverId?.toString() || '',
+        conductorId: trip.conductorId?.toString(),
+        date: trip.tripDate || trip.date || '',
         status: 'scheduled' as const, // Default status since new schema doesn't include status
-        startTime: trip.startTime,
-        endTime: trip.endTime,
-        startLocation: trip.startLocation,
-        endLocation: trip.endLocation,
-        passengers: trip.passengers,
-        revenue: trip.revenue,
-        assignedStudents: trip.assignedStudents,
-        supervisorId: trip.supervisorId
+        startTime: trip.startTime || '00:00',
+        endTime: trip.endTime || '00:00',
+        startLocation: trip.startLocation || '',
+        endLocation: trip.endLocation || '',
+        passengers: trip.passengers || 0,
+        revenue: trip.revenue || 0,
+        assignedStudents: trip.assignedStudents || [],
+        supervisorId: trip.supervisorId?.toString()
       }));
 
-      setStudents(studentsRes);
-      setBuses(busesRes);
+      // Transform students data to match Student interface
+      const transformedStudents = (studentsRes as any[]).map((student: any) => ({
+        id: student.id,
+        name: student.name || student.fullName || '',
+        email: student.email || '',
+        studentId: student.studentId || student.id,
+        department: student.department || 'Unknown',
+        year: student.year || 1,
+        assignedBusId: student.assignedBusId || '',
+        assignedRouteId: student.assignedRouteId || '',
+        assignedSupervisorId: student.assignedSupervisorId || ''
+      }));
+
+      setStudents(transformedStudents);
+      setBuses((busesRes as any)?.data || busesRes || []);
       setTrips(transformedTrips);
-      setBookings(bookingsRes);
-    } catch {
+      setBookings((bookingsRes as Booking[]) || []);
+    } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setIsLoading(false);

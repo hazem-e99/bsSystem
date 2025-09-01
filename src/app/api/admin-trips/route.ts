@@ -3,6 +3,16 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { autoCompleteTrips } from '@/lib/tripStatus';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  licenseNumber?: string;
+  phone?: string;
+  studentId?: string;
+}
+
 interface Trip {
   id: string;
   status: string;
@@ -14,6 +24,9 @@ interface Trip {
   startTime: string;
   endTime: string;
   passengers: number;
+  operationalCost?: number;
+  scheduledTime?: string;
+  actualStartTime?: string;
 }
 
 interface EnrichedTrip extends Trip {
@@ -80,6 +93,8 @@ interface Booking {
   id: string;
   status: string;
   tripId: string;
+  studentId?: string;
+  date?: string;
 }
 
 interface Payment {
@@ -347,7 +362,7 @@ export async function GET(request: NextRequest) {
       trips: enrichedTrips,
       summary
     });
-  } catch {
+  } catch (error) {
     console.error('Error fetching trips data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -431,13 +446,13 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date().toISOString()
         });
       }
-    } catch { console.error('Failed to create notifications for new trip (admin):', e); }
+         } catch (e) { console.error('Failed to create notifications for new trip (admin):', e); }
 
     // Write back to db.json
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newTrip, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating trip:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -477,7 +492,7 @@ export async function PUT(request: NextRequest) {
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(db.trips[index]);
-  } catch {
+  } catch (error) {
     console.error('Error updating trip:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -511,7 +526,7 @@ export async function DELETE(request: NextRequest) {
 
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json({ message: 'Trip deleted', trip: deleted });
-  } catch {
+  } catch (error) {
     console.error('Error deleting trip:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

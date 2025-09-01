@@ -11,12 +11,22 @@ import { subscriptionPlansAPI } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
+interface Plan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  maxNumberOfRides: number;
+  durationInDays: number;
+  isActive: boolean;
+}
+
 export default function PlansPage() {
-  const [plans, setPlans] = useState<unknown[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<unknown | null>(null);
+  const [editing, setEditing] = useState<Plan | null>(null);
   const [form, setForm] = useState({ id: '', name: '', description: '', price: 0, maxNumberOfRides: 1, durationInDays: 1, isActive: true });
   const { showToast } = useToast();
   const [confirmState, setConfirmState] = useState<{ open: boolean; id?: string }>(() => ({ open: false }));

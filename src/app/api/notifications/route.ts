@@ -11,6 +11,8 @@ interface Notification {
   createdAt: string;
   type?: string;
   priority?: string;
+  userId?: string;
+  status?: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Otherwise return all notifications
     return NextResponse.json(db.notifications || []);
-  } catch {
+  } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
     db.notifications.push(notification);
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     return NextResponse.json(notification, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating notification:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

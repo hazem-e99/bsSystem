@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'next/server';
+import { promises as fs } from 'fs';
 import path from 'path';
 
 interface User {
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       message: 'Password has been reset successfully'
     });
 
-  } catch {
+  } catch (error) {
     console.error('Reset password error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

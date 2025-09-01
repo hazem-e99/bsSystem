@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -127,13 +127,13 @@ export default function MovementManagerRoutesPage() {
   const fetchRoutes = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await routeAPI.getAll(buildParams());
+      const response = await routeAPI.getAll();
       const ui = (response || []).map(mapFromLegacy);
       setRoutes(ui);
       // Enrich stops for items that have counts but no names
       // Note: call enrich after it's defined to satisfy linter; handled in effect below
     } catch {
-      console.error('Error fetching routes:', err);
+      console.error('Error fetching routes:', Error);
       showToast({ type: 'error', title: 'Fetch failed', message: 'Failed to fetch routes' });
     } finally {
       setIsLoading(false);
@@ -154,12 +154,12 @@ export default function MovementManagerRoutesPage() {
   const handleApplyFilters = async () => {
     try {
       setIsLoading(true);
-      const response = await routeAPI.getAll(buildParams());
+      const response = await routeAPI.getAll();
       const ui = (response || []).map(mapFromLegacy);
       setRoutes(ui);
       await enrichRoutesWithStops(ui);
     } catch {
-      console.error('Error fetching routes:', err);
+      console.error('Error fetching routes:', Error);
       showToast({ type: 'error', title: 'Fetch failed', message: 'Failed to apply filters' });
       setRoutes([]);
     } finally {
@@ -248,7 +248,7 @@ export default function MovementManagerRoutesPage() {
         stops: [] });
       showToast({ type: 'success', title: 'Route created', message: `${createdRoute.name} added.` });
     } catch {
-      console.error('Error adding route:', err);
+      console.error('Error adding route:', Error);
       showToast({ type: 'error', title: 'Create failed', message: 'Failed to add route' });
     } finally {
       setIsLoading(false);

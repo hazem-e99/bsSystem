@@ -1,6 +1,6 @@
 // TripForm.tsx - محدث بـ Mapping System
-import React from 'react';
-import { useTripMapping } from './useTripMapping';
+import React, { useState } from 'react';
+import { useTripMapping } from './src/hooks/useTripMapping';
 
 export default function TripForm() {
   const {
@@ -22,6 +22,8 @@ export default function TripForm() {
     arrivalTimeOnly: '',
     stopLocations: []
   });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

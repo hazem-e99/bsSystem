@@ -6,11 +6,21 @@ interface User {
   id: string;
   role: string;
   status?: string;
+  licenseNumber?: string;
   licenseType?: string;
   licenseExpiry?: string;
   name: string;
   email: string;
   phone: string;
+  incidents?: number;
+  lastIncident?: string;
+  performance?: {
+    totalRevenue: number;
+    completionRate: number;
+  };
+  license?: {
+    status: string;
+  };
 }
 
 interface Trip {
@@ -206,7 +216,7 @@ export async function GET(request: NextRequest) {
       drivers: enrichedDrivers,
       summary: driversSummary
     });
-  } catch {
+  } catch (error) {
     console.error('Error fetching drivers data:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -243,7 +253,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newDriver, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating driver:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

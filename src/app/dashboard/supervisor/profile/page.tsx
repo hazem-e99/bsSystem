@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -28,17 +28,21 @@ import { userAPI } from '@/lib/api';
 
 interface SupervisorProfile {
   id: string;
+  profileId: string;
   name: string;
+  fullName: string;
   email: string;
+  role: string;
   phone: string;
-  avatar: string;
+  nationalId: string;
   status: string;
+  avatar: string;
   createdAt: string;
   updatedAt: string;
-  assignedBusId: string;
-  assignedRouteId: string;
-  assignedStudents: string[];
-  assignedDrivers: string[];
+  assignedBusId?: string;
+  assignedRouteId?: string;
+  assignedStudents?: string[];
+  assignedDrivers?: string[];
 }
 
 export default function SupervisorProfilePage() {
@@ -74,18 +78,19 @@ export default function SupervisorProfilePage() {
         
         if (response) {
           console.log('📊 Supervisor data loaded:', response);
-          setProfile(response);
+          const profileData = response as SupervisorProfile;
+          setProfile(profileData);
           setFormData({
-            name: response.name || response.fullName || '',
-            email: response.email || '',
-            phone: response.phone || response.phoneNumber || ''
+            name: profileData.name || profileData.fullName || '',
+            email: profileData.email || '',
+            phone: profileData.phone || ''
           });
           setLastRefresh(new Date());
           console.log('✅ Supervisor profile loaded successfully');
         } else {
           throw new Error('Failed to fetch profile');
         }
-      } catch {
+      } catch (error) {
         console.error('❌ Failed to fetch supervisor profile:', error);
       } finally {
         setIsLoading(false);
@@ -135,14 +140,15 @@ export default function SupervisorProfilePage() {
 
         if (response) {
           console.log('✅ Avatar updated successfully:', response);
-          setProfile(response);
+          const updatedProfile = response as SupervisorProfile;
+          setProfile(updatedProfile);
           alert('Profile picture updated successfully!');
         }
       };
       
       reader.readAsDataURL(file);
       
-    } catch {
+    } catch (error) {
       console.error('❌ Failed to upload image:', error);
       alert('Failed to upload image. Please try again.');
     } finally {
@@ -160,10 +166,11 @@ export default function SupervisorProfilePage() {
       setIsSaving(true);
       console.log('💾 Saving supervisor profile to global API...');
 
-      const updated = await userAPI.update(profile.id, { name: formData.name, email: formData.email, phoneNumber: formData.phone });
+      const updated = await userAPI.update(profile!.id, { name: formData.name, email: formData.email, phone: formData.phone });
       if (updated) {
         console.log('✅ Profile updated successfully:', updated);
-        setProfile({ ...profile, ...updated });
+        const updatedProfile = updated as SupervisorProfile;
+        setProfile({ ...profile!, ...updatedProfile });
         setIsEditing(false);
         setLastRefresh(new Date());
         
@@ -178,7 +185,7 @@ export default function SupervisorProfilePage() {
       } else {
         throw new Error('Failed to update profile');
       }
-    } catch {
+    } catch (error) {
       console.error('❌ Failed to update profile:', error);
       alert('Failed to update profile. Please try again.');
     } finally {

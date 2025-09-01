@@ -27,7 +27,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 export default function BusesPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService'>('all');
   const [capacityFilter, setCapacityFilter] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -59,7 +59,7 @@ export default function BusesPage() {
       page: 0,
       pageSize: 1000, // Get all buses initially
       busNumber: searchTerm,
-      status: statusFilter === 'all' ? '' : statusFilter,
+      status: statusFilter === 'all' ? '' : (statusFilter as 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService'),
       minSpeed: 0,
       maxSpeed: 0,
       minCapacity,
@@ -103,7 +103,7 @@ export default function BusesPage() {
       
       const busesList = Array.isArray(response) ? response : (response?.data || []);
       return busesList.some((bus: BusType) => bus.busNumber === busNumber);
-    } catch {
+    } catch (error) {
       console.error('Error checking bus number existence:', error);
       // If we can&apos;t check server, fall back to local check
       return buses.find(bus => bus.busNumber === busNumber) !== undefined;
@@ -126,7 +126,7 @@ export default function BusesPage() {
         setIsLoading(true);
         
         // Use default params for initial load (no filters)
-        const initialParams = {
+        const initialParams: BusListParams = {
           page: 0,
           pageSize: 1000,
           busNumber: '',
@@ -176,7 +176,7 @@ export default function BusesPage() {
         } else {
           console.log(`✅ Successfully loaded ${cleanBusesData.length} buses`);
         }
-      } catch {
+      } catch (error) {
         console.error('Failed to fetch data:', error);
         // Set empty arrays on error to prevent crashes
         setBuses([]);
@@ -235,8 +235,8 @@ export default function BusesPage() {
             : { lat: 0, lng: 0 }
         }));
       setBuses(cleanBusesData);
-    } catch {
-      console.error('Failed to apply filters:', e);
+    } catch (error) {
+      console.error('Failed to apply filters:', error);
       setBuses([]);
     } finally {
       setIsLoading(false);
@@ -303,7 +303,7 @@ export default function BusesPage() {
         const msg = (response as { message?: string })?.message || 'Server rejected create request.';
         setAddMessage({ type: 'error', text: msg });
       }
-    } catch {
+    } catch (error) {
       console.error('Failed to add bus:', error);
       const message = error instanceof Error ? error.message : 'Failed to add bus. Please try again.';
       showToast({ type: 'error', title: 'Add failed', message });
@@ -366,7 +366,7 @@ export default function BusesPage() {
         const msg = (response as { message?: string })?.message || 'Server rejected update request.';
         setEditMessage({ type: 'error', text: msg });
       }
-    } catch {
+    } catch (error) {
       console.error('Failed to update bus:', error);
       const message = error instanceof Error ? error.message : 'Failed to update bus. Please try again.';
       showToast({ type: 'error', title: 'Update failed', message });
@@ -435,7 +435,7 @@ export default function BusesPage() {
         setBuses(cleanBusesData);
         showToast({ type: 'success', title: 'Bus deleted' });
       }
-    } catch {
+    } catch (error) {
       console.error('Failed to delete bus:', error);
       showToast({ type: 'error', title: 'Delete failed', message: 'Failed to delete bus. Please try again.' });
     } finally {
@@ -479,13 +479,13 @@ export default function BusesPage() {
 
   const getDriverName = (driverId?: number) => {
     if (!driverId) return 'Not assigned';
-    const driver = users.find((u: { id: number; name?: string }) => u.id === driverId);
+    const driver = users.find((u: { id: number; name?: string }) => u.id === driverId) as { id: number; name?: string } | undefined;
     return driver ? (driver.name || 'Unknown') : 'Unknown';
   };
 
   const getRouteName = (routeId?: number) => {
     if (!routeId) return 'Not assigned';
-    const route = routes.find((r: { id: number; name?: string }) => r.id === routeId);
+    const route = routes.find((r: { id: number; name?: string }) => r.id === routeId) as { id: number; name?: string } | undefined;
     return route ? (route.name || 'Unknown') : 'Unknown';
   };
 
@@ -582,7 +582,7 @@ export default function BusesPage() {
                 { value: 'OutOfService', label: 'Out of Service' },
               ]}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+                              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService')}
             />
             <Select
               options={[
@@ -762,7 +762,7 @@ export default function BusesPage() {
                   { value: 'OutOfService', label: 'Out of Service' }
                 ]}
                 value={newBus.status}
-                onChange={(e) => setNewBus({ ...newBus, status: e.target.value })}
+                onChange={(e) => setNewBus({ ...newBus, status: e.target.value as 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService' })}
                 required
               />
             </div>
@@ -859,7 +859,7 @@ export default function BusesPage() {
                     { value: 'OutOfService', label: 'Out of Service' }
                   ]}
                   value={selectedBus.status}
-                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value })}
+                  onChange={(e) => setSelectedBus({ ...selectedBus, status: e.target.value as 'Active' | 'Inactive' | 'UnderMaintenance' | 'OutOfService' })}
                   required
                 />
               </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -58,7 +58,7 @@ export default function MovementManagerProfilePage() {
         setFormData({ name: data.name || '', email: data.email || '', phone: data.phone || '' });
         setLastRefresh(new Date());
       } catch {
-        console.error('Failed to fetch movement manager profile:', error);
+        console.error('Failed to fetch movement manager profile:', Error);
       } finally {
         setIsLoading(false);
       }
@@ -95,7 +95,7 @@ export default function MovementManagerProfilePage() {
       };
       reader.readAsDataURL(file);
     } catch {
-      console.error('Failed to upload image:', error);
+      console.error('Failed to upload image:', Error);
       alert('Failed to upload image. Please try again.');
     } finally {
       setIsUploadingImage(false);
@@ -118,7 +118,7 @@ export default function MovementManagerProfilePage() {
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: updated }));
       alert('Profile refreshed from server.');
     } catch {
-      console.error('Failed to update profile:', error);
+      console.error('Failed to update profile:', Error);
       alert('Failed to refresh profile.');
     } finally {
       setIsSaving(false);

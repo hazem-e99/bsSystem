@@ -7,8 +7,17 @@ interface Trip {
   date: string;
   busId: string;
   driverId: string;
+  routeId: string;
   status: string;
   passengers: number;
+}
+
+interface Route {
+  id: string;
+  name: string;
+  startPoint: string;
+  endPoint: string;
+  distance: number;
 }
 
 interface Bus {
@@ -22,6 +31,7 @@ interface User {
   id: string;
   role: string;
   name: string;
+  phone?: string;
 }
 
 interface Payment {
@@ -296,18 +306,18 @@ export async function GET(request: NextRequest) {
       routePerformance,
       monthlyTrends: monthlyTrendsArray,
       topPerformingBuses: fleetPerformance
-        .sort((a: Bus, b: Bus) => b.totalRevenue - a.totalRevenue)
+        .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
         .slice(0, 5),
       topPerformingDrivers: driverPerformance
-        .sort((a: User, b: User) => b.totalRevenue - a.totalRevenue)
+        .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
         .slice(0, 5),
       topPerformingRoutes: routePerformance
-        .sort((a: Route, b: Route) => b.totalRevenue - a.totalRevenue)
+        .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
         .slice(0, 5)
     };
     
     return NextResponse.json(analyticsData);
-  } catch {
+  } catch (error) {
     console.error('Error calculating movement manager analytics:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

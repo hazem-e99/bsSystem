@@ -12,16 +12,57 @@ import { studentProfileAPI, paymentAPI, subscriptionPlansAPI } from '@/lib/api';
 import { CheckCircle, CreditCard, Banknote, Crown, Shield, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+// Define proper types for the data
+interface StudentProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  year: number;
+  studentId: string;
+  avatar?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  subscriptionStatus?: string;
+  subscriptionPlan?: any;
+}
+
+interface Payment {
+  id: string;
+  studentId: string;
+  tripId?: string;
+  amount: number;
+  method: 'bank' | 'cash';
+  status: 'pending' | 'completed' | 'failed';
+  date: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  type?: string;
+  description?: string;
+  price: number;
+  duration?: string;
+  recommended?: boolean;
+  maxNumberOfRides?: number;
+  durationInDays?: number;
+  isActive?: boolean;
+}
+
 export default function StudentSubscriptionPage() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
-  const [profile, setProfile] = useState<unknown>(null);
-  const [payments, setPayments] = useState<unknown[]>([]);
-  const [plans, setPlans] = useState<unknown[]>([]);
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [methodModalOpen, setMethodModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<unknown | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'bank' | 'cash'>('bank');
   const [submitting, setSubmitting] = useState(false);
   const [pendingModalOpen, setPendingModalOpen] = useState(false);
@@ -31,26 +72,36 @@ export default function StudentSubscriptionPage() {
       if (!user) return;
       
       try {
-        const [profileRes, paymentsRes] = await Promise.all([
+        setLoading(true);
+        const [profileRes, paymentsRes, plansRes] = await Promise.all([
           studentProfileAPI.getProfile(user.id.toString()),
-          paymentAPI.getByStudent(user.id.toString())
+          paymentAPI.getByStudent(user.id.toString()),
+          subscriptionPlansAPI.getAll().catch(() => [])
         ]);
 
         if (profileRes) {
-          setProfile(profileRes);
+          setProfile(profileRes as StudentProfile);
         }
         if (paymentsRes) {
-          setPayments(paymentsRes);
+          setPayments(paymentsRes as Payment[]);
         }
-      } catch {
+        if (plansRes) {
+          setPlans(plansRes as Plan[]);
+        }
+      } catch (error) {
         console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
   }, [user]);
 
-  const lastSubscriptionPayment = useMemo(() => (payments || []).filter((x: Payment) => !x.tripId).sort((a: Payment, b: Payment) => new Date(b.date).getTime() - new Date(a.date).getTime())[0], [payments]);
+  const lastSubscriptionPayment = useMemo(() => 
+    (payments || []).filter((x: Payment) => !x.tripId).sort((a: Payment, b: Payment) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )[0], [payments]);
 
   const currentPlan = profile?.subscriptionPlan || lastSubscriptionPayment?.description?.replace('Subscription ', '') || null;
   const currentMethod = lastSubscriptionPayment?.method || null;
@@ -66,12 +117,15 @@ export default function StudentSubscriptionPage() {
     if (!user || !selectedPlan) return;
     
     try {
+      setSubmitting(true);
+      // Use the correct API structure for creating subscription plans
       const res = await subscriptionPlansAPI.create({
-        studentId: user.id.toString(),
-        planId: selectedPlan.id,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + selectedPlan.duration * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active'
+        name: selectedPlan.name,
+        description: selectedPlan.description,
+        price: selectedPlan.price,
+        maxNumberOfRides: selectedPlan.maxNumberOfRides || 0,
+        durationInDays: selectedPlan.durationInDays || 30,
+        isActive: selectedPlan.isActive || true
       });
 
       if (res) {
@@ -88,19 +142,23 @@ export default function StudentSubscriptionPage() {
         ]);
 
         if (profileRes) {
-          setProfile(profileRes);
+          setProfile(profileRes as StudentProfile);
         }
         if (paymentsRes) {
-          setPayments(paymentsRes);
+          setPayments(paymentsRes as Payment[]);
         }
+        
+        setMethodModalOpen(false);
       }
-    } catch {
+    } catch (error) {
       console.error('Subscription error:', error);
       showToast({
         type: 'error',
         title: 'Error!',
         message: 'Failed to subscribe. Please try again.'
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 

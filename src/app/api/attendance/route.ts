@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(attendanceRecords);
   } catch {
-    console.error('Error fetching attendance records:', error);
+    console.error('Error fetching attendance records:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newAttendanceRecord, { status: 201 });
   } catch {
-    console.error('Error creating attendance record:', error);
+    console.error('Error creating attendance record:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -129,7 +129,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(db.attendance[recordIndex]);
   } catch {
-    console.error('Error updating attendance record:', error);
+    console.error('Error updating attendance record:', Error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

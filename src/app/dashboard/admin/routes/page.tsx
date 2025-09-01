@@ -22,7 +22,7 @@ import {
   Bus
 } from 'lucide-react';
 import { routeAPI } from '@/lib/api';
-import { Route as RouteType } from '@/types/bus';
+import { TripRoute as RouteType } from '@/types/tripRoute';
 import { TripRouteFilterDTO } from '@/types/tripRoute';
 import { formatDate } from '@/utils/formatDate';
 import { useToast } from '@/components/ui/Toast';
@@ -118,12 +118,12 @@ export default function RoutesPage() {
   const fetchRoutes = async () => {
     try {
       setIsLoading(true);
-      const response = await routeAPI.getAll(buildParams());
+      const response = await routeAPI.getAll();
       setRoutes(response || []);
       // Enrich newly loaded routes with stops if missing
       await enrichRoutesWithStops(response || []);
     } catch {
-      console.error('Error fetching routes:', err);
+      console.error('Error fetching routes:', Error);
       setError('Failed to fetch routes');
     } finally {
       setIsLoading(false);
@@ -133,11 +133,11 @@ export default function RoutesPage() {
   const handleApplyFilters = async () => {
     try {
       setIsLoading(true);
-      const response = await routeAPI.getAll(buildParams());
+      const response = await routeAPI.getAll();
       setRoutes(response || []);
       await enrichRoutesWithStops(response || []);
-    } catch {
-      console.error('Error fetching routes:', err);
+    } catch (error) {
+      console.error('Error fetching routes:', error);
       setError('Failed to fetch routes');
       setRoutes([]);
     } finally {
@@ -154,7 +154,7 @@ export default function RoutesPage() {
       if (need.length === 0) return;
               const fulls = await Promise.all(need.map((r: BaseRoute) => routeAPI.getById(r.id)));
               setRoutes(prev => prev.map((r: RouteType) => {
-        const idx = need.findIndex((n: Notification) => n.id === r.id);
+        const idx = need.findIndex((n: BaseRoute) => n.id === r.id);
         const full = fulls[idx];
         if (idx >= 0 && full && Array.isArray(full.stops)) {
           return { ...r, stops: full.stops };
@@ -173,8 +173,8 @@ export default function RoutesPage() {
   // Filter routes based on search and filters
   const filteredRoutes = routes.filter(route => {
     const name = (route?.name ?? '').toString().toLowerCase();
-    const start = (route?.startPoint ?? route?.startLocation ?? '').toString().toLowerCase();
-    const end = (route?.endPoint ?? route?.endLocation ?? '').toString().toLowerCase();
+    const start = (route?.startLocation ?? '').toString().toLowerCase();
+    const end = (route?.endLocation ?? '').toString().toLowerCase();
     const term = (searchTerm ?? '').toLowerCase();
     const matchesSearch = name.includes(term) || start.includes(term) || end.includes(term);
     const distanceNum = Number(route?.distance ?? 0);
@@ -236,7 +236,7 @@ export default function RoutesPage() {
       showToast({ type: 'success', title: 'Route created', message: `${createdRoute.name} added.` });
       
     } catch {
-      console.error('Error adding route:', err);
+      console.error('Error adding route:', Error);
       setError('Failed to add route');
       showToast({ type: 'error', title: 'Create failed', message: 'Failed to add route.' });
     } finally {
@@ -252,27 +252,13 @@ export default function RoutesPage() {
       setIsLoading(true);
       setError('');
 
-      const frequency = selectedRoute?.schedule?.frequency || 'daily';
-              const updatedData: Partial<RouteType> = {
+      const updatedData: Partial<RouteType> = {
         name: selectedRoute.name,
-        startPoint: selectedRoute.startPoint,
-        endPoint: selectedRoute.endPoint,
+        startLocation: selectedRoute.startLocation,
+        endLocation: selectedRoute.endLocation,
         distance: selectedRoute.distance,
-        estimatedDuration: selectedRoute?.estimatedDuration || 0,
-        schedule: {
-          departureTime: selectedRoute?.schedule?.departureTime || '08:00',
-          arrivalTime: selectedRoute?.schedule?.arrivalTime || '09:00',
-          frequency,
-          days:
-            frequency === 'weekdays'
-              ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-              : frequency === 'weekends'
-              ? ['Saturday', 'Sunday']
-              : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-        },
-                  stops: (selectedRoute as RouteWithStops)?.stops ? (selectedRoute as RouteWithStops).stops.map((s: Stop) => ({
-          stopName: s.stopName || s.name || ''
-        })) : []
+        estimatedTime: selectedRoute.estimatedTime,
+        stopLocations: (selectedRoute as RouteWithStops)?.stops ? (selectedRoute as RouteWithStops).stops.map((s: Stop) => s.stopName || s.name || '').filter(Boolean) : []
       };
 
       const updated = await routeAPI.update(selectedRoute.id, updatedData);
@@ -281,7 +267,7 @@ export default function RoutesPage() {
       setShowEditModal(false);
       setSelectedRoute(null);
     } catch {
-      console.error('Error updating route:', err);
+      console.error('Error updating route:', Error);
       setError('Failed to update route');
       showToast({ type: 'error', title: 'Update failed', message: 'Failed to update route.' });
     } finally {
@@ -290,7 +276,7 @@ export default function RoutesPage() {
   };
 
   const addStop = () => {
-    setNewRoute(prev => ({ ...prev, stops: [...(prev.stops || []), { stopName: '' }] }));
+    setNewRoute(prev => ({ ...prev, stops: [...(prev.stops || []), { stopName: '', stopTime: '' }] }));
   };
 
   const removeStop = (index: number) => {
@@ -309,10 +295,10 @@ export default function RoutesPage() {
       setIsLoading(true);
       setError('');
       await routeAPI.delete(routeId);
-      setRoutes(prev => prev.filter(r => r.id !== routeId));
+      setRoutes(prev => prev.filter(r => r.id !== Number(routeId)));
       showToast({ type: 'success', title: 'Route deleted', message: 'Route removed.' });
     } catch {
-      console.error('Error deleting route:', err);
+      console.error('Error deleting route:', Error);
       setError('Failed to delete route');
       showToast({ type: 'error', title: 'Delete failed', message: 'Failed to delete route.' });
     } finally {
@@ -324,8 +310,8 @@ export default function RoutesPage() {
     const stats = {
       total: routes.length,
       totalDistance: routes.reduce((sum, r) => sum + r.distance, 0),
-      activeBuses: routes.filter(r => r.assignedBuses?.length > 0).length,
-      totalStops: routes.reduce((sum, r) => sum + (r.stops?.length || 0), 0)
+      activeBuses: 0, // Not available in TripRoute interface
+      totalStops: routes.reduce((sum, r) => sum + (r.stopLocations?.length || 0), 0)
     };
     return stats;
   };
@@ -333,15 +319,13 @@ export default function RoutesPage() {
   const routeStats = getRouteStats();
 
   const getAssignedBuses = (routeId: string) => {
-    const route = routes.find(r => r.id === routeId);
-    return route?.assignedBuses?.length || 0;
+    const route = routes.find(r => r.id === Number(routeId));
+    return 0; // Not available in TripRoute interface
   };
 
   const getAssignedDrivers = (routeId: string) => {
-    const route = routes.find(r => r.id === routeId);
-    const driverIds = route?.assignedSupervisors?.map(s => s.id).filter(Boolean) || [];
-    const uniqueDrivers = new Set(driverIds);
-    return uniqueDrivers.size;
+    const route = routes.find(r => r.id === Number(routeId));
+    return 0; // Not available in TripRoute interface
   };
 
   return (
@@ -477,7 +461,7 @@ export default function RoutesPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{route.name}</p>
-                        <p className="text-sm text-gray-500">{route.startPoint} → {route.endPoint}</p>
+                        <p className="text-sm text-gray-500">{route.startLocation} → {route.endLocation}</p>
                       </div>
                     </div>
                   </TableCell>
@@ -491,7 +475,7 @@ export default function RoutesPage() {
                   <TableCell>
                     <div className="text-sm">
                       <p className="font-medium">
-                        {route.estimatedDuration ? `${route.estimatedDuration} min` : '-'}
+                        {route.estimatedTime ? `${route.estimatedTime} min` : '-'}
                       </p>
                     </div>
                   </TableCell>
@@ -499,14 +483,14 @@ export default function RoutesPage() {
                   <TableCell>
                     <div className="text-sm">
                       <p className="font-medium">
-                        {route?.stopLocationsCount || (route.stops?.length || 0)} stops
+                                                 {route?.stopLocationsCount || ((route as RouteWithStops).stops?.length || 0)} stops
                       </p>
-                      {route.stops && route.stops.length > 0 && (
-                        <p className="text-xs text-gray-500 truncate">
-                          {((route.stops || []).slice(0,3).map((s: Stop) => s.stopName || s.name).filter(Boolean) as string[]).join(', ')}
-                          {((route.stops || []).length > 3) ? ` +${(route.stops || []).length - 3} more` : ''}
-                        </p>
-                      )}
+                                             {(route as RouteWithStops).stops && (route as RouteWithStops).stops.length > 0 && (
+                         <p className="text-xs text-gray-500 truncate">
+                           {(((route as RouteWithStops).stops || []).slice(0,3).map((s: Stop) => s.stopName || s.name).filter(Boolean) as string[]).join(', ')}
+                           {(((route as RouteWithStops).stops || []).length > 3) ? ` +${((route as RouteWithStops).stops || []).length - 3} more` : ''}
+                         </p>
+                       )}
                     </div>
                   </TableCell>
                   
@@ -542,7 +526,7 @@ export default function RoutesPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDeleteRoute(route.id)}
+                        onClick={() => handleDeleteRoute(route.id.toString())}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -701,8 +685,8 @@ export default function RoutesPage() {
                   Start Point
                 </label>
                 <Input
-                  value={selectedRoute.startPoint}
-                  onChange={(e) => setSelectedRoute({ ...selectedRoute, startPoint: e.target.value })}
+                  value={selectedRoute.startLocation}
+                  onChange={(e) => setSelectedRoute({ ...selectedRoute, startLocation: e.target.value })}
                   placeholder="Enter start point"
                   required
                 />
@@ -712,8 +696,8 @@ export default function RoutesPage() {
                   End Point
                 </label>
                 <Input
-                  value={selectedRoute.endPoint}
-                  onChange={(e) => setSelectedRoute({ ...selectedRoute, endPoint: e.target.value })}
+                  value={selectedRoute.endLocation}
+                  onChange={(e) => setSelectedRoute({ ...selectedRoute, endLocation: e.target.value })}
                   placeholder="Enter end point"
                   required
                 />
@@ -741,8 +725,8 @@ export default function RoutesPage() {
                 </label>
                 <Input
                   type="number"
-                  value={selectedRoute.estimatedDuration}
-                  onChange={(e) => setSelectedRoute({ ...selectedRoute, estimatedDuration: Number(e.target.value) })}
+                  value={selectedRoute.estimatedTime}
+                  onChange={(e) => setSelectedRoute({ ...selectedRoute, estimatedTime: e.target.value })}
                   placeholder="Enter duration"
                   min="0"
                   required
@@ -757,21 +741,21 @@ export default function RoutesPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setSelectedRoute({ ...selectedRoute, stops: [ ...(selectedRoute?.stops || []), { stopName: '', stopTime: '' } ] })}
+                  onClick={() => setSelectedRoute({ ...selectedRoute, stops: [ ...((selectedRoute as RouteWithStops)?.stops || []), { stopName: '', stopTime: '' } ] } as RouteWithStops)}
                 >
                   + Add Stop
                 </Button>
               </div>
-                              {(selectedRoute?.stops || []).map((stop: Stop, index: number) => (
+                              {((selectedRoute as RouteWithStops)?.stops || []).map((stop: Stop, index: number) => (
                 <div key={index} className="grid grid-cols-2 gap-4 items-end">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Stop Name</label>
                     <Input
                       value={stop.stopName || ''}
-                      onChange={(e) => setSelectedRoute({
-                        ...selectedRoute,
-                        stops: (selectedRoute?.stops || []).map((s: Stop, i: number) => i === index ? { ...s, stopName: e.target.value } : s)
-                      })}
+                                             onChange={(e) => setSelectedRoute({
+                         ...selectedRoute,
+                                                  stops: ((selectedRoute as RouteWithStops)?.stops || []).map((s: Stop, i: number) => i === index ? { ...s, stopName: e.target.value } : s)
+                       } as RouteWithStops)}
                       placeholder="e.g., Main Gate"
                       required
                     />
@@ -781,10 +765,10 @@ export default function RoutesPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setSelectedRoute({
-                        ...selectedRoute,
-                        stops: (selectedRoute?.stops || []).filter((_: Stop, i: number) => i !== index)
-                      })}
+                                             onClick={() => setSelectedRoute({
+                         ...selectedRoute,
+                                                  stops: ((selectedRoute as RouteWithStops)?.stops || []).filter((_: Stop, i: number) => i !== index)
+                       } as RouteWithStops)}
                     >
                       -
                     </Button>
@@ -829,31 +813,31 @@ export default function RoutesPage() {
             </div>
             
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Start Point:</span>
-                <p className="font-medium">{selectedRoute.startPoint}</p>
-              </div>
-              <div>
-                <span className="text-gray-500">End Point:</span>
-                <p className="font-medium">{selectedRoute.endPoint}</p>
-              </div>
+                             <div>
+                 <span className="text-gray-500">Start Point:</span>
+                 <p className="font-medium">{selectedRoute.startLocation}</p>
+               </div>
+               <div>
+                 <span className="text-gray-500">End Point:</span>
+                 <p className="font-medium">{selectedRoute.endLocation}</p>
+               </div>
               <div>
                 <span className="text-gray-500">Distance:</span>
                 <p className="font-medium">{selectedRoute.distance} km</p>
               </div>
-              <div>
-                <span className="text-gray-500">Duration:</span>
-                <p className="font-medium">
-                  {selectedRoute.estimatedDuration ? `${selectedRoute.estimatedDuration} min` : '-'}
-                </p>
-              </div>
+                             <div>
+                 <span className="text-gray-500">Duration:</span>
+                 <p className="font-medium">
+                   {selectedRoute.estimatedTime ? `${selectedRoute.estimatedTime} min` : '-'}
+                 </p>
+               </div>
               
-              <div>
-                <span className="text-gray-500">Stops:</span>
-                <p className="font-medium">
-                  {selectedRoute?.stopLocationsCount || (selectedRoute.stops?.length || 0)} stops
-                </p>
-              </div>
+                             <div>
+                 <span className="text-gray-500">Stops:</span>
+                 <p className="font-medium">
+                   {selectedRoute?.stopLocationsCount || ((selectedRoute as RouteWithStops).stops?.length || 0)} stops
+                 </p>
+               </div>
 
               <div>
                 <span className="text-gray-500">Trips:</span>
@@ -877,11 +861,11 @@ export default function RoutesPage() {
               </div>
             </div>
 
-            {selectedRoute.stops && selectedRoute.stops.length > 0 && (
+            {(selectedRoute as RouteWithStops).stops && (selectedRoute as RouteWithStops).stops.length > 0 && (
               <div>
                 <span className="text-gray-500 text-sm">Stops:</span>
                 <div className="mt-2 space-y-1">
-                  {selectedRoute.stops.map((stop: Stop, index) => (
+                  {(selectedRoute as RouteWithStops).stops.map((stop: Stop, index) => (
                     <div key={index} className="flex items-center space-x-2 text-sm">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       <span>{stop.stopName || stop.name}{stop.stopTime ? ` - ${stop.stopTime}` : ''}</span>

@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  studentId?: string;
+  department?: string;
+  year?: string;
+}
+
 interface Booking {
   id: string;
   status: string;
@@ -50,6 +60,12 @@ interface EnrichedBooking extends Booking {
     paymentStatus: string;
     paymentAmount: number;
     paymentDate: string | null;
+    isConfirmed: boolean;
+    isPending: boolean;
+    isCancelled: boolean;
+    isUpcoming: boolean;
+    isToday: boolean;
+    isPast: boolean;
   };
 }
 
@@ -291,13 +307,13 @@ export async function GET(request: NextRequest) {
       bookings: enrichedBookings,
       summary
     });
-  } catch {
-    console.error('Error fetching bookings data:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error fetching bookings data:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }
 
 export async function POST(request: NextRequest) {
@@ -329,11 +345,11 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newBooking, { status: 201 });
-  } catch {
-    console.error('Error creating booking:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+     } catch (error) {
+     console.error('Error creating booking:', error);
+     return NextResponse.json(
+       { error: 'Internal server error' },
+       { status: 500 }
+     );
+   }
 }

@@ -14,6 +14,13 @@ interface Trip {
   date?: string;
 }
 
+interface Booking {
+  id: string;
+  status: string;
+  createdAt?: string;
+  date?: string;
+}
+
 interface Payment {
   id: string;
   status: string;

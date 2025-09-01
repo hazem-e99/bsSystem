@@ -48,8 +48,8 @@ export default function ViewStudentPage() {
         }
         
         setStudent(studentData);
-      } catch {
-        console.error('Failed to fetch student:', err);
+      } catch (error) {
+        console.error('Failed to fetch student:', error);
         showToast({
           type: 'error',
           title: 'Error',

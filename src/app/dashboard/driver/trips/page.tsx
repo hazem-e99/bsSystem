@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/utils/formatDate';
 import { useState, useEffect } from 'react';
+import { TripViewModel } from '@/types/trip';
 
 interface Trip {
   id: string;
@@ -44,7 +45,7 @@ interface Trip {
 
 interface Bus {
   id: string;
-  number: string;
+  busNumber: string;
   capacity: number;
   driverId?: string;
   status: 'active' | 'maintenance' | 'out-of-service';
@@ -85,20 +86,20 @@ export default function TripHistory() {
       
       // Fetch all trips
       const allTrips = await tripAPI.getAll();
-      const driverTrips = allTrips.filter((t: Trip) => t.driverId === user.id.toString());
+      const driverTrips = allTrips.filter((t: TripViewModel) => t.driverId === user.id);
       console.log('📊 Driver trips loaded:', driverTrips.length);
-      setTrips(driverTrips);
+      setTrips(driverTrips as unknown as Trip[]);
       
       // Fetch routes and buses for additional info
       const allRoutes = await routeAPI.getAll();
       const allBusesResponse = await busAPI.getAll();
       setRoutes(allRoutes);
-      setBuses(allBusesResponse.data);
+      setBuses(allBusesResponse.data as unknown as Bus[]);
       
       setLastRefresh(new Date());
       console.log('✅ Trip history loaded successfully');
       
-    } catch {
+    } catch (error) {
       console.error('❌ Failed to fetch trip history:', error);
       showToast({
         type: 'error',

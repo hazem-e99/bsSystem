@@ -53,7 +53,7 @@ export const Topbar = () => {
       
       try {
         // Fetch profile for all user types from db.json
-        const profile = await userAPI.getById(user.id);
+        const profile = await userAPI.getById(String(user.id));
         if (profile) {
           setUserProfile(profile);
           console.log('👤 User profile loaded from db.json:', profile);
@@ -98,8 +98,8 @@ export const Topbar = () => {
       
       try {
         setIsLoadingNotifications(true);
-        const userNotifications = await notificationAPI.getByUser(user.id);
-        setNotifications(userNotifications);
+        const userNotifications = await notificationAPI.getByUser(String(user.id));
+        setNotifications(userNotifications as Notification[]);
       } catch (error: unknown) {
         // Ignore 404s silently
         if ((error as Error)?.message?.includes('404')) {
@@ -123,8 +123,8 @@ export const Topbar = () => {
       const refreshNotifications = async () => {
         if (!user) return;
         try {
-          const userNotifications = await notificationAPI.getByUser(user.id);
-          setNotifications(userNotifications);
+          const userNotifications = await notificationAPI.getByUser(String(user.id));
+          setNotifications(userNotifications as Notification[]);
         } catch (error) {
           console.error('Failed to refresh notifications:', error);
         }
@@ -194,7 +194,7 @@ export const Topbar = () => {
     
     try {
       // Clear all read notifications from the database
-      const result = await notificationAPI.clearReadNotifications(user.id);
+      const result = await notificationAPI.clearReadNotifications(String(user.id));
       
       if (result && result.success) {
         // Update local state to remove read notifications
@@ -223,7 +223,7 @@ export const Topbar = () => {
     
     try {
       // Mark all notifications as read in the database
-      const result = await notificationAPI.markAllAsRead(user.id);
+      const result = await notificationAPI.markAllAsRead(String(user.id));
       
       if (result && result.success) {
         // Update local state to mark all notifications as read
@@ -249,12 +249,12 @@ export const Topbar = () => {
 
   // Get user avatar - use profile avatar if available, otherwise fallback to initial
   const getUserAvatar = () => {
-    if (userProfile?.avatar) {
+    if ((userProfile as any)?.avatar) {
       // Check if it's a base64 image or file path
-      if (userProfile.avatar.startsWith('data:image')) {
-        return userProfile.avatar; // Base64 image
-      } else if (userProfile.avatar.startsWith('/avatars/')) {
-        return userProfile.avatar; // File path
+      if ((userProfile as any).avatar.startsWith('data:image')) {
+        return (userProfile as any).avatar; // Base64 image
+      } else if ((userProfile as any).avatar.startsWith('/avatars/')) {
+        return (userProfile as any).avatar; // File path
       }
     }
     return null;
@@ -262,8 +262,8 @@ export const Topbar = () => {
 
   // Get user display name - use profile name if available, otherwise fallback to user context
   const getUserDisplayName = () => {
-    if (userProfile?.name) {
-      return userProfile.name;
+    if ((userProfile as any)?.name) {
+      return (userProfile as any).name;
     }
     return user?.name || 'User';
   };
@@ -360,8 +360,8 @@ export const Topbar = () => {
                         <div className="flex items-start gap-3">
                           {/* Icon */}
                           <div className={`mt-1 w-9 h-9 rounded-lg flex items-center justify-center shadow-sm ${
-                            notification.type === 'booking' ? 'bg-primary/10 text-primary' :
-                            notification.type === 'announcement' ? 'bg-secondary/10 text-secondary' :
+                            (notification as any).type === 'booking' ? 'bg-primary/10 text-primary' :
+                            (notification as any).type === 'announcement' ? 'bg-secondary/10 text-secondary' :
                             'bg-warning/10 text-warning'
                           }`}>
                             <Bell className="w-4 h-4" />
@@ -369,18 +369,18 @@ export const Topbar = () => {
                           {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between">
-                              <p className={`text-sm font-semibold truncate pr-3 ${!notification.read ? 'text-primary' : 'text-text-primary'}`}>{notification.title || 'Notification'}</p>
+                              <p className={`text-sm font-semibold truncate pr-3 ${!notification.read ? 'text-primary' : 'text-text-primary'}`}>{(notification as any).title || 'Notification'}</p>
                               {!notification.read && (
                                 <span className="mt-1 inline-block w-2 h-2 rounded-full bg-primary" />
                               )}
                             </div>
-                            {notification.message && (
-                              <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">{notification.message}</p>
+                            {(notification as any).message && (
+                              <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">{(notification as any).message}</p>
                             )}
                             <div className="flex items-center gap-2 mt-2 text-[11px] text-text-muted">
-                              <span>{getRelativeTime(notification.createdAt || notification.date || (notification.timestamp ? new Date(notification.timestamp) : new Date()))}</span>
-                              {notification.stopName && <span>• Pickup: {notification.stopName}</span>}
-                              {notification.busId && <span>• Bus: {notification.busId}</span>}
+                              <span>{getRelativeTime((notification as any).createdAt || (notification as any).date || ((notification as any).timestamp ? new Date((notification as any).timestamp) : new Date()))}</span>
+                                                              {(notification as any).stopName && <span>• Pickup: {(notification as any).stopName}</span>}
+                                {(notification as any).busId && <span>• Bus: {(notification as any).busId}</span>}
                             </div>
                           </div>
                         </div>

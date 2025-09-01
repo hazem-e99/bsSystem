@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -43,6 +43,19 @@ interface Plan {
   name: string;
 }
 
+// Student Profile interface
+interface StudentProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  year: number;
+  studentId: string;
+  subscriptionStatus?: string;
+  subscriptionPlan?: any;
+  paymentMethod?: string;
+}
+
 // Latest booking and trip interfaces
 interface LatestBooking {
   id: number;
@@ -68,6 +81,7 @@ interface Notification {
   createdAt: string;
   type?: string;
   priority?: string;
+  status?: string;
 }
 
 export default function StudentDashboard() {
@@ -76,7 +90,7 @@ export default function StudentDashboard() {
 	const [stats, setStats] = useState<unknown>(null);
 	const { showToast } = useToast();
 	const [requireSubscriptionSetup, setRequireSubscriptionSetup] = useState(false);
-	const [plans, setPlans] = useState<unknown[]>([]);
+	const [plans, setPlans] = useState<Plan[]>([]);
 	const [selectedPlan, setSelectedPlan] = useState<string>('');
 	const [paymentMethod, setPaymentMethod] = useState<'bank' | 'cash'>('bank');
 	const [submitting, setSubmitting] = useState(false);
@@ -103,11 +117,11 @@ export default function StudentDashboard() {
 						bookingAPI.getByStudent(user.id.toString()),
 						notificationAPI.getByUser(user.id.toString())
 					]);
-					const profile = profileRes;
-					const payments = paymentsRes;
-					setPlans(plansData || []);
-					const bookings = bookingsRes;
-					const notifications = notifRes;
+					const profile = profileRes as StudentProfile;
+					const payments = paymentsRes as Payment[];
+					setPlans(plansData as Plan[] || []);
+					const bookings = bookingsRes as Booking[];
+					const notifications = notifRes as Notification[];
 
 					const hasActive = Array.isArray(payments) && payments.some((p: Payment) => p.status === 'completed' && !p.tripId);
 					const profileActive = profile?.subscriptionStatus === 'active';
@@ -136,8 +150,14 @@ export default function StudentDashboard() {
 					if (latest?.tripId) {
 						try {
 							const tRes = await tripAPI.getById(latest.tripId);
-							const trip = tRes;
-							setLatestTrip(trip);
+							const trip = tRes as any;
+							setLatestTrip({
+								id: trip.id,
+								startLocation: trip.startLocation || '',
+								endLocation: trip.endLocation || '',
+								startTime: trip.startTime || '',
+								endTime: trip.endTime || ''
+							});
 						} catch {}
 					} else {
 						setLatestTrip(null);
@@ -147,7 +167,7 @@ export default function StudentDashboard() {
 					setActiveBookingsCount((Array.isArray(bookings) ? bookings : []).filter((b: Booking) => b.status === 'confirmed').length);
 					setUnreadNotifications((Array.isArray(notifications) ? notifications : []).filter((n: Notification) => n.read !== true && n.status !== 'read').length);
 				} catch {}
-			} catch {
+			} catch (error) {
 				console.error('Failed to fetch student data:', error);
 				showToast({ type: 'error', title: 'Error!', message: 'Failed to load dashboard data. Please try again.' });
 			} finally {
@@ -161,12 +181,14 @@ export default function StudentDashboard() {
 		if (!user || !selectedPlan) return;
 		try {
 			setSubmitting(true);
+			// Use the correct API structure for creating subscription plans
 			const res = await subscriptionPlansAPI.create({
-				studentId: user.id.toString(),
-				planId: selectedPlan,
-				startDate: new Date().toISOString(),
-				endDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // Placeholder duration
-				status: 'active'
+				name: selectedPlan,
+				description: `Subscription for ${selectedPlan}`,
+				price: 0, // Default price
+				maxNumberOfRides: 100, // Default rides
+				durationInDays: 30, // Default duration
+				isActive: true
 			});
 			const data = res;
 			if (!res) {
@@ -176,7 +198,7 @@ export default function StudentDashboard() {
 			setRequireSubscriptionSetup(false);
 			showToast({ type: 'success', title: 'Success!', message: 'Subscription saved' });
 			window.location.reload();
-		} catch {
+		} catch (error) {
 			showToast({ type: 'error', title: 'Error!', message: 'Failed to set subscription' });
 		} finally {
 			setSubmitting(false);

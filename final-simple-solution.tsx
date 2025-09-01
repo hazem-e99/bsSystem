@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+
 // الحل البسيط النهائي - مضمون 100%
 // ✅ VALIDATED with real API testing - These IDs are confirmed working
 export const GUARANTEED_IDS = {
@@ -14,7 +16,7 @@ export default function SimpleTripForm() {
     arrivalTimeOnly: ''
   });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     const payload = {
@@ -47,7 +49,8 @@ export default function SimpleTripForm() {
         alert(`خطأ: ${result.message}`);
       }
     } catch (error) {
-      alert(`خطأ في الشبكة: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+      alert(`خطأ في الشبكة: ${errorMessage}`);
     }
   };
 

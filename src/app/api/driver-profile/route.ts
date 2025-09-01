@@ -8,6 +8,15 @@ interface User {
   name: string;
   email: string;
   phone: string;
+  licenseNumber?: string;
+  licenseType?: string;
+  licenseExpiry?: string;
+  incidents?: number;
+  lastIncident?: string;
+  avatar?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Trip {
@@ -193,7 +202,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(profileData);
-  } catch {
+  } catch (error) {
     console.error('Error fetching driver profile:', error);
     return NextResponse.json(
       { error: 'Failed to fetch driver profile' },
@@ -243,7 +252,7 @@ export async function PUT(request: NextRequest) {
       message: 'Driver profile updated successfully',
       driver: db.users[driverIndex]
     });
-  } catch {
+  } catch (error) {
     console.error('Error updating driver profile:', error);
     return NextResponse.json(
       { error: 'Failed to update driver profile' },

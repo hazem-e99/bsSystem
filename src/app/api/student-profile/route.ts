@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(profileData);
   } catch {
-    console.error('Error fetching student profile:', error);
+    console.error('Error fetching student profile:', Error);
     return NextResponse.json(
       { error: 'Failed to fetch student profile' },
       { status: 500 }
@@ -119,7 +119,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(profileData);
   } catch {
-    console.error('Error updating student profile:', error);
+    console.error('Error updating student profile:', Error);
     return NextResponse.json(
       { error: 'Failed to update student profile' },
       { status: 500 }

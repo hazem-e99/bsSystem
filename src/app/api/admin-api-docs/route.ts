@@ -810,7 +810,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(apiDocumentation);
-  } catch {
+  } catch (error) {
     console.error('Error generating API documentation:', error);
     return NextResponse.json(
       { error: 'Failed to generate API documentation' },

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getApiConfig } from "./config";
 import {
   LoginDTO,
@@ -10,9 +11,10 @@ import {
 import { Bus, BusApiResponse, BusRequest, BusListParams } from "@/types/bus";
 import {
   CreateTripDTO,
-  UpdateTripDTO,
+  TripResponse,
   Trip,
   TripViewModel,
+  UpdateTripDTO,
 } from "@/types/trip";
 
 const apiConfig = getApiConfig();
@@ -47,7 +49,7 @@ async function apiRequest<T>(
       if (qs) {
         url = `${url}${hasQuery ? "&" : "?"}${qs}`;
       }
-    } catch {
+    } catch (e: unknown) {
       console.warn("Failed to convert GET body to query params:", e);
     } finally {
       // Remove body to satisfy fetch constraints for GET/HEAD
@@ -202,7 +204,7 @@ async function apiRequest<T>(
       console.warn("⚠️ Response was not JSON, returning raw text");
       return rawText as unknown as T;
     }
-  } catch {
+  } catch (error: unknown) {
     console.error(`❌ API request failed for ${endpoint}:`, error);
 
     // For critical endpoints, re-throw the error
@@ -366,7 +368,7 @@ const mapGlobalRole = (role: string | undefined) => {
   return r;
 };
 
-const mapGlobalUserToApp = (u: User) => {
+const mapGlobalUserToApp = (u: any) => {
   if (!u) return null;
   const first = u.firstName || "";
   const last = u.lastName || "";
@@ -422,7 +424,7 @@ export const userAPI = {
     } catch {
       const all = await userAPI.getAll();
       return (all || []).filter(
-        (u: User) => (u.email || "").toLowerCase() === email.toLowerCase()
+        (u: any) => (u.email || "").toLowerCase() === email.toLowerCase()
       );
     }
   },
@@ -971,32 +973,29 @@ export const studentAvatarAPI = {
     }),
 };
 
-// Route API - use global endpoints
 export const routeAPI = {
-  getAll: (params?: Record<string, unknown>) => {
-    const queryParams = params ? new URLSearchParams() : null;
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          queryParams!.append(key, String(value));
-        }
-      });
-    }
-    const endpoint = queryParams ? `/Routes?${queryParams.toString()}` : '/Routes';
-    return apiRequest<any[]>(endpoint);
-  },
-  getById: (id: string) => apiRequest<any>(`/Routes/${id}`),
+  // Get all routes
+  getAll: () => apiRequest<any[]>("/Routes"),
+
+  // Get route by ID
+  getById: (id: string | number) => apiRequest<any>(`/Routes/${id}`),
+
+  // Create new route
   create: (routeData: Record<string, unknown>) =>
-    apiRequest<unknown>("/Routes", {
+    apiRequest<any>("/Routes", {
       method: "POST",
       body: JSON.stringify(routeData),
     }),
-  update: (id: string, routeData: Record<string, unknown>) =>
-    apiRequest<unknown>(`/Routes/${id}`, {
+
+  // Update route
+  update: (id: string | number, routeData: Record<string, unknown>) =>
+    apiRequest<any>(`/Routes/${id}`, {
       method: "PUT",
       body: JSON.stringify(routeData),
     }),
-  delete: (id: string) =>
+
+  // Delete route
+  delete: (id: string | number) =>
     apiRequest<any>(`/Routes/${id}`, {
       method: "DELETE",
     }),

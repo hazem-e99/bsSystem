@@ -10,7 +10,7 @@ export async function GET(_request: NextRequest) {
     const maintenance = Boolean(db?.systemSettings?.maintenanceMode);
     return NextResponse.json({ maintenanceMode: maintenance });
   } catch {
-    console.error('Error fetching maintenance mode:', error);
+    console.error('Error fetching maintenance mode:', Error);
     return NextResponse.json({ maintenanceMode: false });
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
@@ -112,8 +112,8 @@ export default function EditStudentPage() {
           emergencyContact: studentData.emergencyContact || '',
           emergencyPhone: studentData.emergencyPhone || ''
         });
-      } catch {
-        console.error('Failed to fetch student:', err);
+      } catch (error) {
+        console.error('Failed to fetch student:', error);
         showToast({
           type: 'error',
           title: 'Error',
@@ -159,8 +159,8 @@ export default function EditStudentPage() {
       // For now, just show success message and redirect
       // In a real implementation, you would call the appropriate update API
       
-    } catch {
-      console.error('Failed to update student:', err);
+    } catch (error) {
+      console.error('Failed to update student:', error);
       showToast({
         type: 'error',
         title: 'Update Failed',
@@ -258,7 +258,7 @@ export default function EditStudentPage() {
       <Card>
         <CardHeader>
           <CardTitle>Student Information</CardTitle>
-          <CardDescription>Update the student's details below</CardDescription>
+          <CardDescription>Update the student&apos;s details below</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

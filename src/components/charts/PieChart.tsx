@@ -47,7 +47,7 @@ export const PieChart = ({ data, title, height = 300 }: PieChartProps) => {
         font: {
           family: 'Inter, sans-serif',
           size: 16,
-          weight: '600',
+          weight: 600,
         },
       },
       tooltip: {
@@ -61,7 +61,7 @@ export const PieChart = ({ data, title, height = 300 }: PieChartProps) => {
         titleFont: {
           family: 'Inter, sans-serif',
           size: 14,
-          weight: '600',
+          weight: 600,
         },
         bodyFont: {
           family: 'Inter, sans-serif',

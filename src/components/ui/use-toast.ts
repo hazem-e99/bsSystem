@@ -2,7 +2,6 @@
 import * as React from "react"
 
 import type {
-  ToastActionElement,
   ToastProps,
 } from "@/components/ui/Toast"
 
@@ -13,7 +12,8 @@ type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
-  action?: ToastActionElement
+  action?: React.ReactNode
+  onOpenChange?: (open: boolean) => void
 }
 
 const actionTypes = {
@@ -155,7 +155,7 @@ function toast(props: Toast) {
     toast: {
       ...props,
       id,
-      open: true,
+      // open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
       },

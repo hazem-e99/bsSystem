@@ -42,6 +42,12 @@ interface Reader {
   readAt: string;
 }
 
+interface User {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -94,7 +100,7 @@ export async function GET(request: NextRequest) {
     const enrichedAnnouncements = filteredAnnouncements.map((announcement: Announcement) => {
       // Calculate read statistics
       const readCount = announcement.readBy ? announcement.readBy.length : 0;
-      const totalTargetUsers = calculateTargetUsersCount(announcement.targetRoles, users);
+      const totalTargetUsers = calculateTargetUsersCount(announcement.targetRoles || [], users);
       const readPercentage = totalTargetUsers > 0 ? (readCount / totalTargetUsers) * 100 : 0;
       
       // Calculate engagement metrics
@@ -134,7 +140,7 @@ export async function GET(request: NextRequest) {
 
     // Sort announcements by priority and creation date
     enrichedAnnouncements.sort((a: EnrichedAnnouncement, b: EnrichedAnnouncement) => {
-      const priorityOrder = { 'high': 1, 'medium': 2, 'low': 3 };
+      const priorityOrder: Record<string, number> = { 'high': 1, 'medium': 2, 'low': 3 };
       const priorityDiff = (priorityOrder[a.priority] || 4) - (priorityOrder[b.priority] || 4);
       if (priorityDiff !== 0) return priorityDiff;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -184,7 +190,7 @@ export async function GET(request: NextRequest) {
       announcements: enrichedAnnouncements,
       summary
     });
-  } catch {
+  } catch (error) {
     console.error('Error fetching announcements:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -225,7 +231,7 @@ export async function POST(request: NextRequest) {
     await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
     
     return NextResponse.json(newAnnouncement, { status: 201 });
-  } catch {
+  } catch (error) {
     console.error('Error creating announcement:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -275,7 +281,7 @@ export async function PUT(request: NextRequest) {
       message: 'Announcement updated successfully',
       announcement: db.announcements[announcementIndex]
     });
-  } catch {
+  } catch (error) {
     console.error('Error updating announcement:', error);
     return NextResponse.json(
       { error: 'Failed to update announcement' },
@@ -318,7 +324,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Announcement deleted successfully',
       deletedAnnouncement
     });
-  } catch {
+  } catch (error) {
     console.error('Error deleting announcement:', error);
     return NextResponse.json(
       { error: 'Failed to delete announcement' },

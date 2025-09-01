@@ -31,7 +31,7 @@ export default function TripList({
   onDelete, 
   loading = false 
 }: TripListProps) {
-  const [sortField, setSortField] = useState<keyof TripResponse>('departureTime');
+  const [sortField, setSortField] = useState<keyof TripResponse>('departureTimeOnly');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const handleSort = (field: keyof TripResponse) => {
@@ -153,21 +153,17 @@ export default function TripList({
                 </th>
                 <th 
                   className="text-left p-3 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleSort('departureTime')}
+                  onClick={() => handleSort('departureTimeOnly')}
                 >
                   Date & Time
-                  {sortField === 'departureTime' && (
+                  {sortField === 'departureTimeOnly' && (
                     <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </th>
                 <th 
                   className="text-left p-3 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
-                  onClick={() => handleSort('origin')}
                 >
                   Route
-                  {sortField === 'origin' && (
-                    <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                  )}
                 </th>
                 <th 
                   className="text-left p-3 font-medium text-gray-700 cursor-pointer hover:bg-gray-50"
@@ -207,10 +203,10 @@ export default function TripList({
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <div>
-                        <div className="font-medium">{formatDate(trip.departureTime)}</div>
+                        <div className="font-medium">{formatDate(trip.departureTimeOnly)}</div>
                         <div className="text-gray-500 flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {formatTime(trip.departureTime)}
+                          {formatTime(trip.departureTimeOnly)}
                         </div>
                       </div>
                     </div>
@@ -219,8 +215,8 @@ export default function TripList({
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-gray-400" />
                       <div>
-                        <div className="font-medium">{trip.origin}</div>
-                        <div className="text-gray-500">→ {trip.destination}</div>
+                        <div className="font-medium">{(trip as any).origin || (trip as any).startLocation || 'N/A'}</div>
+                        <div className="text-gray-500">→ {(trip as any).destination || (trip as any).endLocation || 'N/A'}</div>
                       </div>
                     </div>
                   </td>

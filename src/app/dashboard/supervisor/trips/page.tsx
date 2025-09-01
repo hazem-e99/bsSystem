@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   XCircle,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  CheckCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { tripAPI, routeAPI, busAPI, userAPI, bookingAPI } from '@/lib/api';
@@ -66,13 +67,24 @@ interface Driver {
   status: string;
 }
 
+interface Booking {
+  id: string;
+  studentId: string;
+  tripId: string;
+  date: string;
+  status: string;
+  seatNumber: number;
+  paymentMethod: string;
+  price: number;
+}
+
 export default function SupervisorTripsPage() {
   const { user } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [bookings, setBookings] = useState<unknown[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -94,12 +106,69 @@ export default function SupervisorTripsPage() {
           bookingAPI.getAll()
         ]);
 
-        setTrips(tripsRes);
-        setRoutes(routesRes);
-        setBuses(busesRes);
-        setDrivers(driversRes);
-        setBookings(bookingsRes);
-      } catch {
+        // Transform trips data to match Trip interface
+        const transformedTrips = (tripsRes as any[]).map((trip: any) => ({
+          id: trip.id?.toString() || '',
+          busId: trip.busId?.toString() || '',
+          routeId: trip.routeId?.toString() || '',
+          driverId: trip.driverId?.toString() || '',
+          date: trip.tripDate || trip.date || '',
+          status: (trip.status || 'scheduled') as 'scheduled' | 'in-progress' | 'completed' | 'cancelled',
+          startTime: trip.startTime || '00:00',
+          endTime: trip.endTime || '00:00',
+          passengers: trip.passengers || 0,
+          revenue: trip.revenue || 0,
+          assignedStudents: trip.assignedStudents || [],
+          supervisorId: trip.supervisorId?.toString() || '',
+          stops: trip.stops || []
+        }));
+
+        // Transform routes data
+        const transformedRoutes = (routesRes as any[]).map((route: any) => ({
+          id: route.id?.toString() || '',
+          name: route.name || '',
+          startPoint: route.startPoint || '',
+          endPoint: route.endPoint || '',
+          estimatedDuration: route.estimatedDuration || 0,
+          distance: route.distance || 0
+        }));
+
+        // Transform buses data
+        const transformedBuses = (busesRes as any)?.data || busesRes || [];
+        const processedBuses = (Array.isArray(transformedBuses) ? transformedBuses : []).map((bus: any) => ({
+          id: bus.id?.toString() || '',
+          number: bus.busNumber || bus.number || '',
+          capacity: bus.capacity || 0,
+          status: bus.status || 'active'
+        }));
+
+        // Transform drivers data
+        const transformedDrivers = (driversRes as any[]).map((driver: any) => ({
+          id: driver.id?.toString() || '',
+          name: driver.name || driver.fullName || '',
+          email: driver.email || '',
+          phone: driver.phone || '',
+          status: driver.status || 'active'
+        }));
+
+        // Transform bookings data
+        const transformedBookings = (bookingsRes as any[]).map((booking: any) => ({
+          id: booking.id?.toString() || '',
+          studentId: booking.studentId?.toString() || '',
+          tripId: booking.tripId?.toString() || '',
+          date: booking.date || '',
+          status: booking.status || '',
+          seatNumber: booking.seatNumber || 0,
+          paymentMethod: booking.paymentMethod || '',
+          price: booking.price || 0
+        }));
+
+        setTrips(transformedTrips);
+        setRoutes(transformedRoutes);
+        setBuses(processedBuses);
+        setDrivers(transformedDrivers);
+        setBookings(transformedBookings);
+      } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
