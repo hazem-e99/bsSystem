@@ -36,6 +36,8 @@ interface TripWithStops {
   time?: string;
   startTime?: string;
   endTime?: string;
+  departureTimeOnly?: string;
+  arrivalTimeOnly?: string;
   busId: string;
   routeId: string;
   capacity?: number;
@@ -97,8 +99,8 @@ export const BookingModal = ({ isOpen, onClose, onSuccess, preSelectedTrip }: Bo
       setIsLoading(true);
       const detailedTrip = await tripAPI.getById(trip.id);
       if (detailedTrip) {
-        // Merge basic trip data with detailed data
-        const enhancedTrip = {
+        // Merge basic trip data with detailed data, coercing ids to strings to satisfy TripWithStops
+        const enhancedTrip: TripWithStops = {
           ...trip,
           ...detailedTrip,
           // Map stop locations to the expected format
@@ -106,7 +108,11 @@ export const BookingModal = ({ isOpen, onClose, onSuccess, preSelectedTrip }: Bo
             id: `stop-${index}`,
             stopName: stop.address || `Stop ${index + 1}`,
             stopTime: stop.departureTimeOnly || stop.arrivalTimeOnly || 'TBD'
-          })) || []
+          })) || [],
+          // Ensure required identifiers are strings
+          id: String((detailedTrip as any)?.id ?? trip.id),
+          busId: String((detailedTrip as any)?.busId ?? trip.busId),
+          routeId: String((detailedTrip as any)?.routeId ?? trip.routeId)
         };
         
         setSelectedTrip(enhancedTrip);
