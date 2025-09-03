@@ -15,11 +15,7 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  Eye,
-  MapPin,
-  Fuel,
-  Gauge,
-  User
+  Eye
 } from 'lucide-react';
 import { busAPI, userAPI } from '@/lib/api';
 import { Bus as BusType, BusRequest, BusListParams } from '@/types/bus';

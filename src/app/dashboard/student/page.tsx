@@ -1,49 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardTitle, CardHeader } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
+import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
-import { 
-	Bus, 
-	Route, 
-	CreditCard, 
-	Calendar,
-	Clock,
-	Bell
-} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { studentProfileAPI, paymentAPI, bookingAPI, notificationAPI, tripAPI, subscriptionPlansAPI } from '@/lib/api';
+import { Calendar, MapPin, Clock, Users, Bell, TrendingUp, Bus, CreditCard } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-// Payment interface
-interface Payment {
-  id: number;
-  status: string;
-  tripId?: number;
-  date: string;
-  method?: string;
-  description?: string;
-}
-
-// Booking interface
-interface Booking {
-  id: number;
-  status: string;
-  date: string;
-  tripId?: number;
-}
-
-// Plan interface
-interface Plan {
-  id: number;
-  type?: string;
-  name: string;
-}
-
-// Student Profile interface
+// Define proper types for the data
 interface StudentProfile {
   id: string;
   name: string;
@@ -51,55 +19,96 @@ interface StudentProfile {
   phone: string;
   year: number;
   studentId: string;
+  avatar?: string | null;
+  createdAt: string;
+  updatedAt: string;
   subscriptionStatus?: string;
   subscriptionPlan?: any;
   paymentMethod?: string;
 }
 
-// Latest booking and trip interfaces
-interface LatestBooking {
-  id: number;
-  status: string;
+interface Payment {
+  id: string;
+  studentId: string;
+  tripId?: string;
+  amount: number;
+  method: 'bank' | 'cash';
+  status: 'pending' | 'completed' | 'failed';
+  description: string;
   date: string;
-  tripId?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface LatestTrip {
-  id: number;
+interface Booking {
+  id: string;
+  tripId: string;
+  studentId: string;
+  stopId: string;
+  status: 'confirmed' | 'cancelled' | 'completed';
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Notification {
+  id: string;
+  userId: string;
+  senderId?: string;
+  type: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'unread' | 'read';
+  read: boolean;
+  title: string;
+  message: string;
+  busId?: string;
+  tripId?: string;
+  stopId?: string;
+  stopName?: string;
+  stopTime?: string;
+  actionUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Trip {
+  id: string;
   startLocation: string;
   endLocation: string;
   startTime: string;
   endTime: string;
 }
 
-// Notification interface
-interface Notification {
+interface Plan {
   id: string;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
+  name: string;
+  description?: string;
+  price: number;
   type?: string;
-  priority?: string;
-  status?: string;
+  maxNumberOfRides?: number;
+  durationInDays?: number;
+  isActive?: boolean;
 }
 
 export default function StudentDashboard() {
 	const { user } = useAuth();
-	const [isLoading, setIsLoading] = useState(true);
-	const [stats, setStats] = useState<unknown>(null);
+	const router = useRouter();
+
+	// Temporary redirect: make bookings the landing page for students
+	useEffect(() => {
+		router.replace('/dashboard/student/bookings');
+	}, [router]);
+
+	return null;
 	const { showToast } = useToast();
-	const [requireSubscriptionSetup, setRequireSubscriptionSetup] = useState(false);
-	const [plans, setPlans] = useState<Plan[]>([]);
-	const [selectedPlan, setSelectedPlan] = useState<string>('');
-	const [paymentMethod, setPaymentMethod] = useState<'bank' | 'cash'>('bank');
-	const [submitting, setSubmitting] = useState(false);
-	const [waitForConfirmation, setWaitForConfirmation] = useState(false);
-	const [latestBooking, setLatestBooking] = useState<LatestBooking | null>(null);
-	const [latestTrip, setLatestTrip] = useState<LatestTrip | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [stats, setStats] = useState<any>({});
+	const [latestBooking, setLatestBooking] = useState<Booking | null>(null);
+	const [latestTrip, setLatestTrip] = useState<Trip | null>(null);
 	const [currentPlanName, setCurrentPlanName] = useState<string | null>(null);
 	const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
 	const [activeBookingsCount, setActiveBookingsCount] = useState<number>(0);
+	const [plans, setPlans] = useState<Plan[]>([]);
 
 	// Fetch student dashboard data
 	useEffect(() => {
@@ -108,7 +117,7 @@ export default function StudentDashboard() {
 			try {
 				setIsLoading(true);
 				setStats({});
-				// determine if subscription setup is required
+				
 				try {
 					const [profileRes, paymentsRes, plansData, bookingsRes, notifRes] = await Promise.all([
 						studentProfileAPI.getProfile(user.id.toString()),
@@ -123,20 +132,9 @@ export default function StudentDashboard() {
 					const bookings = bookingsRes as Booking[];
 					const notifications = notifRes as Notification[];
 
-					const hasActive = Array.isArray(payments) && payments.some((p: Payment) => p.status === 'completed' && !p.tripId);
-					const profileActive = profile?.subscriptionStatus === 'active';
-					const hasAnySubscriptionRecord = Array.isArray(payments) && payments.some((p: Payment) => !p.tripId);
-					const hasChosenPlan = Boolean(profile?.subscriptionPlan);
-					setRequireSubscriptionSetup(!(hasActive || profileActive || hasAnySubscriptionRecord || hasChosenPlan));
-
-					// Show Wait for Confirmation modal when method is cash and not active
+					// determine current plan name (if any)
 					const lastSubPayment = (Array.isArray(payments) ? payments : []).filter((x: Payment) => !x.tripId)
 						.sort((a: Payment, b: Payment) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-					const method = String(lastSubPayment?.method || profile?.paymentMethod || '').toLowerCase();
-					const status = String(profile?.subscriptionStatus || lastSubPayment?.status || '').toLowerCase();
-					setWaitForConfirmation(method === 'cash' && status !== 'active');
-
-					// determine current plan name
 					const planFromProfile = profile?.subscriptionPlan;
 					const planFromPayment = lastSubPayment?.description ? String(lastSubPayment.description).replace(/^Subscription\s+/i, '') : '';
 					const resolvedPlan = planFromProfile || planFromPayment || null;
@@ -177,189 +175,195 @@ export default function StudentDashboard() {
 		fetchStudentData();
 	}, [user, showToast]);
 
-	const submitSubscription = async () => {
-		if (!user || !selectedPlan) return;
-		try {
-			setSubmitting(true);
-			// Use the correct API structure for creating subscription plans
-			const res = await subscriptionPlansAPI.create({
-				name: selectedPlan,
-				description: `Subscription for ${selectedPlan}`,
-				price: 0, // Default price
-				maxNumberOfRides: 100, // Default rides
-				durationInDays: 30, // Default duration
-				isActive: true
-			});
-			const data = res;
-			if (!res) {
-				showToast({ type: 'error', title: 'Error!', message: 'Failed to set subscription' });
-				return;
-			}
-			setRequireSubscriptionSetup(false);
-			showToast({ type: 'success', title: 'Success!', message: 'Subscription saved' });
-			window.location.reload();
-		} catch (error) {
-			showToast({ type: 'error', title: 'Error!', message: 'Failed to set subscription' });
-		} finally {
-			setSubmitting(false);
-		}
-	};
-
 	if (isLoading) {
 		return (
-			<div className="space-y-8 p-6">
-				<div className="flex items-center justify-center h-64">
-					<div className="text-center">
-						<div className="animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent mx-auto shadow-lg"></div>
-						<p className="mt-6 text-text-secondary text-lg font-medium">Loading dashboard...</p>
-					</div>
-				</div>
-			</div>
-		);
-	}
-
-	if (!stats) {
-		return (
-			<div className="space-y-8 p-6">
-				<div className="flex items-center justify-center h-64">
-					<div className="text-center">
-						<div className="text-red-500 text-6xl mb-4">⚠️</div>
-						<h3 className="text-lg font-medium mb-2">Failed to load data</h3>
-						<p className="text-sm text-gray-500">Unable to load dashboard statistics</p>
-						<Button onClick={() => window.location.reload()} className="mt-4" variant="outline">Try Again</Button>
-					</div>
-				</div>
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
 			</div>
 		);
 	}
 
 	return (
 		<div className="space-y-8 p-6">
-			{/* Cash Pending Modal */}
-			<Modal isOpen={waitForConfirmation} onClose={() => {}} title="Wait for Confirmation" size="md">
-				<div className="space-y-4">
-					<p className="text-sm text-text-secondary">Your payment method is Cash. Please wait for admin to confirm your subscription before accessing features.</p>
-					<div className="flex justify-end gap-2">
-						<Button variant="outline" onClick={() => window.location.reload()}>Refresh</Button>
-						<Button variant="destructive" onClick={() => { window.location.href = '/logout'; }}>Logout</Button>
-					</div>
-				</div>
-			</Modal>
-
-			{/* Force subscription setup modal on first login */}
-			<Modal isOpen={requireSubscriptionSetup} onClose={() => { /* block close until setup */ }} title="Complete Your Subscription" size="lg">
-				<div className="space-y-4">
-					<p className="text-sm text-text-secondary">Please choose your subscription plan and payment method to proceed.</p>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div>
-							<label className="block text-sm font-medium text-text-primary mb-1">Plan</label>
-							<Select value={selectedPlan} onChange={(e) => setSelectedPlan(e.target.value)}
-								options={[{ value: '', label: 'Select Plan' }, ...(plans || []).map((p: Plan) => ({ value: p.type || p.name, label: p.name }))]} />
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-text-primary mb-1">Payment Method</label>
-							<Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'bank' | 'cash')}
-								options={[{ value: 'bank', label: 'Bank Transfer' }, { value: 'cash', label: 'Cash (manual confirm)' }]} />
-						</div>
-					</div>
-					<div className="flex justify-end gap-2 pt-2">
-						<Button onClick={submitSubscription} disabled={submitting || !selectedPlan}>{submitting ? 'Saving...' : 'Save & Continue'}</Button>
-					</div>
-				</div>
-			</Modal>
-
 			{/* Header */}
-			<div className="flex items-start justify-between gap-4">
+			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold text-text-primary mb-1">Welcome, {user?.name || 'Student'}</h1>
-					<p className="text-text-secondary">Here is your study commute overview</p>
+					<h1 className="text-3xl font-bold text-text-primary">مرحباً {user?.name || 'Student'}!</h1>
+					<p className="text-text-secondary mt-2">مرحباً بك في لوحة تحكم الطالب</p>
 				</div>
-				<div className="flex items-center gap-2">
-					<Button variant="outline" onClick={() => { window.location.href = '/dashboard/student/notifications'; }}><Bell className="w-4 h-4 mr-2" /> Notifications</Button>
-					<Button onClick={() => { window.location.href = '/dashboard/student/bookings'; }}><Calendar className="w-4 h-4 mr-2" /> Book a Trip</Button>
+				<div className="flex items-center gap-4">
+					{currentPlanName && (
+						<Badge variant="secondary" className="flex items-center gap-2">
+							<CreditCard className="w-4 h-4" />
+							{currentPlanName}
+						</Badge>
+					)}
+					<Badge variant="outline" className="flex items-center gap-2">
+						<Users className="w-4 h-4" />
+						Student
+					</Badge>
 				</div>
 			</div>
 
 			{/* Quick Stats */}
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm text-text-secondary">Unread Notifications</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-3xl font-bold">{unreadNotifications}</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm text-text-secondary">Active Bookings</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-3xl font-bold">{activeBookingsCount}</div>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader className="pb-2">
-						<CardTitle className="text-sm text-text-secondary">Current Plan</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="text-lg font-semibold">{currentPlanName || '—'}</div>
-						<div className="mt-2">{waitForConfirmation ? (<Badge variant="secondary">Pending</Badge>) : (<Badge>Active</Badge>)}</div>
-					</CardContent>
-				</Card>
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5 }}
+				>
+					<Card className="hover:shadow-lg transition-shadow">
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+							<CardTitle className="text-sm font-medium">الحجوزات النشطة</CardTitle>
+							<Calendar className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-2xl font-bold">{activeBookingsCount}</div>
+							<p className="text-xs text-muted-foreground">حجوزات مؤكدة</p>
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.1 }}
+				>
+					<Card className="hover:shadow-lg transition-shadow">
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+							<CardTitle className="text-sm font-medium">الإشعارات الجديدة</CardTitle>
+							<Bell className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-2xl font-bold">{unreadNotifications}</div>
+							<p className="text-xs text-muted-foreground">إشعارات غير مقروءة</p>
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.2 }}
+				>
+					<Card className="hover:shadow-lg transition-shadow">
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+							<CardTitle className="text-sm font-medium">الرحلات المتاحة</CardTitle>
+							<Bus className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-2xl font-bold">∞</div>
+							<p className="text-xs text-muted-foreground">جميع الرحلات متاحة</p>
+						</CardContent>
+					</Card>
+				</motion.div>
+
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.3 }}
+				>
+					<Card className="hover:shadow-lg transition-shadow">
+						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+							<CardTitle className="text-sm font-medium">الحالة</CardTitle>
+							<TrendingUp className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-2xl font-bold text-green-600">نشط</div>
+							<p className="text-xs text-muted-foreground">يمكنك الوصول لجميع الميزات</p>
+						</CardContent>
+					</Card>
+				</motion.div>
 			</div>
 
-			{/* Subscription Overview */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-primary" /> Subscription Overview</CardTitle>
-					<CardDescription>Your current plan and subscription status</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-						<div>
-							<div className="text-xs text-text-muted">Plan</div>
-							<div className="text-xl font-semibold">{currentPlanName || '—'}</div>
-						</div>
-						<div>
-							<div className="text-xs text-text-muted">Status</div>
-							<div className="mt-1">{waitForConfirmation ? (<Badge variant="secondary">Pending</Badge>) : (<Badge>Active</Badge>)}</div>
-						</div>
-						<div>
-							<Button variant="outline" onClick={() => { window.location.href = '/dashboard/student/subscription'; }}>Manage Subscription</Button>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
+			{/* Latest Booking */}
+			{latestBooking && latestTrip && (
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.4 }}
+				>
+					<Card>
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<Calendar className="w-5 h-5" />
+								آخر حجز
+							</CardTitle>
+							<CardDescription>تفاصيل آخر رحلة حجزتها</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<div className="flex items-center gap-2">
+										<MapPin className="w-4 h-4 text-muted-foreground" />
+										<span className="text-sm">
+											<strong>من:</strong> {latestTrip.startLocation}
+										</span>
+									</div>
+									<div className="flex items-center gap-2">
+										<MapPin className="w-4 h-4 text-muted-foreground" />
+										<span className="text-sm">
+											<strong>إلى:</strong> {latestTrip.endLocation}
+										</span>
+									</div>
+								</div>
+								<div className="space-y-2">
+									<div className="flex items-center gap-2">
+										<Clock className="w-4 h-4 text-muted-foreground" />
+										<span className="text-sm">
+											<strong>وقت الانطلاق:</strong> {latestTrip.startTime}
+										</span>
+									</div>
+									<div className="flex items-center gap-2">
+										<Clock className="w-4 h-4 text-muted-foreground" />
+										<span className="text-sm">
+											<strong>وقت الوصول:</strong> {latestTrip.endTime}
+										</span>
+									</div>
+								</div>
+							</div>
+							<div className="mt-4 flex gap-2">
+								<Button variant="outline" size="sm">
+									عرض التفاصيل
+								</Button>
+								<Button size="sm">
+									حجز رحلة جديدة
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</motion.div>
+			)}
 
-			{/* Upcoming Trip */}
-			{latestBooking && (
+			{/* Quick Actions */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.5, delay: 0.5 }}
+			>
 				<Card>
 					<CardHeader>
-						<CardTitle className="flex items-center gap-2"><Bus className="w-5 h-5 text-primary" /> Upcoming Trip</CardTitle>
-						<CardDescription>Your most recent booking</CardDescription>
+						<CardTitle>إجراءات سريعة</CardTitle>
+						<CardDescription>الوصول السريع للميزات المهمة</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-							<div>
-								<div className="text-xs text-text-muted">Date</div>
-								<div className="font-medium">{new Date(latestBooking.date).toLocaleDateString()}</div>
-							</div>
-							<div>
-								<div className="text-xs text-text-muted">Route</div>
-								<div className="font-medium">{latestTrip ? `${latestTrip.startLocation || 'Start'} → ${latestTrip.endLocation || 'End'}` : '-'}</div>
-							</div>
-							<div>
-								<div className="text-xs text-text-muted">Time</div>
-								<div className="font-medium flex items-center gap-2"><Clock className="w-4 h-4" /> {latestTrip?.startTime || '-'}</div>
-							</div>
-						</div>
-						<div className="mt-4">
-							<Button variant="outline" onClick={() => { window.location.href = '/dashboard/student/bookings'; }}>View All Bookings</Button>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<Button variant="outline" className="h-20 flex flex-col gap-2">
+								<Calendar className="w-6 h-6" />
+								<span>حجز رحلة</span>
+							</Button>
+							<Button variant="outline" className="h-20 flex flex-col gap-2">
+								<Bell className="w-6 h-6" />
+								<span>الإشعارات</span>
+							</Button>
+							<Button variant="outline" className="h-20 flex flex-col gap-2">
+								<CreditCard className="w-6 h-6" />
+								<span>الاشتراكات</span>
+							</Button>
 						</div>
 					</CardContent>
 				</Card>
-			)}
+			</motion.div>
 		</div>
 	);
 }

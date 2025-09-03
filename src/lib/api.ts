@@ -16,6 +16,23 @@ import {
   TripViewModel,
   UpdateTripDTO,
 } from "@/types/trip";
+import {
+  SubscriptionPlanViewModel,
+  CreateSubscriptionPlanDTO,
+  UpdateSubscriptionPlanDTO,
+  SubscriptionPlanViewModelApiResponse,
+  SubscriptionPlanViewModelIEnumerableApiResponse,
+  BooleanApiResponse,
+} from "@/types/subscription";
+import {
+  TripBookingViewModel,
+  CreateTripBookingDTO,
+  ChangePickupTripBookingDTO,
+  TripBookingSearchDTO,
+  TripBookingViewModelApiResponse,
+  TripBookingViewModelIEnumerableApiResponse,
+  BookingStatus,
+} from "@/types/tripBooking";
 
 const apiConfig = getApiConfig();
 
@@ -766,88 +783,148 @@ export const formsAPI = {
 
 // Subscription plans API - use global endpoints
 export const subscriptionPlansAPI = {
-  // GET /api/SubscriptionPlan → returns { data: SubscriptionPlanViewModel[] }
-  getAll: async () => {
-    const resp = await apiRequest<any>("/SubscriptionPlan");
-    return resp?.data ?? resp ?? [];
+  // GET /api/SubscriptionPlan → returns SubscriptionPlanViewModelIEnumerableApiResponse
+  getAll: async (): Promise<SubscriptionPlanViewModel[]> => {
+    const resp = await apiRequest<SubscriptionPlanViewModelIEnumerableApiResponse>("/SubscriptionPlan");
+    return resp?.data ?? [];
   },
   // GET /api/SubscriptionPlan/active
-  getActive: async () => {
-    const resp = await apiRequest<any>("/SubscriptionPlan/active");
-    return resp?.data ?? resp ?? [];
+  getActive: async (): Promise<SubscriptionPlanViewModel[]> => {
+    const resp = await apiRequest<SubscriptionPlanViewModelIEnumerableApiResponse>("/SubscriptionPlan/active");
+    return resp?.data ?? [];
   },
   // GET /api/SubscriptionPlan/{id}
-  getById: async (id: number | string) => {
-    const resp = await apiRequest<any>(`/SubscriptionPlan/${id}`);
-    return resp?.data ?? resp ?? null;
+  getById: async (id: number | string): Promise<SubscriptionPlanViewModel | null> => {
+    const resp = await apiRequest<SubscriptionPlanViewModelApiResponse>(`/SubscriptionPlan/${id}`);
+    return resp?.data ?? null;
   },
   // POST /api/SubscriptionPlan with CreateSubscriptionPlanDTO
-  create: (planData: {
-    name: string;
-    description?: string | null;
-    price: number;
-    maxNumberOfRides: number;
-    durationInDays: number;
-    isActive: boolean;
-  }) =>
-    apiRequest<any>("/SubscriptionPlan", {
+  create: (planData: CreateSubscriptionPlanDTO): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>("/SubscriptionPlan", {
       method: "POST",
       body: JSON.stringify(planData),
     }),
   // PUT /api/SubscriptionPlan/{id} with UpdateSubscriptionPlanDTO
   update: (
     id: number | string,
-    planData: Partial<{
-      name: string;
-      description: string | null;
-      price: number;
-      maxNumberOfRides: number;
-      durationInDays: number;
-      isActive: boolean;
-    }>
-  ) =>
-    apiRequest<any>(`/SubscriptionPlan/${id}`, {
+    planData: UpdateSubscriptionPlanDTO
+  ): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>(`/SubscriptionPlan/${id}`, {
       method: "PUT",
       body: JSON.stringify(planData),
     }),
   // DELETE /api/SubscriptionPlan/{id}
-  delete: (id: number | string) =>
-    apiRequest<any>(`/SubscriptionPlan/${id}`, {
+  delete: (id: number | string): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>(`/SubscriptionPlan/${id}`, {
       method: "DELETE",
     }),
   // PUT /api/SubscriptionPlan/{id}/activate
-  activate: (id: number | string) =>
-    apiRequest<any>(`/SubscriptionPlan/${id}/activate`, {
+  activate: (id: number | string): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>(`/SubscriptionPlan/${id}/activate`, {
       method: "PUT",
     }),
   // PUT /api/SubscriptionPlan/{id}/deactivate
-  deactivate: (id: number | string) =>
-    apiRequest<any>(`/SubscriptionPlan/${id}/deactivate`, {
+  deactivate: (id: number | string): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>(`/SubscriptionPlan/${id}/deactivate`, {
       method: "PUT",
     }),
   // GET /api/SubscriptionPlan/by-price-range?minPrice=&maxPrice=
-  getByPriceRange: async (minPrice?: number, maxPrice?: number) => {
+  getByPriceRange: async (minPrice?: number, maxPrice?: number): Promise<SubscriptionPlanViewModel[]> => {
     const params = new URLSearchParams();
     if (minPrice !== undefined) params.append("minPrice", String(minPrice));
     if (maxPrice !== undefined) params.append("maxPrice", String(maxPrice));
-    const resp = await apiRequest<any>(
+    const resp = await apiRequest<SubscriptionPlanViewModelIEnumerableApiResponse>(
       `/SubscriptionPlan/by-price-range?${params.toString()}`
     );
-    return resp?.data ?? resp ?? [];
+    return resp?.data ?? [];
   },
   // GET /api/SubscriptionPlan/by-duration?durationInDays=
-  getByDuration: async (durationInDays?: number) => {
+  getByDuration: async (durationInDays?: number): Promise<SubscriptionPlanViewModel[]> => {
     const params = new URLSearchParams();
     if (durationInDays !== undefined)
       params.append("durationInDays", String(durationInDays));
-    const resp = await apiRequest<any>(
+    const resp = await apiRequest<SubscriptionPlanViewModelIEnumerableApiResponse>(
       `/SubscriptionPlan/by-duration?${params.toString()}`
     );
-    return resp?.data ?? resp ?? [];
+    return resp?.data ?? [];
   },
 };
 
-// Booking API - use global endpoints
+// TripBooking API - use global endpoints
+export const tripBookingAPI = {
+  // POST /api/TripBooking (create new booking)
+  create: (bookingData: CreateTripBookingDTO): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>("/TripBooking", {
+      method: "POST",
+      body: JSON.stringify(bookingData),
+    }),
+  
+  // GET /api/TripBooking/{id} (get booking by id)
+  getById: async (id: number | string): Promise<TripBookingViewModel | null> => {
+    const resp = await apiRequest<TripBookingViewModelApiResponse>(`/TripBooking/${id}`);
+    return resp?.data ?? null;
+  },
+  
+  // DELETE /api/TripBooking/{id} (delete booking)
+  delete: (id: number | string): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>(`/TripBooking/${id}`, {
+      method: "DELETE",
+    }),
+  
+  // PATCH /api/TripBooking/{bookId}/cancel (cancel booking)
+  cancel: (bookId: number | string): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>(`/TripBooking/${bookId}/cancel`, {
+      method: "PATCH",
+    }),
+  
+  // PUT /api/TripBooking/update-trip-pickup/{id} (update pickup location for a booking)
+  updatePickupLocation: (
+    id: number | string, 
+    pickupData: ChangePickupTripBookingDTO
+  ): Promise<BooleanApiResponse> =>
+    apiRequest<BooleanApiResponse>(`/TripBooking/update-trip-pickup/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(pickupData),
+    }),
+  
+  // POST /api/TripBooking/search (search/filter bookings)
+  search: async (searchData: TripBookingSearchDTO): Promise<TripBookingViewModel[]> => {
+    const resp = await apiRequest<TripBookingViewModelIEnumerableApiResponse>("/TripBooking/search", {
+      method: "POST",
+      body: JSON.stringify(searchData),
+    });
+    return resp?.data ?? [];
+  },
+  
+  // GET /api/TripBooking/by-trip/{tripId}
+  getByTrip: async (tripId: number | string): Promise<TripBookingViewModel[]> => {
+    const resp = await apiRequest<TripBookingViewModelIEnumerableApiResponse>(`/TripBooking/by-trip/${tripId}`);
+    return resp?.data ?? [];
+  },
+  
+  // GET /api/TripBooking/by-student/{studentId}
+  getByStudent: async (studentId: number | string): Promise<TripBookingViewModel[]> => {
+    const resp = await apiRequest<TripBookingViewModelIEnumerableApiResponse>(`/TripBooking/by-student/${studentId}`);
+    return resp?.data ?? [];
+  },
+  
+  // GET /api/TripBooking/by-date/{date}
+  getByDate: async (date: string): Promise<TripBookingViewModel[]> => {
+    const resp = await apiRequest<TripBookingViewModelIEnumerableApiResponse>(`/TripBooking/by-date/${date}`);
+    return resp?.data ?? [];
+  },
+  
+  // GET /api/TripBooking/check-eligibility?tripId=&studentId=
+  checkEligibility: async (tripId: number | string, studentId: number | string): Promise<boolean> => {
+    const params = new URLSearchParams();
+    params.append("tripId", String(tripId));
+    params.append("studentId", String(studentId));
+    const resp = await apiRequest<BooleanApiResponse>(`/TripBooking/check-eligibility?${params.toString()}`);
+    return resp?.data ?? false;
+  },
+};
+
+// Legacy Booking API - kept for backward compatibility
 export const bookingAPI = {
   getAll: () => apiRequest<unknown[]>("/Bookings"),
   getById: (id: string) => apiRequest<any>(`/Bookings/${id}`),

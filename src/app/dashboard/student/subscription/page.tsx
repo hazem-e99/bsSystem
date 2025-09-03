@@ -187,7 +187,7 @@ export default function StudentSubscriptionPage() {
                 <Badge variant="secondary">Pending Admin Approval</Badge>
               )}
               {status !== 'active' && status !== 'pending' && (
-                <Badge variant="destructive">Inactive</Badge>
+                <Badge variant="outline">No Active Plan</Badge>
               )}
             </div>
           </CardHeader>

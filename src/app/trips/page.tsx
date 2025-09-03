@@ -100,9 +100,9 @@ export default function TripsPage() {
                 {trips.map((t) => (
                   <tr key={t.id} className="border-t">
                     <td className="p-3">{t.id}</td>
-                    <td className="p-3">{t.busId}</td>
-                    <td className="p-3">{t.driverId}</td>
-                    <td className="p-3">{t.conductorId}</td>
+                    <td className="p-3">{t.busNumber ?? t.busId}</td>
+                    <td className="p-3">{t.driverName ?? t.driverId}</td>
+                    <td className="p-3">{t.conductorName ?? t.conductorId}</td>
                     <td className="p-3">{t.tripDate}</td>
                     <td className="p-3">{t.departureTimeOnly}</td>
                     <td className="p-3">{t.arrivalTimeOnly}</td>
@@ -126,5 +126,11 @@ export default function TripsPage() {
     </div>
   );
 }
+
+
+
+
+
+
 
 

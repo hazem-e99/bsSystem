@@ -455,8 +455,7 @@ export default function BusesPage() {
         active: 0,
         maintenance: 0,
         outOfService: 0,
-        totalCapacity: 0,
-        avgFuelLevel: 0
+        totalCapacity: 0
       };
     }
     
@@ -468,9 +467,7 @@ export default function BusesPage() {
       active: validBuses.filter(b => b.status === 'Active').length,
       maintenance: validBuses.filter(b => b.status === 'UnderMaintenance').length,
       outOfService: validBuses.filter(b => b.status === 'OutOfService').length,
-      totalCapacity: validBuses.reduce((sum, b) => sum + (b.capacity || 0), 0),
-      avgFuelLevel: validBuses.length > 0 ? 
-        Math.round(validBuses.reduce((sum, b) => sum + (b.fuelLevel || 0), 0) / validBuses.length) : 0
+      totalCapacity: validBuses.reduce((sum, b) => sum + (b.capacity || 0), 0)
     };
     return stats;
   };
@@ -491,7 +488,7 @@ export default function BusesPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-8 p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary border-t-transparent mx-auto shadow-lg"></div>
@@ -503,7 +500,7 @@ export default function BusesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -517,43 +514,38 @@ export default function BusesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="rounded-2xl border border-gray-100 shadow-sm">
+          <CardContent className="p-5">
             <div className="text-2xl font-bold text-blue-600">{busStats.total}</div>
             <p className="text-xs text-gray-500">Total Buses</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="rounded-2xl border border-gray-100 shadow-sm">
+          <CardContent className="p-5">
             <div className="text-2xl font-bold text-green-600">{busStats.active}</div>
             <p className="text-xs text-gray-500">Active</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="rounded-2xl border border-gray-100 shadow-sm">
+          <CardContent className="p-5">
             <div className="text-2xl font-bold text-yellow-600">{busStats.maintenance}</div>
             <p className="text-xs text-gray-500">Maintenance</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="rounded-2xl border border-gray-100 shadow-sm">
+          <CardContent className="p-5">
             <div className="text-2xl font-bold text-red-600">{busStats.outOfService}</div>
             <p className="text-xs text-gray-500">Out of Service</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
+        <Card className="rounded-2xl border border-gray-100 shadow-sm">
+          <CardContent className="p-5">
             <div className="text-2xl font-bold text-purple-600">{busStats.totalCapacity}</div>
             <p className="text-xs text-gray-500">Total Capacity</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-indigo-600">{busStats.avgFuelLevel}%</div>
-            <p className="text-xs text-gray-500">Avg Fuel</p>
-          </CardContent>
-        </Card>
+        {/* Removed Avg Fuel card per request */}
       </div>
 
       {/* Filters and Search */}
@@ -948,25 +940,23 @@ export default function BusesPage() {
                 <div className="mt-1 text-lg font-semibold text-gray-800">{selectedBus.speed != null ? `${selectedBus.speed} km/h` : 'N/A'}</div>
               </div>
 
-              <div className="col-span-2 p-3 bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-sm">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-400">Fuel Level</p>
-                  <p className="text-sm font-medium text-gray-700">{selectedBus.fuelLevel != null ? `${selectedBus.fuelLevel}%` : 'N/A'}</p>
-                </div>
-                <div className="w-full bg-slate-200 h-2 rounded mt-2 overflow-hidden">
-                  <div
-                    className={`h-2 ${((selectedBus.fuelLevel ?? 0) > 30) ? 'bg-emerald-500' : ((selectedBus.fuelLevel ?? 0) > 10) ? 'bg-yellow-400' : 'bg-red-500'}`}
-                    style={{ width: `${Math.max(0, Math.min(100, Number(selectedBus.fuelLevel ?? 0)))}%` }}
-                  />
-                </div>
-              </div>
+              {/* Removed Fuel Level section per request */}
             </div>
 
             {/* Footer lines */}
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <div>Last updated: <span className="text-gray-700 font-medium">{selectedBus.updatedAt ? formatDate(selectedBus.updatedAt) : 'Unknown'}</span></div>
-              <div>Location: <span className="text-gray-700 font-medium">{selectedBus.location?.lat != null ? `${String(selectedBus.location.lat).slice(0,10)}, ${String(selectedBus.location?.lng).slice(0,10)}` : 'N/A'}</span></div>
-            </div>
+            {(
+              (selectedBus.updatedAt) ||
+              (selectedBus.location && selectedBus.location.lat != null && selectedBus.location.lng != null && (Number(selectedBus.location.lat) !== 0 || Number(selectedBus.location.lng) !== 0))
+            ) && (
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                {selectedBus.updatedAt && (
+                  <div>Last updated: <span className="text-gray-700 font-medium">{formatDate(selectedBus.updatedAt)}</span></div>
+                )}
+                {selectedBus.location && selectedBus.location.lat != null && selectedBus.location.lng != null && (Number(selectedBus.location.lat) !== 0 || Number(selectedBus.location.lng) !== 0) && (
+                  <div>Location: <span className="text-gray-700 font-medium">{`${String(selectedBus.location.lat).slice(0,10)}, ${String(selectedBus.location.lng).slice(0,10)}`}</span></div>
+                )}
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end space-x-2 pt-2">

@@ -44,9 +44,7 @@ export async function POST(request: NextRequest) {
     const capacity = Number(bus.capacity) || 0;
     const assignedStudents: string[] = Array.isArray(bus.assignedStudents) ? bus.assignedStudents : [];
 
-    // Check subscription
-    const hasActivePayment = (db.payments || []).some((p: Payment) => p.studentId === studentId && p.status === 'completed');
-    if (!hasActivePayment) return NextResponse.json({ error: 'Subscription inactive. Complete payment first.' }, { status: 403 });
+    // Subscription check removed - all students can be assigned to buses
 
     if (assignedStudents.includes(studentId)) {
       return NextResponse.json({ error: 'Student already assigned to this bus' }, { status: 409 });

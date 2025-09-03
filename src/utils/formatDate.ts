@@ -1,5 +1,21 @@
-export const formatDate = (date: string | Date): string => {
-  const d = new Date(date);
+export const formatDate = (date: string | Date | null | undefined): string => {
+  if (!date) return 'Date TBD';
+  
+  // Handle string dates that might be in different formats
+  let dateToProcess = date;
+  if (typeof date === 'string') {
+    // If it's a date string like "2024-01-15", ensure it's properly formatted
+    if (date.includes('-')) {
+      dateToProcess = date;
+    }
+  }
+  
+  const d = new Date(dateToProcess);
+  if (isNaN(d.getTime())) {
+    console.warn('Invalid date:', date);
+    return 'Date TBD';
+  }
+  
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -11,8 +27,12 @@ export const formatTime = (time: string): string => {
   return time;
 };
 
-export const formatDateTime = (date: string | Date): string => {
+export const formatDateTime = (date: string | Date | null | undefined): string => {
+  if (!date) return 'Date TBD';
+  
   const d = new Date(date);
+  if (isNaN(d.getTime())) return 'Invalid Date';
+  
   return d.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -22,9 +42,14 @@ export const formatDateTime = (date: string | Date): string => {
   });
 };
 
-export const getRelativeTime = (date: string | Date): string => {
+export const getRelativeTime = (date: string | Date | null | undefined): string => {
+  if (!date) return 'Date TBD';
+  
   const now = new Date();
   const d = new Date(date);
+  
+  if (isNaN(d.getTime())) return 'Invalid Date';
+  
   const diffInMs = now.getTime() - d.getTime();
   const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));

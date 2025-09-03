@@ -21,6 +21,10 @@ export interface CreateTripDTO {
 
 export interface TripResponse {
   id: number;
+  // Optional display fields provided by TripViewModel in API
+  busNumber?: string | null;
+  driverName?: string | null;
+  conductorName?: string | null;
   busId: number;
   driverId: number;
   conductorId: number;

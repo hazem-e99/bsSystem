@@ -6,40 +6,51 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Power, PowerOff } from 'lucide-react';
 import { subscriptionPlansAPI } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-
-interface Plan {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  maxNumberOfRides: number;
-  durationInDays: number;
-  isActive: boolean;
-}
+import { SubscriptionPlanViewModel, CreateSubscriptionPlanDTO, UpdateSubscriptionPlanDTO } from '@/types/subscription';
 
 export default function PlansPage() {
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlanViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Plan | null>(null);
-  const [form, setForm] = useState({ id: '', name: '', description: '', price: 0, maxNumberOfRides: 1, durationInDays: 1, isActive: true });
+  const [editing, setEditing] = useState<SubscriptionPlanViewModel | null>(null);
+  const [form, setForm] = useState<CreateSubscriptionPlanDTO>({
+    name: '',
+    description: '',
+    price: 0,
+    maxNumberOfRides: 1,
+    durationInDays: 1,
+    isActive: true
+  });
   const { showToast } = useToast();
-  const [confirmState, setConfirmState] = useState<{ open: boolean; id?: string }>(() => ({ open: false }));
+  const [confirmState, setConfirmState] = useState<{ 
+    open: boolean; 
+    id?: number; 
+    action?: 'delete' | 'activate' | 'deactivate';
+    title?: string;
+    description?: string;
+  }>({ open: false });
 
   useEffect(() => { load(); }, []);
 
   const load = async () => {
     try {
       setLoading(true);
+      setError('');
       const data = await subscriptionPlansAPI.getAll();
       setPlans(data || []);
-    } catch {
-      setError('Failed to load plans');
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to load plans';
+      setError(errorMessage);
+      showToast({ 
+        type: 'error', 
+        title: 'Load Failed', 
+        message: errorMessage 
+      });
     } finally {
       setLoading(false);
     }
@@ -47,53 +58,173 @@ export default function PlansPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ id: '', name: '', description: '', price: 0, maxNumberOfRides: 1, durationInDays: 1, isActive: true });
+    setForm({
+      name: '',
+      description: '',
+      price: 0,
+      maxNumberOfRides: 1,
+      durationInDays: 1,
+      isActive: true
+    });
     setShowModal(true);
   };
 
-  const openEdit = (plan: Plan) => {
-    setEditing(plan);
-    setForm({ id: String(plan.id), name: plan.name ?? '', description: plan.description ?? '', price: Number(plan.price ?? 0), maxNumberOfRides: Number(plan.maxNumberOfRides ?? 1), durationInDays: Number(plan.durationInDays ?? 1), isActive: Boolean(plan.isActive) });
-    setShowModal(true);
+  const openEdit = async (plan: SubscriptionPlanViewModel) => {
+    try {
+      // Fetch the latest plan data by ID
+      const fetchedPlan = await subscriptionPlansAPI.getById(plan.id);
+      if (fetchedPlan) {
+        setEditing(fetchedPlan);
+        setForm({
+          name: fetchedPlan.name || '',
+          description: fetchedPlan.description || '',
+          price: fetchedPlan.price,
+          maxNumberOfRides: fetchedPlan.maxNumberOfRides,
+          durationInDays: fetchedPlan.durationInDays,
+          isActive: fetchedPlan.isActive
+        });
+        setShowModal(true);
+      } else {
+        showToast({ 
+          type: 'error', 
+          title: 'Error', 
+          message: 'Failed to load plan details' 
+        });
+      }
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to load plan details';
+      showToast({ 
+        type: 'error', 
+        title: 'Error', 
+        message: errorMessage 
+      });
+    }
   };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = {
-        name: form.name,
-        description: form.description || undefined,
-        price: Number(form.price),
-        maxNumberOfRides: Number(form.maxNumberOfRides),
-        durationInDays: Number(form.durationInDays),
-        isActive: Boolean(form.isActive),
-      };
       if (editing) {
-        const updated = await subscriptionPlansAPI.update(form.id, payload);
-        await load();
-        showToast({ type: 'success', title: 'Plan updated', message: `${form.name}` });
+        const updateData: UpdateSubscriptionPlanDTO = {
+          name: form.name,
+          description: form.description || null,
+          price: form.price,
+          maxNumberOfRides: form.maxNumberOfRides,
+          durationInDays: form.durationInDays,
+          isActive: form.isActive
+        };
+        const response = await subscriptionPlansAPI.update(editing.id, updateData);
+        if (response.success) {
+          await load();
+          showToast({ 
+            type: 'success', 
+            title: 'Plan Updated', 
+            message: `${form.name} has been updated successfully` 
+          });
+        } else {
+          throw new Error(response.message || 'Update failed');
+        }
       } else {
-        const created = await subscriptionPlansAPI.create(payload);
-        await load();
-        showToast({ type: 'success', title: 'Plan created', message: `${created?.data?.name || form.name}` });
+        const createData: CreateSubscriptionPlanDTO = {
+          name: form.name,
+          description: form.description || undefined,
+          price: form.price,
+          maxNumberOfRides: form.maxNumberOfRides,
+          durationInDays: form.durationInDays,
+          isActive: form.isActive
+        };
+        const response = await subscriptionPlansAPI.create(createData);
+        if (response.success) {
+          await load();
+          showToast({ 
+            type: 'success', 
+            title: 'Plan Created', 
+            message: `${form.name} has been created successfully` 
+          });
+        } else {
+          throw new Error(response.message || 'Creation failed');
+        }
       }
       setShowModal(false);
-    } catch {
-      setError('Failed to save plan');
-      showToast({ type: 'error', title: 'Save failed', message: 'Please try again.' });
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Failed to save plan';
+      showToast({ 
+        type: 'error', 
+        title: 'Save Failed', 
+        message: errorMessage 
+      });
     }
   };
 
-  const remove = (id: string) => setConfirmState({ open: true, id });
-  const handleDeleteConfirmed = async () => {
-    if (!confirmState.id) return;
+  const handleDelete = (id: number) => {
+    setConfirmState({ 
+      open: true, 
+      id, 
+      action: 'delete',
+      title: 'Delete Plan',
+      description: 'Are you sure you want to delete this plan? This action cannot be undone.'
+    });
+  };
+
+  const handleActivate = (id: number) => {
+    setConfirmState({ 
+      open: true, 
+      id, 
+      action: 'activate',
+      title: 'Activate Plan',
+      description: 'Are you sure you want to activate this plan?'
+    });
+  };
+
+  const handleDeactivate = (id: number) => {
+    setConfirmState({ 
+      open: true, 
+      id, 
+      action: 'deactivate',
+      title: 'Deactivate Plan',
+      description: 'Are you sure you want to deactivate this plan?'
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmState.id || !confirmState.action) return;
+    
     try {
-      await subscriptionPlansAPI.delete(confirmState.id);
-      setPlans(prev => prev.filter(p => p.id !== confirmState.id));
-      showToast({ type: 'success', title: 'Deleted', message: 'Plan removed.' });
-    } catch {
-      setError('Failed to delete plan');
-      showToast({ type: 'error', title: 'Delete failed', message: 'Please try again.' });
+      let response;
+      let successMessage = '';
+      
+      switch (confirmState.action) {
+        case 'delete':
+          response = await subscriptionPlansAPI.delete(confirmState.id);
+          successMessage = 'Plan deleted successfully';
+          break;
+        case 'activate':
+          response = await subscriptionPlansAPI.activate(confirmState.id);
+          successMessage = 'Plan activated successfully';
+          break;
+        case 'deactivate':
+          response = await subscriptionPlansAPI.deactivate(confirmState.id);
+          successMessage = 'Plan deactivated successfully';
+          break;
+      }
+
+      if (response.success) {
+        await load();
+        showToast({ 
+          type: 'success', 
+          title: 'Success', 
+          message: successMessage 
+        });
+      } else {
+        throw new Error(response.message || 'Action failed');
+      }
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Action failed';
+      showToast({ 
+        type: 'error', 
+        title: 'Action Failed', 
+        message: errorMessage 
+      });
     } finally {
       setConfirmState({ open: false });
     }
@@ -113,6 +244,12 @@ export default function PlansPage() {
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Add Plan</Button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Plans</CardTitle>
@@ -124,10 +261,11 @@ export default function PlansPage() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Description</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Duration (days)</TableHead>
                 <TableHead>Max rides</TableHead>
-                <TableHead>Active</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -135,15 +273,57 @@ export default function PlansPage() {
               {plans.map(plan => (
                 <TableRow key={plan.id}>
                   <TableCell className="font-mono text-xs">{plan.id}</TableCell>
-                  <TableCell>{plan.name}</TableCell>
+                  <TableCell className="font-medium">{plan.name}</TableCell>
+                  <TableCell className="max-w-xs truncate">{plan.description || '-'}</TableCell>
                   <TableCell>${Number(plan.price || 0).toFixed(2)}</TableCell>
-                  <TableCell>{plan.durationInDays ?? ''}</TableCell>
-                  <TableCell>{plan.maxNumberOfRides ?? ''}</TableCell>
-                  <TableCell>{plan.isActive ? 'Yes' : 'No'}</TableCell>
+                  <TableCell>{plan.durationInDays}</TableCell>
+                  <TableCell>{plan.maxNumberOfRides}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      plan.isActive 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {plan.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(plan)}><Edit className="w-4 h-4" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => remove(plan.id)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => openEdit(plan)}
+                        title="Edit Plan"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      {plan.isActive ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleDeactivate(plan.id)}
+                          title="Deactivate Plan"
+                        >
+                          <PowerOff className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleActivate(plan.id)}
+                          title="Activate Plan"
+                        >
+                          <Power className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDelete(plan.id)}
+                        title="Delete Plan"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -156,36 +336,89 @@ export default function PlansPage() {
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editing ? 'Edit Plan' : 'Add Plan'} size="md">
         <form onSubmit={save} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required minLength={3} maxLength={100} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <Input 
+              value={form.name} 
+              onChange={e => setForm({ ...form, name: e.target.value })} 
+              required 
+              minLength={3} 
+              maxLength={100}
+              placeholder="Enter plan name"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} maxLength={500} />
+            <Input 
+              value={form.description} 
+              onChange={e => setForm({ ...form, description: e.target.value })} 
+              maxLength={500}
+              placeholder="Enter plan description (optional)"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-            <Input type="number" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} min={0.01} max={10000} step={0.01} required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+            <Input 
+              type="number" 
+              value={form.price} 
+              onChange={e => setForm({ ...form, price: Number(e.target.value) })} 
+              min={0.01} 
+              max={10000} 
+              step={0.01} 
+              required
+              placeholder="0.00"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Duration (days)</label>
-            <Input type="number" value={form.durationInDays} onChange={e => setForm({ ...form, durationInDays: Number(e.target.value) })} min={1} max={365} required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Duration (days) *</label>
+            <Input 
+              type="number" 
+              value={form.durationInDays} 
+              onChange={e => setForm({ ...form, durationInDays: Number(e.target.value) })} 
+              min={1} 
+              max={365} 
+              required
+              placeholder="30"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Max number of rides</label>
-            <Input type="number" value={form.maxNumberOfRides} onChange={e => setForm({ ...form, maxNumberOfRides: Number(e.target.value) })} min={1} max={1000} required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Max number of rides *</label>
+            <Input 
+              type="number" 
+              value={form.maxNumberOfRides} 
+              onChange={e => setForm({ ...form, maxNumberOfRides: Number(e.target.value) })} 
+              min={1} 
+              max={1000} 
+              required
+              placeholder="10"
+            />
           </div>
           <div className="flex items-center gap-2">
-            <input id="isActive" type="checkbox" checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} />
+            <input 
+              id="isActive" 
+              type="checkbox" 
+              checked={form.isActive} 
+              onChange={e => setForm({ ...form, isActive: e.target.checked })} 
+            />
             <label htmlFor="isActive" className="text-sm text-gray-700">Active</label>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit">{editing ? 'Save Changes' : 'Create Plan'}</Button>
+            <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {editing ? 'Save Changes' : 'Create Plan'}
+            </Button>
           </div>
         </form>
       </Modal>
-      <ConfirmDialog open={confirmState.open} onCancel={() => setConfirmState({ open: false })} onConfirm={handleDeleteConfirmed} title="Delete plan?" description="This action cannot be undone." />
+      
+      <ConfirmDialog 
+        open={confirmState.open} 
+        onCancel={() => setConfirmState({ open: false })} 
+        onConfirm={handleConfirmAction} 
+        title={confirmState.title || 'Confirm Action'}
+        description={confirmState.description || 'Are you sure?'}
+      />
     </div>
   );
 }

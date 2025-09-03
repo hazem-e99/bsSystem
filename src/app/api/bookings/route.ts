@@ -98,12 +98,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // Enforce active subscription
-    const studentPayments = (db.payments || []).filter((p: Payment) => p.studentId === studentId);
-    const hasActivePayment = studentPayments.some((p: Payment) => p.status === 'completed');
-    if (!hasActivePayment) {
-      return NextResponse.json({ message: 'You must have an active subscription' }, { status: 403 });
-    }
+    // Subscription check removed - all students can book trips
 
     // Validate bus capacity and seat availability
     const bus = (db.buses || []).find((b: Bus) => b.id === trip.busId);

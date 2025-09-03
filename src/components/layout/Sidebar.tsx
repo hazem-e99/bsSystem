@@ -16,7 +16,8 @@ import {
   Calendar,
   Bell,
   User,
-  LayoutDashboard
+  LayoutDashboard,
+  BookOpen
 } from 'lucide-react';
 import { UserRole } from '@/types/user';
 
@@ -37,16 +38,17 @@ const navigationItems = {
     { name: 'Users', href: '/dashboard/admin/users', icon: Users },
     { name: 'Buses', href: '/dashboard/admin/buses', icon: Bus },
     { name: 'Trips', href: '/trips', icon: Calendar },
-    { name: 'Plans', href: '/dashboard/admin/plans', icon: CreditCard, disabled: true },
+    { name: 'Trip Bookings', href: '/dashboard/admin/trip-bookings', icon: BookOpen },
+    { name: 'Plans', href: '/dashboard/admin/plans', icon: CreditCard },
     { name: 'Subscriptions', href: '/dashboard/admin/subscriptions', icon: LayoutDashboard, disabled: true },
     { name: 'Settings', href: '/dashboard/admin/settings', icon: Settings, disabled: true },
   ],
   student: [
-    { name: 'Dashboard', href: '/dashboard/student', icon: Home },
+    { name: 'Dashboard', href: '/dashboard/student', icon: Home, disabled: true },
     { name: 'Bookings', href: '/dashboard/student/bookings', icon: Calendar },
-    { name: 'Notifications', href: '/dashboard/student/notifications', icon: Bell },
+    { name: 'Notifications', href: '/dashboard/student/notifications', icon: Bell, disabled: true },
     { name: 'Subscription', href: '/dashboard/student/subscription', icon: CreditCard },
-    { name: 'Profile', href: '/dashboard/student/settings', icon: Settings },
+    { name: 'Profile', href: '/dashboard/student/settings', icon: Settings, disabled: true },
   ],
   supervisor: [
     { name: 'Dashboard', href: '/dashboard/supervisor', icon: Home },

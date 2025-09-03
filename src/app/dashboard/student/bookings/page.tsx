@@ -14,12 +14,14 @@ import {
   Search,
   Download,
   Eye,
-  X
+  X,
+  Plus,
+  Users
 } from 'lucide-react';
 import { BookingModal } from '@/components/booking/BookingModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { useToast } from '@/components/ui/Toast';
-import { bookingAPI, tripAPI } from '@/lib/api';
+import { bookingAPI, tripAPI, busAPI } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/utils/formatDate';
 import { Modal } from '@/components/ui/Modal';
@@ -35,17 +37,27 @@ interface Booking {
 }
 
 interface Trip {
-  id: string;
+  id: string | number;
   tripDate: string;
   startLocation: string;
   endLocation: string;
   startTime: string;
   endTime?: string;
-  busId?: string;
+  busId?: string | number;
+  capacity?: number;
+  duration?: number;
+  date?: string;
+  displayDate?: string;
+  busDetails?: any;
   stopLocations?: Array<{
     stopId: string;
     stopName: string;
     arrivalTime: string;
+  }>;
+  stops?: Array<{
+    id: string;
+    stopName: string;
+    stopTime: string;
   }>;
 }
 
@@ -62,6 +74,14 @@ export default function MyBookingsPage() {
   const { showToast } = useToast();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<(Booking & { _trip: Trip | null; _stopName: string }) | null>(null);
+  
+  // New state for available trips section
+  const [availableTrips, setAvailableTrips] = useState<any[]>([]);
+  const [isLoadingTrips, setIsLoadingTrips] = useState(false);
+  const [tripSearchTerm, setTripSearchTerm] = useState('');
+  const [tripDateFilter, setTripDateFilter] = useState('all');
+  const [selectedTripForBooking, setSelectedTripForBooking] = useState<any | null>(null);
+  const [bookingLoadingTripId, setBookingLoadingTripId] = useState<string | number | null>(null);
 
   // Fetch student-specific bookings from API and join trip data
   useEffect(() => {
@@ -98,6 +118,71 @@ export default function MyBookingsPage() {
     };
     fetchBookings();
   }, [user]);
+
+  // Fetch all available trips
+  useEffect(() => {
+    const fetchAvailableTrips = async () => {
+      try {
+        setIsLoadingTrips(true);
+        // Get trips for the next 30 days
+        const today = new Date();
+        const futureTrips: any[] = [];
+        
+        for (let i = 0; i < 30; i++) {
+          const date = new Date(today);
+          date.setDate(date.getDate() + i);
+          const dateStr = date.toISOString().split('T')[0];
+          
+          try {
+            const trips = await tripAPI.getByDate(dateStr);
+            if (Array.isArray(trips) && trips.length > 0) {
+              // Process each trip and fetch bus details
+              for (const trip of trips) {
+                let busDetails = null;
+                
+                // Try to fetch bus details if busId exists (but don't fail if forbidden)
+                console.log(`Trip ${trip.id} has busId:`, trip.busId);
+                if (trip.busId) {
+                  try {
+                    // Convert busId to number if it's a string
+                    const busIdNumber = typeof trip.busId === 'string' ? parseInt(trip.busId) : trip.busId;
+                    console.log(`Converting busId to number:`, busIdNumber);
+                    busDetails = await busAPI.getById(busIdNumber);
+                    console.log(`Bus details for trip ${trip.id}:`, busDetails);
+                    console.log(`Bus capacity:`, busDetails?.data?.capacity);
+                    console.log(`Bus number:`, busDetails?.data?.busNumber);
+                  } catch (error) {
+                    console.error(`Failed to fetch bus details for bus ${trip.busId}:`, error);
+                    // Set busDetails to null if API fails
+                    busDetails = null;
+                  }
+                }
+                
+                futureTrips.push({
+                  ...trip,
+                  tripDate: dateStr,
+                  date: dateStr,
+                  displayDate: dateStr,
+                  busDetails: busDetails
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to fetch trips for ${dateStr}:`, error);
+          }
+        }
+        
+        setAvailableTrips(futureTrips);
+      } catch (error) {
+        console.error('Failed to fetch available trips:', error);
+        setAvailableTrips([]);
+      } finally {
+        setIsLoadingTrips(false);
+      }
+    };
+    
+    fetchAvailableTrips();
+  }, []);
   
   // Filter bookings based on search and filters
   const filteredBookings = enrichedBookings.filter(booking => {
@@ -121,6 +206,31 @@ export default function MyBookingsPage() {
     }
     
     return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  // Filter available trips
+  const filteredAvailableTrips = availableTrips.filter(trip => {
+    const matchesSearch = tripSearchTerm === '' ||
+      trip.startLocation?.toLowerCase().includes(tripSearchTerm.toLowerCase()) ||
+      trip.endLocation?.toLowerCase().includes(tripSearchTerm.toLowerCase());
+    
+    let matchesDate = true;
+    const tripDate = trip.displayDate || trip.tripDate || trip.date;
+    
+    if (tripDateFilter === 'today') {
+      matchesDate = tripDate === new Date().toISOString().split('T')[0];
+    } else if (tripDateFilter === 'tomorrow') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      matchesDate = tripDate === tomorrow.toISOString().split('T')[0];
+    } else if (tripDateFilter === 'this-week') {
+      const today = new Date();
+      const weekFromNow = new Date();
+      weekFromNow.setDate(today.getDate() + 7);
+      matchesDate = new Date(tripDate) >= today && new Date(tripDate) <= weekFromNow;
+    }
+    
+    return matchesSearch && matchesDate;
   });
 
   const getStatusColor = (status: string) => {
@@ -206,6 +316,48 @@ export default function MyBookingsPage() {
     });
   };
 
+  const handleBookNow = async (trip: Trip) => {
+    try {
+      setBookingLoadingTripId(trip.id);
+      // Load detailed trip data using /api/Trip/{id} endpoint
+      const detailedTrip = await tripAPI.getById(trip.id);
+      if (detailedTrip) {
+        // Merge basic trip data with detailed data
+        const enhancedTrip = {
+          ...trip,
+          ...detailedTrip,
+          // Map stop locations to the expected format
+          stops: detailedTrip.stopLocations?.map((stop: any, index: number) => ({
+            id: `stop-${index}`,
+            stopName: stop.address || `Stop ${index + 1}`,
+            stopTime: stop.departureTimeOnly || stop.arrivalTimeOnly || 'TBD'
+          })) || []
+        };
+        
+        setSelectedTripForBooking(enhancedTrip);
+        setIsBookingModalOpen(true);
+        console.log('Trip details loaded successfully for booking:', enhancedTrip);
+      } else {
+        console.warn('No detailed trip data received, using basic data');
+        setSelectedTripForBooking(trip);
+        setIsBookingModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to load trip details for booking:', error);
+      // Show error message to user
+      showToast({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to load trip details. Please try again.'
+      });
+      // Still open modal with basic trip data
+      setSelectedTripForBooking(trip);
+      setIsBookingModalOpen(true);
+    } finally {
+      setBookingLoadingTripId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -219,6 +371,144 @@ export default function MyBookingsPage() {
           Book New Trip
         </Button>
       </div>
+
+      {/* Available Trips Section */}
+      <Card className="bg-white border-[#E0E0E0]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BusIcon className="w-5 h-5 text-primary" />
+            Available Trips
+          </CardTitle>
+          <CardDescription className="text-[#757575]">Browse and book from all available trips</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Trip Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-[#757575]" />
+              <Input
+                placeholder="Search routes, locations..."
+                value={tripSearchTerm}
+                onChange={(e) => setTripSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Select
+              value={tripDateFilter}
+              onChange={(e) => setTripDateFilter(e.target.value)}
+              options={[
+                { value: 'all', label: 'All Dates' },
+                { value: 'today', label: 'Today' },
+                { value: 'tomorrow', label: 'Tomorrow' },
+                { value: 'this-week', label: 'This Week' }
+              ]}
+            />
+            
+            <div className="text-sm text-[#757575] flex items-center">
+              <Users className="w-4 h-4 mr-2" />
+              {filteredAvailableTrips.length} trips available
+            </div>
+          </div>
+
+          {/* Available Trips Table */}
+          {isLoadingTrips ? (
+            <div className="text-center py-12 text-[#757575]">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Loading available trips...</p>
+            </div>
+          ) : filteredAvailableTrips.length > 0 ? (
+            <div className="overflow-x-auto border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold">Date</TableHead>
+                    <TableHead className="font-semibold">Route</TableHead>
+                    <TableHead className="font-semibold">Time</TableHead>
+                    <TableHead className="font-semibold">Capacity</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAvailableTrips.map((trip) => (
+                    <TableRow key={trip.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {formatDate(trip.displayDate || trip.tripDate || trip.date)}
+                        </Badge>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">
+                            {trip.startLocation || 'Start'} → {trip.endLocation || 'End'}
+                          </div>
+                          <div className="text-xs text-[#757575]">
+                            Route #{trip.id}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">
+                            {(trip.departureTimeOnly || trip.startTime || 'TBD')} - {(trip.arrivalTimeOnly || trip.endTime || 'TBD')}
+                          </div>
+                          {trip.duration ? (
+                            <div className="text-xs text-[#757575]">{`${trip.duration} min`}</div>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-[#757575]" />
+                          <span className="font-medium">
+                            {trip.busDetails?.data?.capacity || trip.busDetails?.capacity || trip.capacity || trip.totalSeats || 'N/A'}
+                          </span>
+                          <span className="text-xs text-[#757575]">
+                            seats
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="default" className="text-xs">
+                          Available
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          onClick={() => handleBookNow(trip)}
+                          size="sm"
+                          disabled={bookingLoadingTripId === trip.id}
+                        >
+                          {bookingLoadingTripId === trip.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-4 h-4 mr-2" />
+                              Book Now
+                            </>
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-[#757575]">
+              <BusIcon className="w-16 h-16 mx-auto mb-4 text-[#BDBDBD]" />
+              <h3 className="text-lg font-medium mb-2">No trips available</h3>
+              <p className="text-sm">Try adjusting your search criteria or check back later.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modern Filters */}
       
@@ -298,7 +588,7 @@ export default function MyBookingsPage() {
               <TableBody>
                 {filteredBookings.map((b) => (
                   <TableRow key={`bk-row-${b.id}`}>
-                    <TableCell>{formatDate(b.date || b.createdAt)}</TableCell>
+                     <TableCell>{formatDate(b.date || b.createdAt || null)}</TableCell>
                     <TableCell>{b._trip ? `${b._trip.startLocation || '—'} → ${b._trip.endLocation || '—'}` : '-'}</TableCell>
                     <TableCell>{b._stopName || '-'}</TableCell>
                     <TableCell>
@@ -317,6 +607,11 @@ export default function MyBookingsPage() {
             <div className="text-center py-12 text-[#757575]">
               <Calendar className="w-16 h-16 mx-auto mb-4 text-[#BDBDBD]" />
               <h3 className="text-lg font-medium mb-2">No bookings yet.</h3>
+              <p className="text-sm mb-4">Start by booking a trip from the available trips above.</p>
+              <Button onClick={() => setIsBookingModalOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Book Your First Trip
+              </Button>
             </div>
           )}
         </CardContent>
@@ -325,8 +620,13 @@ export default function MyBookingsPage() {
       {/* Booking Modal */}
       <BookingModal
         isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
+        onClose={() => {
+          setIsBookingModalOpen(false);
+          setSelectedTripForBooking(null);
+          setBookingLoadingTripId(null);
+        }}
         onSuccess={handleBookingSuccess}
+        preSelectedTrip={selectedTripForBooking}
       />
 
       {/* Booking Details Modal */}
@@ -381,7 +681,7 @@ function BookingDetailsModal({ isOpen, onClose, booking }: { isOpen: boolean; on
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm"><Calendar className="w-4 h-4" /> <span>{formatDate(trip?.tripDate || booking.date)}</span></div>
+             <div className="flex items-center gap-2 text-sm"><Calendar className="w-4 h-4" /> <span>{formatDate(trip?.tripDate || booking.date || null)}</span></div>
             <div className="flex items-center gap-2 text-sm"><Clock className="w-4 h-4" /> <span>{trip?.startTime} {trip?.endTime ? `- ${trip.endTime}` : ''}</span></div>
             <div className="flex items-center gap-2 text-sm"><BusIcon className="w-4 h-4" /> <span>Bus: {trip?.busId || '-'}</span></div>
             <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4" /> <span>Pickup: {stop?.stopName || booking._stopName || '-'}</span></div>

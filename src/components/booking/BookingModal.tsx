@@ -23,6 +23,7 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (booking: unknown) => void;
+  preSelectedTrip?: TripWithStops | null;
 }
 
 interface BookingFormData { 
@@ -43,7 +44,7 @@ interface TripWithStops {
   stops?: { id: string; stopName: string; stopTime: string }[];
 }
 
-export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) => {
+export const BookingModal = ({ isOpen, onClose, onSuccess, preSelectedTrip }: BookingModalProps) => {
   const { user } = useAuth();
   const [step, setStep] = useState(1); // 1: Date, 2: Trip, 3: Stop, 4: Confirm
   const [formData, setFormData] = useState<BookingFormData>({ date: '' });
@@ -86,10 +87,41 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
     setError('');
   };
 
-  const handleTripSelection = (trip: TripWithStops) => { 
+  const handleTripSelection = async (trip: TripWithStops) => { 
     setSelectedTrip(trip); 
     setSelectedStopId(''); 
     setError(''); 
+    
+    // Load detailed trip data including stop points
+    try {
+      setIsLoading(true);
+      const detailedTrip = await tripAPI.getById(trip.id);
+      if (detailedTrip) {
+        // Merge basic trip data with detailed data
+        const enhancedTrip = {
+          ...trip,
+          ...detailedTrip,
+          // Map stop locations to the expected format
+          stops: detailedTrip.stopLocations?.map((stop: any, index: number) => ({
+            id: `stop-${index}`,
+            stopName: stop.address || `Stop ${index + 1}`,
+            stopTime: stop.departureTimeOnly || stop.arrivalTimeOnly || 'TBD'
+          })) || []
+        };
+        
+        setSelectedTrip(enhancedTrip);
+        console.log('Trip details loaded successfully:', enhancedTrip);
+      } else {
+        console.warn('No detailed trip data received, using basic data');
+        // Keep the basic trip data if no detailed data is available
+      }
+    } catch (error) {
+      console.error('Failed to load trip details:', error);
+      // Keep the basic trip data even if detailed loading fails
+      setError('Failed to load trip details. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -134,6 +166,15 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
     setError('');
     onClose();
   };
+
+  // Handle pre-selected trip
+  useEffect(() => {
+    if (preSelectedTrip && isOpen) {
+      setSelectedTrip(preSelectedTrip);
+      setFormData({ date: preSelectedTrip.date });
+      setStep(3); // Skip to stop selection step
+    }
+  }, [preSelectedTrip, isOpen]);
 
   const canProceedToStep2 = !!formData.date;
   const canProceedToStep3 = !!selectedTrip;
@@ -296,6 +337,11 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
                     }`}
                     onClick={() => handleTripSelection(t)}
                   >
+                    {selectedTrip?.id === t.id && isLoading && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg z-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    )}
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -361,7 +407,12 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
         {step === 3 && selectedTrip && (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
+              <div>
               <h3 className="text-xl font-semibold text-text-primary">Select Pickup Stop</h3>
+                <p className="text-sm text-text-secondary mt-1">
+                  Choose your pickup location from the available stops
+                </p>
+              </div>
               <Button
                 variant="outline"
                 onClick={() => setStep(2)}
@@ -373,32 +424,120 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
 
             <Card>
               <CardHeader>
-                <CardTitle>Available Stops</CardTitle>
-                <CardDescription>Select your pickup point</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  Available Stops
+                </CardTitle>
+                <CardDescription>Select your pickup point from the available stops</CardDescription>
               </CardHeader>
               <CardContent>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                    <span className="text-text-secondary">Loading trip details...</span>
+                  </div>
+                ) : (
                 <div className="space-y-3">
-                  {(selectedTrip.stops || []).map((s) => (
+                    {(selectedTrip.stops || []).map((s, index) => (
                     <button
                       key={s.id}
                       onClick={() => setSelectedStopId(s.id)}
-                      className={`w-full p-3 border rounded-lg text-left transition ${selectedStopId === s.id ? 'border-primary bg-primary-light' : 'border-border hover:border-primary/50'}`}
+                        className={`w-full p-4 border rounded-lg text-left transition-all duration-200 ${
+                          selectedStopId === s.id 
+                            ? 'border-primary bg-primary-light shadow-md' 
+                            : 'border-border hover:border-primary/50 hover:shadow-sm'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                              selectedStopId === s.id 
+                                ? 'bg-primary text-white' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {index + 1}
+                            </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 text-primary" />
-                          <span className="font-medium">{s.stopName}</span>
+                              <span className="font-medium text-text-primary">{s.stopName}</span>
+                            </div>
                         </div>
                         <div className="text-sm text-text-secondary flex items-center gap-2">
                           <Clock className="w-4 h-4" />
-                          <span>{s.stopTime}</span>
+                            <span className="font-semibold">{s.stopTime}</span>
+                          </div>
+                        </div>
+                        {selectedStopId === s.id && (
+                          <div className="mt-3 pt-3 border-t border-primary/20">
+                            <div className="flex items-center gap-2 text-sm text-primary">
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Selected pickup point</span>
                         </div>
                       </div>
+                        )}
                     </button>
                   ))}
                   {(!selectedTrip.stops || selectedTrip.stops.length === 0) && (
-                    <div className="text-sm text-text-muted">No stops configured for this trip.</div>
-                  )}
+                      <div className="text-center py-8 text-text-muted">
+                        <MapPin className="w-12 h-12 mx-auto mb-3 text-border" />
+                        <p className="text-sm">No stops configured for this trip.</p>
+                        <p className="text-xs mt-1">Please contact the administrator.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Trip Details Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bus className="w-5 h-5 text-primary" />
+                  Trip Details
+                </CardTitle>
+                <CardDescription>Complete information about your selected trip</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-text-muted" />
+                      <span className="text-sm text-text-muted">Route:</span>
+                      <span className="font-medium text-text-primary">{selectedTrip.startLocation || 'Start'} → {selectedTrip.endLocation || 'End'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-text-muted" />
+                      <span className="text-sm text-text-muted">Departure:</span>
+                      <span className="font-medium text-text-primary">{selectedTrip.startTime || selectedTrip.departureTimeOnly || 'TBD'}</span>
+                    </div>
+                    {selectedTrip.endTime || selectedTrip.arrivalTimeOnly ? (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-text-muted" />
+                        <span className="text-sm text-text-muted">Arrival:</span>
+                        <span className="font-medium text-text-primary">{selectedTrip.endTime || selectedTrip.arrivalTimeOnly}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Bus className="w-4 h-4 text-text-muted" />
+                      <span className="text-sm text-text-muted">Bus ID:</span>
+                      <span className="font-medium text-text-primary">{selectedTrip.busId}</span>
+                    </div>
+                    {selectedTrip.capacity && (
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-text-muted" />
+                        <span className="text-sm text-text-muted">Capacity:</span>
+                        <span className="font-medium text-text-primary">{selectedTrip.capacity} passengers</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-text-muted" />
+                      <span className="text-sm text-text-muted">Stops:</span>
+                      <span className="font-medium text-text-primary">{selectedTrip.stops?.length || 0} locations</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -406,26 +545,72 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
             {/* Booking Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Booking Summary</CardTitle>
+                 <CardTitle className="flex items-center gap-2">
+                   <CheckCircle className="w-5 h-5 text-primary" />
+                   Booking Summary
+                 </CardTitle>
+                 <CardDescription>Review your trip details before confirming</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between py-2 border-b border-border-light">
-                    <span className="text-text-muted">Route:</span>
+                  <div className="flex justify-between py-3 border-b border-border-light">
+                    <span className="text-text-muted flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Route:
+                    </span>
                     <span className="font-semibold text-text-primary">{selectedTrip.startLocation || 'Start'} → {selectedTrip.endLocation || 'End'}</span>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-border-light">
-                    <span className="text-text-muted">Date:</span>
+                  <div className="flex justify-between py-3 border-b border-border-light">
+                    <span className="text-text-muted flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Date:
+                    </span>
                     <span className="font-semibold text-text-primary">{formatDate(formData.date)}</span>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-border-light">
-                    <span className="text-text-muted">Time:</span>
-                    <span className="font-semibold text-text-primary">{selectedTrip.startTime}</span>
+                  <div className="flex justify-between py-3 border-b border-border-light">
+                    <span className="text-text-muted flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Departure:
+                    </span>
+                    <span className="font-semibold text-text-primary">{selectedTrip.startTime || selectedTrip.departureTimeOnly || 'TBD'}</span>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-border-light">
-                    <span className="text-text-muted">Bus:</span>
+                  {selectedTrip.endTime || selectedTrip.arrivalTimeOnly ? (
+                    <div className="flex justify-between py-3 border-b border-border-light">
+                      <span className="text-text-muted flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Arrival:
+                      </span>
+                      <span className="font-semibold text-text-primary">{selectedTrip.endTime || selectedTrip.arrivalTimeOnly}</span>
+                  </div>
+                  ) : null}
+                  <div className="flex justify-between py-3 border-b border-border-light">
+                    <span className="text-text-muted flex items-center gap-2">
+                      <Bus className="w-4 h-4" />
+                      Bus ID:
+                    </span>
                     <span className="font-semibold text-text-primary">{selectedTrip.busId}</span>
                   </div>
+                  {selectedTrip.capacity && (
+                    <div className="flex justify-between py-3 border-b border-border-light">
+                      <span className="text-text-muted flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Capacity:
+                      </span>
+                      <span className="font-semibold text-text-primary">{selectedTrip.capacity} passengers</span>
+                    </div>
+                  )}
+                  {selectedStopId && (
+                    <div className="flex justify-between py-3 bg-primary-light/10 rounded-lg p-3">
+                      <span className="text-text-muted flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        Pickup Stop:
+                      </span>
+                      <span className="font-semibold text-primary">
+                        {selectedTrip.stops?.find(s => s.id === selectedStopId)?.stopName} 
+                        ({selectedTrip.stops?.find(s => s.id === selectedStopId)?.stopTime})
+                      </span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -468,15 +653,72 @@ export const BookingModal = ({ isOpen, onClose, onSuccess }: BookingModalProps) 
 
             <Card>
               <CardHeader>
-                <CardTitle>Summary</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                  Final Booking Summary
+                </CardTitle>
+                <CardDescription>Please review all details before confirming your booking</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm">
-                  <li><strong>Date:</strong> {formatDate(formData.date)}</li>
-                  <li><strong>Trip:</strong> {selectedTrip.id}</li>
-                  <li><strong>Route:</strong> {selectedTrip.startLocation || 'Start'} → {selectedTrip.endLocation || 'End'}</li>
-                  <li><strong>Pickup Stop:</strong> {selectedTrip.stops?.find(s => s.id === selectedStopId)?.stopName} ({selectedTrip.stops?.find(s => s.id === selectedStopId)?.stopTime})</li>
-                </ul>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 p-3 bg-primary-light/10 rounded-lg">
+                        <Calendar className="w-5 h-5 text-primary" />
+                        <div>
+                          <div className="text-sm text-text-muted">Travel Date</div>
+                          <div className="font-semibold text-text-primary">{formatDate(formData.date)}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 p-3 bg-primary-light/10 rounded-lg">
+                        <Bus className="w-5 h-5 text-primary" />
+                        <div>
+                          <div className="text-sm text-text-muted">Trip ID</div>
+                          <div className="font-semibold text-text-primary">{selectedTrip.id}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 p-3 bg-primary-light/10 rounded-lg">
+                        <MapPin className="w-5 h-5 text-primary" />
+                        <div>
+                          <div className="text-sm text-text-muted">Route</div>
+                          <div className="font-semibold text-text-primary">{selectedTrip.startLocation || 'Start'} → {selectedTrip.endLocation || 'End'}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 p-3 bg-primary-light/10 rounded-lg">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <div>
+                          <div className="text-sm text-text-muted">Departure Time</div>
+                          <div className="font-semibold text-text-primary">{selectedTrip.startTime || selectedTrip.departureTimeOnly || 'TBD'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {selectedStopId && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MapPin className="w-5 h-5 text-green-600" />
+                        <span className="font-semibold text-green-800">Pickup Location</span>
+                      </div>
+                      <div className="text-green-700">
+                        <div className="font-medium">{selectedTrip.stops?.find(s => s.id === selectedStopId)?.stopName}</div>
+                        <div className="text-sm">Pickup Time: {selectedTrip.stops?.find(s => s.id === selectedStopId)?.stopTime}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
+                      <span className="font-semibold text-blue-800">Booking Confirmation</span>
+                    </div>
+                    <div className="text-blue-700 text-sm">
+                      Once confirmed, you will receive a booking confirmation and can track your trip status.
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
